@@ -1,0 +1,19 @@
+{
+  "name": "gowalk-plugins",
+  "owner": {
+    "name": "GoWalk"
+  },
+  "metadata": {
+    "description": "GoWalk development toolkit with agents, skills, and workflows",
+    "version": "1.10.3"
+  },
+  "plugins": [
+    {
+      "name": "gowalk-dev-toolkit",
+      "source": "./plugins/gowalk-dev-toolkit",
+      "description": "Complete development toolkit with 11 agents for full-stack development",
+      "version": "1.10.3",
+      "keywords": ["development", "agents", "skills", "workflow"]
+    }
+  ]
+}
