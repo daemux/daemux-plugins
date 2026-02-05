@@ -5,14 +5,14 @@
   },
   "metadata": {
     "description": "Daemux development toolkit with agents, skills, and workflows",
-    "version": "1.11.0"
+    "version": "1.12.0"
   },
   "plugins": [
     {
       "name": "daemux-dev-toolkit",
       "source": "./plugins/daemux-dev-toolkit",
-      "description": "Complete development toolkit with 11 agents for full-stack development",
-      "version": "1.11.0",
+      "description": "Complete development toolkit with 9 agents for full-stack development",
+      "version": "1.12.0",
       "keywords": ["development", "agents", "skills", "workflow"]
     }
   ]
