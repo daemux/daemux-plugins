@@ -130,6 +130,7 @@ settings.env = settings.env || {};
 
 const defaults = {
   'CLAUDE_CODE_ENABLE_TASKS': 'true',
+  'CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS': '1',
   'GEMINI_API_KEY': '',
   'NANOBANANA_MODEL': 'gemini-3-pro-image-preview',
   'DEPLOY_SERVER_USER': '',
