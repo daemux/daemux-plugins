@@ -1,0 +1,8 @@
+{
+  "name": "@daemux/anthropic-provider",
+  "version": "1.0.0",
+  "description": "Anthropic Claude provider for daemux",
+  "author": "daemux",
+  "main": "../dist/index.js",
+  "provider": true
+}
