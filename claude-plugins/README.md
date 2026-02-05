@@ -10,12 +10,12 @@ Copy-paste one of these prompts into Claude Code:
 
 **For current project only:**
 ```
-Install gowalk-claude-plugins for this project only: clone https://github.com/gowalk-public/gowalk-claude-plugins to /tmp/gowalk-plugins and run install.sh
+Install gowalk-claude-plugins for this project only: clone https://github.com/daemux/daemux-plugins to /tmp/gowalk-plugins and run claude-plugins/install.sh
 ```
 
 **For all projects (global):**
 ```
-Install gowalk-claude-plugins globally for all projects: clone https://github.com/gowalk-public/gowalk-claude-plugins to /tmp/gowalk-plugins and run install.sh --global
+Install gowalk-claude-plugins globally for all projects: clone https://github.com/daemux/daemux-plugins to /tmp/gowalk-plugins and run claude-plugins/install.sh --global
 ```
 
 ### Method 2: Command Line
@@ -23,18 +23,18 @@ Install gowalk-claude-plugins globally for all projects: clone https://github.co
 **Project-specific (default):** Run from your project directory:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/gowalk-public/gowalk-claude-plugins/main/install.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/daemux/daemux-plugins/main/claude-plugins/install.sh)
 ```
 
 **Global (all projects):** Install once for all projects:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/gowalk-public/gowalk-claude-plugins/main/install.sh) --global
+bash <(curl -fsSL https://raw.githubusercontent.com/daemux/daemux-plugins/main/claude-plugins/install.sh) --global
 ```
 
 **For private repo access**, clone first then run:
 ```bash
-git clone git@github.com:gowalk-public/gowalk-claude-plugins.git /tmp/gowalk-plugins && bash /tmp/gowalk-plugins/install.sh
+git clone git@github.com:daemux/daemux-plugins.git /tmp/gowalk-plugins && bash /tmp/gowalk-plugins/claude-plugins/install.sh
 ```
 
 Works for both fresh install and updates. Run the same command anytime.
