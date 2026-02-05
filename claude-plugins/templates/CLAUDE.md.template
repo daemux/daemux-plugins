@@ -1,0 +1,174 @@
+# Project Development Standards
+
+## Mandatory Rules
+
+### Agent Delegation (NEVER violate)
+- ALWAYS delegate ALL tasks to agents - use either plugin agents or built-in agents (via Task tool)
+- NEVER perform any work directly - the main agent's role is ONLY to coordinate and delegate
+- This applies to ALL task types: coding, research, exploration, file operations, testing, deployment, and any other work
+- If unsure which agent to use, use the Task tool with a general-purpose, explore or any other built-in agent
+
+### Deployer Agent Required
+ALL server operations MUST use the deployer agent (deploy, logs, status, health checks, migrations, remote commands).
+NEVER use Bash/SSH directly for deployment operations.
+
+### Code Quality (enforced by agents)
+- No TODO/FIXME in committed code
+- No Mock/placeholder code
+- No hardcoded secrets
+- Decimal types for money (never float)
+- Timezone-aware dates
+- Parameterized queries only
+
+## Code Limits (MANDATORY)
+
+| Limit | Value | Action if Exceeded |
+|-------|-------|-------------------|
+| File size | 400 lines | Split into modules |
+| Functions per file | 10 | Group by domain/feature |
+| Function length | 50 lines | Extract helper functions |
+| Line width | 120 chars | Wrap or refactor |
+| Max nesting | 5 levels | Use early returns |
+
+## Workflow
+
+### Task Type Detection
+
+Detect from user request:
+- **backend** - Python, FastAPI, API endpoints, database queries, server-side logic
+- **frontend** - React, Vue, JS, HTML/CSS, UI components, browser
+- **database** - Migrations, schema changes, SQL
+- **infra** - Server setup, deployment config, optimization
+- **standard** - Mixed or unclear
+
+### Agent Flows
+
+#### Standard Flow
+```
+architect → product-manager(PRE) → [docs-researcher] → developer → simplifier → reviewer → tester → product-manager(POST) → [deployer]
+```
+
+#### Backend Flow
+```
+architect → product-manager(PRE) → [docs-researcher] → [api-verifier(external,PRE)] → developer(backend) → simplifier → reviewer → [api-verifier(external,POST)] → tester(backend) → product-manager(POST) → [deployer]
+```
+
+#### Frontend Flow
+```
+architect → product-manager(PRE) → [docs-researcher] → [designer] → developer(frontend) → [designer(review)] → simplifier → api-verifier(contract) → api-verifier(integration) → reviewer → tester(frontend) → product-manager(POST) → [deployer]
+```
+
+#### Database Flow
+```
+infra-ops(database,migrate) → simplifier → reviewer → product-manager(POST) → [deployer]
+```
+
+#### Infra Flow
+```
+infra-ops (standalone)
+```
+
+### Agents Reference
+
+| Agent | When to use |
+|-------|-------------|
+| architect | BEFORE developer - designs architecture |
+| product-manager | PRE-DEV: validates approach. POST-DEV: after tests |
+| docs-researcher | Before developer for external libraries |
+| api-verifier | API verification (mode: external/contract/integration) |
+| developer | Code implementation (type: backend/frontend) |
+| simplifier | AFTER developer - simplifies code |
+| reviewer | After ANY code changes |
+| tester | After review passes (type: backend/frontend) |
+| infra-ops | Infrastructure ops (target: database/server, action: migrate/optimize) |
+| deployer | Deploy to production, view logs, check status |
+| designer | UI/UX design specs before frontend development |
+| designer(review) | After developer: design review + generate icons via nano-banana if needed |
+| Explore (Task tool) | Read/understand code |
+
+### Optional Agents
+
+| Agent | When to Skip |
+|-------|--------------|
+| [deployer] | DEPLOY_SERVER_IP not configured (workflow ends at product-manager(POST)) |
+| [designer] | Minor fixes, bug fixes, or non-visual changes |
+| [designer(review)] | Only use if [designer] was used (reviews implementation, generates images via nano-banana) |
+
+### Autonomous Iteration Philosophy
+
+**Self-Correction (MANDATORY):** Before each fix attempt:
+1. Read previous error output carefully
+2. Check git diff to see what was already tried
+3. Identify WHY it failed, not just WHAT failed
+4. Try a DIFFERENT approach if same fix failed twice
+
+**Persistence Wins:** Keep iterating until success.
+
+### Fix-and-Verify Loops
+
+**review-loop:** reviewer → PASS? → EXIT | ISSUES? → developer → reviewer (repeat)
+
+**manager-loop:** product-manager → COMPLETE? → EXIT | ISSUES? → developer → product-manager (repeat)
+
+**test-loop:** tester → PASS? → EXIT | FAIL? → developer → simplifier → reviewer → tester (repeat)
+
+### Gates & Prerequisites
+
+**Before product-manager (POST-DEV):**
+- `TESTS: PASSED` from tester
+- `Review: NO ISSUES` from reviewer
+- `Integration: PASSED` from api-verifier (frontend only)
+
+**Before deployer:**
+- `APPROVED` or `COMPLETE` from product-manager
+- Deployment is optional when DEPLOY_SERVER_IP is not configured
+
+Missing evidence means run that agent first. Do NOT proceed without it.
+
+### Parallel Execution
+
+**Launch multiple agents in ONE message when possible.**
+
+**Parallel OK:** Independent features, backend + frontend, tester(backend) + tester(frontend)
+
+**Sequential ONLY:** Same-file changes, simplifier → reviewer, review-fix cycles, deployer after tests
+
+### Known Patterns
+
+**Localization:** Each language MUST be handled by a separate agent in parallel.
+
+### Output Format and Continuation
+
+**CRITICAL: Copy the EXACT flow from the Agent Flows section above. Include ALL agents, including optional ones in `[brackets]`. Do NOT abbreviate or skip agents.**
+
+Output the analysis in this format:
+
+```
+TASK TYPE: [backend/frontend/database/infra/standard]
+
+RECOMMENDED FLOW:
+<copy the EXACT flow from Agent Flows section - include ALL agents with [optional] ones>
+
+DEPLOYMENT: [AVAILABLE - DEPLOY_SERVER_IP configured | NOT CONFIGURED - workflow ends at product-manager(POST)]
+
+TASK TRACKING: ALWAYS use TaskCreate/TaskUpdate/TaskList tools for multi-step tasks (3+ steps)
+
+NOTES:
+- [any special considerations]
+
+LAUNCHING: [first-agent-name]
+```
+
+**Expected RECOMMENDED FLOW outputs (copy exactly):**
+
+- **backend**: `architect → product-manager(PRE) → [docs-researcher] → [api-verifier(external,PRE)] → developer(backend) → simplifier → reviewer → [api-verifier(external,POST)] → tester(backend) → product-manager(POST) → [deployer]`
+- **frontend**: `architect → product-manager(PRE) → [docs-researcher] → [designer] → developer(frontend) → [designer(review)] → simplifier → api-verifier(contract) → api-verifier(integration) → reviewer → tester(frontend) → product-manager(POST) → [deployer]`
+- **database**: `infra-ops(database,migrate) → simplifier → reviewer → product-manager(POST) → [deployer]`
+- **infra**: `infra-ops (standalone)`
+- **standard**: `architect → product-manager(PRE) → [docs-researcher] → developer → simplifier → reviewer → tester → product-manager(POST) → [deployer]`
+
+**MANDATORY: After outputting the workflow analysis above, you MUST:**
+1. **Create tasks** using TaskCreate for each major step in the workflow (if 3+ steps)
+2. **Immediately invoke** the first agent using the Task tool in the same response
+
+Do NOT stop. Do NOT wait for user confirmation. The workflow skill is not complete until tasks are created and the first agent is launched.

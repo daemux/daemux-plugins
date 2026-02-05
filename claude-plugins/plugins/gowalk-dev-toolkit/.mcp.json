@@ -1,0 +1,38 @@
+{
+  "mcpServers": {
+    "chrome-devtools": {
+      "command": "node",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/mcp-servers/chrome-devtools/src/index.js",
+        "--headless",
+        "--isolated"
+      ]
+    },
+    "tailwindcss": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp-servers/tailwindcss/index.js"]
+    },
+    "deploy": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp-servers/deploy/dist/index.js"],
+      "env": {
+        "DEPLOY_SERVER_USER": "${DEPLOY_SERVER_USER:-}",
+        "DEPLOY_SERVER_IP": "${DEPLOY_SERVER_IP:-}",
+        "DEPLOY_SERVER_PORT": "${DEPLOY_SERVER_PORT:-22}",
+        "DEPLOY_PROJECT_NAME": "${DEPLOY_PROJECT_NAME:-}",
+        "DEPLOY_REMOTE_PATH": "${DEPLOY_REMOTE_PATH:-}",
+        "DEPLOY_SERVICES": "${DEPLOY_SERVICES:-}",
+        "DEPLOY_AUTH_METHOD": "${DEPLOY_AUTH_METHOD:-key}",
+        "DEPLOY_SSH_KEY_PATH": "${DEPLOY_SSH_KEY_PATH:-}",
+        "DEPLOY_SERVER_PASSWORD": "${DEPLOY_SERVER_PASSWORD:-}",
+        "DEPLOY_DB_HOST": "${DEPLOY_DB_HOST:-}",
+        "DEPLOY_DB_PORT": "${DEPLOY_DB_PORT:-5432}",
+        "DEPLOY_DB_NAME": "${DEPLOY_DB_NAME:-}",
+        "DEPLOY_DB_USER": "${DEPLOY_DB_USER:-}",
+        "DEPLOY_DB_PASSWORD": "${DEPLOY_DB_PASSWORD:-}",
+        "DEPLOY_AUTO_MIGRATE": "${DEPLOY_AUTO_MIGRATE:-false}",
+        "DEPLOY_MIGRATIONS_PATH": "${DEPLOY_MIGRATIONS_PATH:-migrations}"
+      }
+    }
+  }
+}

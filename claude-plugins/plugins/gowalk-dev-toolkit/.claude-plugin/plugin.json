@@ -1,0 +1,10 @@
+{
+  "name": "gowalk-dev-toolkit",
+  "version": "1.10.3",
+  "description": "Complete development toolkit with 11 agents for full-stack development",
+  "author": {
+    "name": "GoWalk"
+  },
+  "keywords": ["development", "agents", "skills", "backend", "frontend", "testing", "deployment"],
+  "mcpServers": "./.mcp.json"
+}
