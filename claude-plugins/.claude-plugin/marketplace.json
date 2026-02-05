@@ -5,14 +5,14 @@
   },
   "metadata": {
     "description": "GoWalk development toolkit with agents, skills, and workflows",
-    "version": "1.10.3"
+    "version": "1.10.4"
   },
   "plugins": [
     {
       "name": "gowalk-dev-toolkit",
       "source": "./plugins/gowalk-dev-toolkit",
       "description": "Complete development toolkit with 11 agents for full-stack development",
-      "version": "1.10.3",
+      "version": "1.10.4",
       "keywords": ["development", "agents", "skills", "workflow"]
     }
   ]
