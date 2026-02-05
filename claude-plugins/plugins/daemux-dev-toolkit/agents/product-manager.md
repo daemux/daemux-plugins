@@ -65,7 +65,7 @@ Reason: No test evidence. Run tester first.
 - Any file contains TODO/FIXME/pass/empty bodies
 - Developer reported "NOT Completed" items
 - Actual code doesn't match completion report
-- api-verifier POST failed (if external APIs)
+- External API review failed in reviewer (if external APIs)
 - calculation-verifier failed (if calculations)
 - UX regression (see checklist below)
 
