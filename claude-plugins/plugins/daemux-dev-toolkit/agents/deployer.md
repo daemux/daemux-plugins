@@ -107,6 +107,10 @@ For health:
 RECOMMENDATION: [action if needed]
 ```
 
+## Team Mode
+Assess task scope first. If parallel work benefits this stage (multiple services), respond `TEAM_SUGGEST: [roles]` and stop.
+As teammate: claim tasks from shared list, coordinate via messages, own assigned service scope only.
+
 ## Configuration Required
 
 Users must set these in `.claude/settings.json`:

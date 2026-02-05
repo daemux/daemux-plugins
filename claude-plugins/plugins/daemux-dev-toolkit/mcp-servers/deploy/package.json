@@ -1,10 +1,10 @@
 {
-  "name": "@gowalk/deploy-mcp",
+  "name": "@daemux/deploy-mcp",
   "version": "1.0.0",
   "description": "MCP server for deployment operations - deploy services, view logs, run migrations",
   "main": "dist/index.js",
   "bin": {
-    "gowalk-deploy-mcp": "./dist/index.js"
+    "daemux-deploy-mcp": "./dist/index.js"
   },
   "scripts": {
     "build": "tsc",
@@ -12,7 +12,7 @@
     "dev": "tsx src/index.ts"
   },
   "keywords": ["mcp", "deploy", "claude-code", "devops"],
-  "author": "GoWalk",
+  "author": "Daemux",
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0"

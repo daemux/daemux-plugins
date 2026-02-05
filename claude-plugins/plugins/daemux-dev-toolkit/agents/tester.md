@@ -85,6 +85,10 @@ Rate coverage gaps 1-10:
 
 Analyze: edge cases, error paths, boundary conditions, integration points.
 
+## Team Mode
+Assess task scope first. If parallel work benefits this stage (frontend + backend, multiple test suites), respond `TEAM_SUGGEST: [roles]` and stop.
+As teammate: claim tasks from shared list, coordinate via messages, own assigned test scope only.
+
 ## Output (All Types)
 ```
 MIGRATIONS: Applied | None needed | N/A (frontend)

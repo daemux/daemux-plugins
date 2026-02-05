@@ -1,5 +1,5 @@
 #!/bin/bash
-# GoWalk Claude Plugins - Install/Update Script
+# Daemux Claude Plugins - Install/Update Script
 # Run from any project directory to install or update the plugin
 
 set -e
@@ -24,9 +24,9 @@ if ! command -v claude &> /dev/null; then
   echo ""
 fi
 
-MP=~/.claude/plugins/marketplaces/gowalk-plugins
+MP=~/.claude/plugins/marketplaces/daemux-claude-plugins
 
-echo "Installing/updating GoWalk Claude Plugins..."
+echo "Installing/updating Daemux Claude Plugins..."
 
 TEMP_DIR=$(mktemp -d)
 echo "Fetching latest plugins..."
@@ -38,15 +38,17 @@ mkdir -p "$MP"
 cp -a "$TEMP_DIR/claude-plugins/." "$MP/"
 rm -rf "$TEMP_DIR"
 
+rm -rf ~/.claude/plugins/marketplaces/gowalk-plugins 2>/dev/null || true
 rm -rf ~/.claude/plugins/marketplaces/gowalk-public-gowalk-claude-plugins 2>/dev/null || true
 rm -rf ~/.claude/plugins/marketplaces/daemux-daemux-plugins 2>/dev/null || true
 
 echo "Clearing plugin cache..."
 rm -rf ~/.claude/plugins/cache/gowalk-plugins 2>/dev/null || true
+rm -rf ~/.claude/plugins/cache/daemux-claude-plugins 2>/dev/null || true
 
 echo "Installing MCP dependencies..."
-npm install --prefix "$MP/plugins/gowalk-dev-toolkit/mcp-servers/deploy" --production --silent 2>/dev/null
-npm install --prefix "$MP/plugins/gowalk-dev-toolkit/mcp-servers/tailwindcss" --production --silent 2>/dev/null
+npm install --prefix "$MP/plugins/daemux-dev-toolkit/mcp-servers/deploy" --production --silent 2>/dev/null
+npm install --prefix "$MP/plugins/daemux-dev-toolkit/mcp-servers/tailwindcss" --production --silent 2>/dev/null
 
 echo "Updating marketplace registration..."
 KNOWN_MP=~/.claude/plugins/known_marketplaces.json
@@ -54,7 +56,7 @@ KNOWN_MP=~/.claude/plugins/known_marketplaces.json
 node -e "
 const fs = require('fs');
 const data = JSON.parse(fs.readFileSync('$KNOWN_MP', 'utf8'));
-data['gowalk-plugins'] = {
+data['daemux-claude-plugins'] = {
   source: { source: 'github', repo: 'daemux/daemux-plugins' },
   installLocation: '$MP',
   lastUpdated: new Date().toISOString()
@@ -63,8 +65,8 @@ fs.writeFileSync('$KNOWN_MP', JSON.stringify(data, null, 2) + '\n');
 "
 
 echo "Installing plugin (scope: $SCOPE)..."
-claude plugin install gowalk-dev-toolkit@gowalk-plugins --scope $SCOPE 2>/dev/null || \
-  claude plugin update gowalk-dev-toolkit@gowalk-plugins --scope $SCOPE
+claude plugin install daemux-dev-toolkit@daemux-claude-plugins --scope $SCOPE 2>/dev/null || \
+  claude plugin update daemux-dev-toolkit@daemux-claude-plugins --scope $SCOPE
 
 # Configure default model in global settings (applies to both global and project installs)
 # DISABLED: sonnet[1m] currently broken for Max 20x users (regression since Dec 2025)

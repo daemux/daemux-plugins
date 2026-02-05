@@ -133,9 +133,46 @@ Missing evidence means run that agent first. Do NOT proceed without it.
 
 **Sequential ONLY:** Same-file changes, simplifier → reviewer, review-fix cycles, deployer after tests
 
+### Agent Teams (Complex Tasks)
+
+Use agent teams when a pipeline stage benefits from parallel work:
+
+**Create team when:** 3+ modules/features in scope, multiple perspectives needed at same stage, frontend + backend can proceed independently, multi-source research phase.
+
+**Stay with subagents when:** simple fix, single file, fully sequential, small scope.
+
+**Rules:**
+1. Decide team-eligible stages before starting the flow
+2. Spawn only agents this task needs — not all agents
+3. Create shared tasks with dependencies matching the pipeline
+4. Each teammate owns separate files — no overlapping assignments
+5. Dissolve team after stage completes, continue pipeline
+6. Always pass current flow stage, remaining stages, and task summary when delegating
+7. If an agent responds with `TEAM_SUGGEST: [roles]`, create an agent team for that stage with the suggested roles
+8. One team at a time — clean up current team before creating next one
+
+**Team-eligible stages:**
+- **Research:** architect + docs-researcher + [designer] in parallel
+- **Implementation:** developer teammates split by module/feature
+- **Review:** reviewer per perspective + [api-verifier] in parallel
+
 ### Known Patterns
 
 **Localization:** Each language MUST be handled by a separate agent in parallel.
+
+### Large Task Protocol
+
+For tasks with 5+ requirements:
+
+1. **Save requirements** to `.tasks/{short-topic}.md` before starting any agent
+2. **Each session:** pass the exact file path (e.g., `.tasks/auth-system.md`) to architect and product-manager
+3. **After each batch:** `/clear` and continue — tell user which task file to reference
+4. **Done when:** product-manager confirms zero remaining and deletes the task file
+
+Rules:
+- ALWAYS pass the exact `.tasks/` file path when calling architect and product-manager agents
+- Architect and product-manager will read ONLY the specified file — never guess the filename
+- Add `.tasks/` to `.gitignore`
 
 ### Output Format and Continuation
 

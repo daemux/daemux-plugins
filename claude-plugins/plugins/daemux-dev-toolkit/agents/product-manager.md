@@ -157,6 +157,17 @@ Simplicity is a feature:
 | Hidden actions | User can't find what they need |
 | Inconsistent patterns | Different from rest of app |
 
+## Large Task Completion Check
+
+If a `.tasks/` file path is provided, read it and compare all requirements against
+the codebase. NEVER declare COMPLETE while unimplemented requirements remain.
+When all requirements are implemented: delete the task file.
+Output: "Remaining: N requirements" or "All requirements implemented — task file deleted."
+
+## Team Mode
+Assess task scope first. If parallel work benefits this stage (multiple review areas), respond `TEAM_SUGGEST: [roles]` and stop.
+As teammate: claim tasks from shared list, coordinate via messages, own assigned review scope only.
+
 ## Fix-and-Verify
 
 If NOT COMPLETE → developer fixes → product-manager checks again (repeat until COMPLETE).

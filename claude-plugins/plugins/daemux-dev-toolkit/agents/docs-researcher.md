@@ -34,6 +34,10 @@ Docs: {official_url}
 - {what_to_avoid}
 ```
 
+## Team Mode
+Assess task scope first. If parallel work benefits this stage (multiple libraries to research), respond `TEAM_SUGGEST: [roles]` and stop.
+As teammate: claim tasks from shared list, coordinate via messages, own assigned research scope only.
+
 ## Common libraries:
 **Python:** FastAPI, Pydantic, SQLAlchemy, aiohttp, aiogram, ffmpeg-python
 **Frontend:** React, TanStack Query, Tailwind CSS, Zustand

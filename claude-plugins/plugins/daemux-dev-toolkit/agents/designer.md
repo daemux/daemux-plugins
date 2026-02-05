@@ -56,6 +56,10 @@ DESIGN REVIEW: [APPROVED / NEEDS FIXES]
 NEXT: simplifier
 ```
 
+## Team Mode
+Assess task scope first. If parallel work benefits this stage (multiple design areas), respond `TEAM_SUGGEST: [roles]` and stop.
+As teammate: claim tasks from shared list, coordinate via messages, own assigned design scope only.
+
 ## Output Footer (initial design)
 
 ```

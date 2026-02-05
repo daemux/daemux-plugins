@@ -350,7 +350,7 @@ async function getServiceHealth(service: string): Promise<string> {
 // Create server
 const server = new Server(
   {
-    name: "gowalk-deploy-mcp",
+    name: "daemux-deploy-mcp",
     version: "1.0.0",
   },
   {

@@ -1,9 +1,9 @@
 {
-  "name": "gowalk-dev-toolkit",
-  "version": "1.10.4",
+  "name": "daemux-dev-toolkit",
+  "version": "1.11.0",
   "description": "Complete development toolkit with 11 agents for full-stack development",
   "author": {
-    "name": "GoWalk"
+    "name": "Daemux"
   },
   "keywords": ["development", "agents", "skills", "backend", "frontend", "testing", "deployment"],
   "mcpServers": "./.mcp.json"

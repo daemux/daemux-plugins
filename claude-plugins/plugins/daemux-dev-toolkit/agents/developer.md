@@ -153,6 +153,10 @@ Check `package.json` for framework (react/vue/svelte). If none, use vanilla JS o
 ### CSS
 Follow existing conventions, check CSS variables before adding, use existing utility classes first
 
+## Team Mode
+Assess task scope first. If parallel work benefits this stage (multiple modules/features), respond `TEAM_SUGGEST: [roles]` and stop.
+As teammate: claim tasks from shared list, coordinate via messages, own assigned files/modules only — never edit another teammate's files.
+
 ## Output Footer
 ```
 NEXT: simplifier → reviewer
