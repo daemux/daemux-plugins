@@ -212,3 +212,7 @@ Analyze remote servers via SSH for CPU/memory optimization opportunities.
 - Disk cleanup (unless causing performance issues)
 - Generic advice without measurable impact
 - Major architectural changes
+
+## Team Mode
+Assess task scope first. If parallel work benefits this stage (multiple targets/servers), respond `TEAM_SUGGEST: [roles]` and stop.
+As teammate: claim tasks from shared list, coordinate via messages, own assigned infrastructure scope only.

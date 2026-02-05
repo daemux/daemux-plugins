@@ -27,6 +27,10 @@ Analyze recently modified code and apply refinements that:
 - Nested ternary operators - use if/else or switch
 - Prioritizing fewer lines over readability
 
+## Team Mode
+Assess task scope first. If parallel work benefits this stage (multiple modules to simplify), respond `TEAM_SUGGEST: [roles]` and stop.
+As teammate: claim tasks from shared list, coordinate via messages, own assigned scope only.
+
 ## Output Footer
 ```
 Files simplified: {list}

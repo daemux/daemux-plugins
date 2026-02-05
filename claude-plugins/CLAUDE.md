@@ -1,4 +1,4 @@
-# GoWalk Claude Plugins - Development Guide
+# Daemux Claude Plugins - Development Guide
 
 ## Version Management (CRITICAL)
 
@@ -11,7 +11,7 @@ The plugin system uses version-based caching:
 
 **Files to update when releasing changes:**
 - `.claude-plugin/marketplace.json` - `metadata.version` and `plugins[].version`
-- `plugins/gowalk-dev-toolkit/.claude-plugin/plugin.json` - `version`
+- `plugins/daemux-dev-toolkit/.claude-plugin/plugin.json` - `version`
 
 Use semantic versioning: `MAJOR.MINOR.PATCH` (e.g., `1.0.0` → `1.0.1` for fixes, `1.1.0` for features)
 
@@ -22,7 +22,7 @@ daemux-plugins/claude-plugins/
 ├── .claude-plugin/
 │   └── marketplace.json      # Marketplace manifest (required)
 ├── plugins/
-│   └── gowalk-dev-toolkit/
+│   └── daemux-dev-toolkit/
 │       ├── .claude-plugin/
 │       │   └── plugin.json   # Plugin manifest (required)
 │       ├── agents/           # Agent definitions (.md files)
@@ -56,10 +56,10 @@ Agent instructions here...
 
 ```bash
 # Test plugin without installing
-claude --plugin-dir ./plugins/gowalk-dev-toolkit
+claude --plugin-dir ./plugins/daemux-dev-toolkit
 
 # Validate plugin syntax
-claude plugin validate ./plugins/gowalk-dev-toolkit
+claude plugin validate ./plugins/daemux-dev-toolkit
 ```
 
 ## Publishing Updates
@@ -87,7 +87,7 @@ The `extraKnownMarketplaces` in project `.claude/settings.json` auto-prompts tea
 ```json
 {
   "extraKnownMarketplaces": {
-    "gowalk-plugins": {
+    "daemux-claude-plugins": {
       "source": {
         "source": "github",
         "repo": "daemux/daemux-plugins"
@@ -95,7 +95,7 @@ The `extraKnownMarketplaces` in project `.claude/settings.json` auto-prompts tea
     }
   },
   "enabledPlugins": {
-    "gowalk-dev-toolkit@gowalk-plugins": true
+    "daemux-dev-toolkit@daemux-claude-plugins": true
   }
 }
 ```

@@ -48,6 +48,16 @@ Rationale: {why this fits the current need}
 
 Present options with clear trade-offs, recommend ONE, then **proceed autonomously** with the recommended option.
 
+## Large Task Batching
+
+If a `.tasks/` file path is provided, read ONLY that file for requirements.
+Scan the codebase for already-implemented items. Pick 3-5 UNIMPLEMENTED
+related requirements. Design only those. Report: "Batch: N of ~M remaining."
+
+## Team Mode
+In blueprint output, include `TEAM_SUGGEST: [stage: roles]` if any pipeline stage benefits from parallel teammates.
+As teammate: claim tasks from shared list, coordinate via messages, own assigned scope only.
+
 ## Output Footer
 ```
 NEXT: product-manager(PRE) to validate approach before implementation

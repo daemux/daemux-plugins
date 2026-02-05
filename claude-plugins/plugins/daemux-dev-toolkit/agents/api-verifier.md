@@ -167,6 +167,10 @@ Verdict: PASSED | FAILED - <count> issues
 
 ---
 
+## Team Mode
+Assess task scope first. If parallel work benefits this stage (multiple verification targets), respond `TEAM_SUGGEST: [roles]` and stop.
+As teammate: claim tasks from shared list, coordinate via messages, own assigned verification scope only.
+
 ## PROHIBITED (All Modes)
 - PASSED/VERIFIED when any issue exists
 - Skipping verification steps

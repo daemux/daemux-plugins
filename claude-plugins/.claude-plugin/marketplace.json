@@ -1,18 +1,18 @@
 {
-  "name": "gowalk-plugins",
+  "name": "daemux-claude-plugins",
   "owner": {
-    "name": "GoWalk"
+    "name": "Daemux"
   },
   "metadata": {
-    "description": "GoWalk development toolkit with agents, skills, and workflows",
-    "version": "1.10.4"
+    "description": "Daemux development toolkit with agents, skills, and workflows",
+    "version": "1.11.0"
   },
   "plugins": [
     {
-      "name": "gowalk-dev-toolkit",
-      "source": "./plugins/gowalk-dev-toolkit",
+      "name": "daemux-dev-toolkit",
+      "source": "./plugins/daemux-dev-toolkit",
       "description": "Complete development toolkit with 11 agents for full-stack development",
-      "version": "1.10.4",
+      "version": "1.11.0",
       "keywords": ["development", "agents", "skills", "workflow"]
     }
   ]

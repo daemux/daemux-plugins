@@ -1,6 +1,6 @@
-# GoWalk Claude Plugins
+# Daemux Claude Plugins
 
-A marketplace for Claude Code plugins used across GoWalk projects.
+A marketplace for Claude Code plugins used across Daemux projects.
 
 ## Install / Update
 
@@ -10,12 +10,12 @@ Copy-paste one of these prompts into Claude Code:
 
 **For current project only:**
 ```
-Install gowalk-claude-plugins for this project only: clone https://github.com/daemux/daemux-plugins to /tmp/gowalk-plugins and run claude-plugins/install.sh
+Install daemux-claude-plugins for this project only: clone https://github.com/daemux/daemux-plugins to /tmp/daemux-plugins and run claude-plugins/install.sh
 ```
 
 **For all projects (global):**
 ```
-Install gowalk-claude-plugins globally for all projects: clone https://github.com/daemux/daemux-plugins to /tmp/gowalk-plugins and run claude-plugins/install.sh --global
+Install daemux-claude-plugins globally for all projects: clone https://github.com/daemux/daemux-plugins to /tmp/daemux-plugins and run claude-plugins/install.sh --global
 ```
 
 ### Method 2: Command Line
@@ -34,7 +34,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/daemux/daemux-plugins/main/c
 
 **For private repo access**, clone first then run:
 ```bash
-git clone git@github.com:daemux/daemux-plugins.git /tmp/gowalk-plugins && bash /tmp/gowalk-plugins/claude-plugins/install.sh
+git clone git@github.com:daemux/daemux-plugins.git /tmp/daemux-plugins && bash /tmp/daemux-plugins/claude-plugins/install.sh
 ```
 
 Works for both fresh install and updates. Run the same command anytime.
@@ -43,14 +43,13 @@ The script will:
 - Clone/update the marketplace
 - Install MCP dependencies
 - Install/update the plugin
-- Set default model to `sonnet[1m]` (Sonnet 4.5 with 1M context) in global settings
 - Add required env vars to `.claude/settings.json` (preserves existing values)
 
 **Prerequisites:** Chrome browser, Node.js
 
 ## Included Plugins
 
-### gowalk-dev-toolkit
+### daemux-dev-toolkit
 
 Complete development toolkit with:
 
