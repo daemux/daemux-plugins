@@ -1,0 +1,38 @@
+{
+  "name": "@daemux/anthropic-provider",
+  "version": "1.0.0",
+  "description": "Anthropic Claude provider for daemux",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.52.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0"
+  },
+  "peerDependencies": {
+    "daemux": "^1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "daemux": {
+      "optional": true
+    }
+  },
+  "files": [
+    "dist",
+    ".claude-plugin"
+  ],
+  "keywords": [
+    "daemux",
+    "anthropic",
+    "claude",
+    "llm",
+    "provider"
+  ],
+  "license": "MIT"
+}
