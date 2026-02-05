@@ -28,17 +28,18 @@ MP=~/.claude/plugins/marketplaces/gowalk-plugins
 
 echo "Installing/updating GoWalk Claude Plugins..."
 
-if [ -d "$MP/.git" ]; then
-  echo "Updating marketplace..."
-  git -C "$MP" fetch --quiet origin main
-  git -C "$MP" reset --hard origin/main --quiet
-else
-  echo "Cloning marketplace..."
-  rm -rf "$MP"
-  git clone --depth 1 https://github.com/gowalk-public/gowalk-claude-plugins.git "$MP"
-fi
+TEMP_DIR=$(mktemp -d)
+echo "Fetching latest plugins..."
+git clone --depth 1 https://github.com/daemux/daemux-plugins.git "$TEMP_DIR" 2>/dev/null
+
+echo "Installing marketplace..."
+rm -rf "$MP"
+mkdir -p "$MP"
+cp -a "$TEMP_DIR/claude-plugins/." "$MP/"
+rm -rf "$TEMP_DIR"
 
 rm -rf ~/.claude/plugins/marketplaces/gowalk-public-gowalk-claude-plugins 2>/dev/null || true
+rm -rf ~/.claude/plugins/marketplaces/daemux-daemux-plugins 2>/dev/null || true
 
 echo "Clearing plugin cache..."
 rm -rf ~/.claude/plugins/cache/gowalk-plugins 2>/dev/null || true
@@ -54,7 +55,7 @@ node -e "
 const fs = require('fs');
 const data = JSON.parse(fs.readFileSync('$KNOWN_MP', 'utf8'));
 data['gowalk-plugins'] = {
-  source: { source: 'github', repo: 'gowalk-public/gowalk-claude-plugins' },
+  source: { source: 'github', repo: 'daemux/daemux-plugins' },
   installLocation: '$MP',
   lastUpdated: new Date().toISOString()
 };

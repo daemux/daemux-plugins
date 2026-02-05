@@ -18,7 +18,7 @@ Use semantic versioning: `MAJOR.MINOR.PATCH` (e.g., `1.0.0` → `1.0.1` for fixe
 ## Plugin Structure
 
 ```
-gowalk-claude-plugins/
+daemux-plugins/claude-plugins/
 ├── .claude-plugin/
 │   └── marketplace.json      # Marketplace manifest (required)
 ├── plugins/
@@ -90,7 +90,7 @@ The `extraKnownMarketplaces` in project `.claude/settings.json` auto-prompts tea
     "gowalk-plugins": {
       "source": {
         "source": "github",
-        "repo": "gowalk-public/gowalk-claude-plugins"
+        "repo": "daemux/daemux-plugins"
       }
     }
   },
