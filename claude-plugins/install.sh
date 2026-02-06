@@ -119,7 +119,7 @@ settings.env = settings.env || {};
 
 const defaults = {
   'CLAUDE_CODE_ENABLE_TASKS': 'true',
-  'CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS': '1'
+  'CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS': '0'
 };
 
 const added = [];
