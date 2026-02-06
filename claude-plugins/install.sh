@@ -29,7 +29,7 @@ KNOWN_MP=~/.claude/plugins/known_marketplaces.json
 
 # Install CLAUDE.md template
 install_claude_md() {
-  local target_path=$1
+  local target_path="$1"
   local template_source="$MP/templates/CLAUDE.md.template"
 
   if [ -f "$template_source" ]; then
@@ -42,7 +42,7 @@ install_claude_md() {
 # Inject statusLine into a settings.json file (non-destructive)
 # Note: no error suppression -- install failures should be visible (set -e)
 inject_status_line() {
-  local settings_file=$1
+  local settings_file="$1"
 
   if [ ! -f "$settings_file" ]; then
     mkdir -p "$(dirname "$settings_file")"
@@ -51,10 +51,11 @@ inject_status_line() {
 
   node -e "
 const fs = require('fs');
-const settings = JSON.parse(fs.readFileSync('$settings_file', 'utf8'));
+const filePath = process.argv[1];
+const settings = JSON.parse(fs.readFileSync(filePath, 'utf8'));
 
 if (settings.statusLine) {
-  console.log('statusLine already configured, skipping');
+  console.log('statusLine already configured (keeping existing), skipping Daemux statusLine');
 } else {
   const parts = [
     'input=\$(cat)',
@@ -64,19 +65,24 @@ if (settings.statusLine) {
     'model=\$(echo \"\$input\" | jq -r \".model.display_name\")',
     'used=\$(echo \"\$input\" | jq -r \".context_window.used_percentage // empty\")',
     'remaining=\$(echo \"\$input\" | jq -r \".context_window.remaining_percentage // empty\")',
-    'if [ -n \"\$used\" ]; then ctx_info=\$(printf \"Context: %.1f%% used (%.1f%% remaining)\" \"\$used\" \"\$remaining\"); else ctx_info=\"Context: N/A\"; fi',
+    'if [ -n \"\$used\" ]; then',
+    '  ctx_info=\$(printf \"Context: %.1f%% used (%.1f%% remaining)\" \"\$used\" \"\$remaining\")',
+    'else',
+    '  ctx_info=\"Context: N/A\"',
+    'fi',
     'printf \"%s@%s:%s | %s | %s\" \"\$user\" \"\$host\" \"\$dir\" \"\$model\" \"\$ctx_info\"'
   ];
   settings.statusLine = { type: 'command', command: parts.join('; ') };
-  fs.writeFileSync('$settings_file', JSON.stringify(settings, null, 2) + '\n');
+  fs.writeFileSync(filePath, JSON.stringify(settings, null, 2) + '\n');
   console.log('Added statusLine configuration');
 }
-"
+" -- "$settings_file" \
+  || { echo "Warning: could not configure statusLine (invalid settings.json?)"; }
 }
 
 # Remove statusLine from a settings.json file
 remove_status_line() {
-  local settings_file=$1
+  local settings_file="$1"
 
   if [ ! -f "$settings_file" ]; then
     return
@@ -84,14 +90,15 @@ remove_status_line() {
 
   node -e "
 const fs = require('fs');
-const settings = JSON.parse(fs.readFileSync('$settings_file', 'utf8'));
+const filePath = process.argv[1];
+const settings = JSON.parse(fs.readFileSync(filePath, 'utf8'));
 
 if (settings.statusLine) {
   delete settings.statusLine;
-  fs.writeFileSync('$settings_file', JSON.stringify(settings, null, 2) + '\n');
+  fs.writeFileSync(filePath, JSON.stringify(settings, null, 2) + '\n');
   console.log('Removed statusLine configuration');
 }
-" 2>/dev/null || true
+" -- "$settings_file" 2>/dev/null || true
 }
 
 # Uninstall mode
@@ -111,10 +118,11 @@ if [ "$ACTION" = "uninstall" ]; then
     if [ -f "$KNOWN_MP" ]; then
       node -e "
 const fs = require('fs');
-const data = JSON.parse(fs.readFileSync('$KNOWN_MP', 'utf8'));
+const filePath = process.argv[1];
+const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
 delete data['daemux-claude-plugins'];
-fs.writeFileSync('$KNOWN_MP', JSON.stringify(data, null, 2) + '\n');
-" 2>/dev/null || true
+fs.writeFileSync(filePath, JSON.stringify(data, null, 2) + '\n');
+" -- "$KNOWN_MP" 2>/dev/null || true
     fi
 
     if [ -f ~/.claude/CLAUDE.md ]; then
@@ -134,13 +142,14 @@ fs.writeFileSync('$KNOWN_MP', JSON.stringify(data, null, 2) + '\n');
       rm -f .claude/CLAUDE.md
     fi
 
-    # Remove env vars and statusLine from project settings
+    # Remove env vars from project settings
     SETTINGS=".claude/settings.json"
     if [ -f "$SETTINGS" ]; then
       echo "Cleaning project settings..."
       node -e "
 const fs = require('fs');
-const settings = JSON.parse(fs.readFileSync('$SETTINGS', 'utf8'));
+const filePath = process.argv[1];
+const settings = JSON.parse(fs.readFileSync(filePath, 'utf8'));
 
 if (settings.env) {
   delete settings.env.CLAUDE_CODE_ENABLE_TASKS;
@@ -152,11 +161,12 @@ if (settings.env) {
   }
 }
 
-delete settings.statusLine;
-
-fs.writeFileSync('$SETTINGS', JSON.stringify(settings, null, 2) + '\n');
-" 2>/dev/null || true
+fs.writeFileSync(filePath, JSON.stringify(settings, null, 2) + '\n');
+" -- "$SETTINGS" 2>/dev/null || true
     fi
+
+    echo "Cleaning project statusLine..."
+    remove_status_line "$SETTINGS"
 
     echo ""
     echo "Done! Plugin uninstalled from this project."
@@ -181,7 +191,11 @@ echo "Installing/updating Daemux Claude Plugins..."
 OLD_VERSION=""
 OLD_MP_JSON="$MP/.claude-plugin/marketplace.json"
 if [ -f "$OLD_MP_JSON" ]; then
-  OLD_VERSION=$(node -e "console.log(JSON.parse(require('fs').readFileSync('$OLD_MP_JSON','utf8')).metadata.version)" 2>/dev/null || true)
+  OLD_VERSION=$(node -e "
+    const fs = require('fs');
+    const data = JSON.parse(fs.readFileSync(process.argv[1], 'utf8'));
+    console.log(data.metadata.version);
+  " -- "$OLD_MP_JSON" 2>/dev/null || true)
 fi
 
 TEMP_DIR=$(mktemp -d)
@@ -203,14 +217,16 @@ echo "Updating marketplace registration..."
 [ ! -f "$KNOWN_MP" ] && echo '{}' > "$KNOWN_MP"
 node -e "
 const fs = require('fs');
-const data = JSON.parse(fs.readFileSync('$KNOWN_MP', 'utf8'));
+const filePath = process.argv[1];
+const installDir = process.argv[2];
+const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
 data['daemux-claude-plugins'] = {
   source: { source: 'github', repo: 'daemux/daemux-plugins' },
-  installLocation: '$MP',
+  installLocation: installDir,
   lastUpdated: new Date().toISOString()
 };
-fs.writeFileSync('$KNOWN_MP', JSON.stringify(data, null, 2) + '\n');
-"
+fs.writeFileSync(filePath, JSON.stringify(data, null, 2) + '\n');
+" -- "$KNOWN_MP" "$MP"
 
 echo "Installing plugin (scope: $SCOPE)..."
 claude plugin install daemux-dev-toolkit@daemux-claude-plugins --scope $SCOPE 2>/dev/null || \
@@ -248,7 +264,12 @@ claude plugin install daemux-dev-toolkit@daemux-claude-plugins --scope $SCOPE 2>
 # "
 
 # Read new version
-NEW_VERSION=$(node -e "console.log(JSON.parse(require('fs').readFileSync('$MP/.claude-plugin/marketplace.json','utf8')).metadata.version)" 2>/dev/null || true)
+NEW_MP_JSON="$MP/.claude-plugin/marketplace.json"
+NEW_VERSION=$(node -e "
+  const fs = require('fs');
+  const data = JSON.parse(fs.readFileSync(process.argv[1], 'utf8'));
+  console.log(data.metadata.version);
+" -- "$NEW_MP_JSON" 2>/dev/null || true)
 
 if [ "$SCOPE" = "user" ]; then
   install_claude_md ~/.claude/CLAUDE.md
@@ -265,7 +286,7 @@ if [ "$SCOPE" = "user" ]; then
     echo "Done! Plugin installed globally (v${NEW_VERSION})"
   fi
   echo ""
-  echo "Note: Global install skips project settings. Configure env vars manually if needed."
+  echo "Note: Global install skips project settings."
   exit 0
 fi
 
@@ -279,7 +300,8 @@ install_claude_md .claude/CLAUDE.md
 echo "Configuring project settings..."
 node -e "
 const fs = require('fs');
-const settings = JSON.parse(fs.readFileSync('$SETTINGS', 'utf8'));
+const filePath = process.argv[1];
+const settings = JSON.parse(fs.readFileSync(filePath, 'utf8'));
 
 settings.env = settings.env || {};
 
@@ -296,9 +318,12 @@ for (const [key, value] of Object.entries(defaults)) {
   }
 }
 
-fs.writeFileSync('$SETTINGS', JSON.stringify(settings, null, 2) + '\n');
-console.log(added.length > 0 ? 'Added env vars: ' + added.join(', ') : 'All env vars already configured');
-"
+fs.writeFileSync(filePath, JSON.stringify(settings, null, 2) + '\n');
+const msg = added.length > 0
+  ? 'Added env vars: ' + added.join(', ')
+  : 'All env vars already configured';
+console.log(msg);
+" -- "$SETTINGS"
 
 echo "Configuring project statusLine..."
 inject_status_line "$SETTINGS"
