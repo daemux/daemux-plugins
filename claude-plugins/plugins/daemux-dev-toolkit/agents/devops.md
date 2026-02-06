@@ -275,9 +275,11 @@ Analyze remote servers via SSH for CPU/memory optimization opportunities.
 
 ---
 
-## Team Mode
+## Team Mode (ALWAYS evaluate)
 
-Assess task scope first. If parallel work benefits this stage (multiple services/servers/databases), respond `TEAM_SUGGEST: [roles]` and stop.
+Assess task scope first. ALWAYS include one of:
+- `TEAM_SUGGEST: [roles]` — if parallel work benefits this stage (multiple services/servers/databases), then stop
+- `TEAM_SUGGEST: NONE` — if single agent is sufficient
 
 As teammate: claim tasks from shared list, coordinate via messages, own assigned scope only.
 
