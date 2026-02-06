@@ -39,6 +39,61 @@ install_claude_md() {
   fi
 }
 
+# Inject statusLine into a settings.json file (non-destructive)
+# Note: no error suppression -- install failures should be visible (set -e)
+inject_status_line() {
+  local settings_file=$1
+
+  if [ ! -f "$settings_file" ]; then
+    mkdir -p "$(dirname "$settings_file")"
+    echo '{}' > "$settings_file"
+  fi
+
+  node -e "
+const fs = require('fs');
+const settings = JSON.parse(fs.readFileSync('$settings_file', 'utf8'));
+
+if (settings.statusLine) {
+  console.log('statusLine already configured, skipping');
+} else {
+  const parts = [
+    'input=\$(cat)',
+    'user=\$(whoami)',
+    'host=\$(hostname -s)',
+    'dir=\$(basename \"\$(echo \"\$input\" | jq -r \".workspace.current_dir\")\")',
+    'model=\$(echo \"\$input\" | jq -r \".model.display_name\")',
+    'used=\$(echo \"\$input\" | jq -r \".context_window.used_percentage // empty\")',
+    'remaining=\$(echo \"\$input\" | jq -r \".context_window.remaining_percentage // empty\")',
+    'if [ -n \"\$used\" ]; then ctx_info=\$(printf \"Context: %.1f%% used (%.1f%% remaining)\" \"\$used\" \"\$remaining\"); else ctx_info=\"Context: N/A\"; fi',
+    'printf \"%s@%s:%s | %s | %s\" \"\$user\" \"\$host\" \"\$dir\" \"\$model\" \"\$ctx_info\"'
+  ];
+  settings.statusLine = { type: 'command', command: parts.join('; ') };
+  fs.writeFileSync('$settings_file', JSON.stringify(settings, null, 2) + '\n');
+  console.log('Added statusLine configuration');
+}
+"
+}
+
+# Remove statusLine from a settings.json file
+remove_status_line() {
+  local settings_file=$1
+
+  if [ ! -f "$settings_file" ]; then
+    return
+  fi
+
+  node -e "
+const fs = require('fs');
+const settings = JSON.parse(fs.readFileSync('$settings_file', 'utf8'));
+
+if (settings.statusLine) {
+  delete settings.statusLine;
+  fs.writeFileSync('$settings_file', JSON.stringify(settings, null, 2) + '\n');
+  console.log('Removed statusLine configuration');
+}
+" 2>/dev/null || true
+}
+
 # Uninstall mode
 if [ "$ACTION" = "uninstall" ]; then
   echo "Uninstalling Daemux Claude Plugins (scope: $SCOPE)..."
@@ -67,6 +122,9 @@ fs.writeFileSync('$KNOWN_MP', JSON.stringify(data, null, 2) + '\n');
       rm -f ~/.claude/CLAUDE.md
     fi
 
+    echo "Cleaning global statusLine..."
+    remove_status_line ~/.claude/settings.json
+
     echo ""
     echo "Done! Plugin uninstalled globally."
   else
@@ -76,7 +134,7 @@ fs.writeFileSync('$KNOWN_MP', JSON.stringify(data, null, 2) + '\n');
       rm -f .claude/CLAUDE.md
     fi
 
-    # Remove env vars from project settings
+    # Remove env vars and statusLine from project settings
     SETTINGS=".claude/settings.json"
     if [ -f "$SETTINGS" ]; then
       echo "Cleaning project settings..."
@@ -93,6 +151,8 @@ if (settings.env) {
     delete settings.env;
   }
 }
+
+delete settings.statusLine;
 
 fs.writeFileSync('$SETTINGS', JSON.stringify(settings, null, 2) + '\n');
 " 2>/dev/null || true
@@ -116,6 +176,13 @@ if ! command -v claude &> /dev/null; then
 fi
 
 echo "Installing/updating Daemux Claude Plugins..."
+
+# Capture previous version before overwriting
+OLD_VERSION=""
+OLD_MP_JSON="$MP/.claude-plugin/marketplace.json"
+if [ -f "$OLD_MP_JSON" ]; then
+  OLD_VERSION=$(node -e "console.log(JSON.parse(require('fs').readFileSync('$OLD_MP_JSON','utf8')).metadata.version)" 2>/dev/null || true)
+fi
 
 TEMP_DIR=$(mktemp -d)
 echo "Fetching latest plugins..."
@@ -180,10 +247,23 @@ claude plugin install daemux-dev-toolkit@daemux-claude-plugins --scope $SCOPE 2>
 # }
 # "
 
+# Read new version
+NEW_VERSION=$(node -e "console.log(JSON.parse(require('fs').readFileSync('$MP/.claude-plugin/marketplace.json','utf8')).metadata.version)" 2>/dev/null || true)
+
 if [ "$SCOPE" = "user" ]; then
   install_claude_md ~/.claude/CLAUDE.md
+
+  echo "Configuring global statusLine..."
+  inject_status_line ~/.claude/settings.json
+
   echo ""
-  echo "Done! Plugin installed globally."
+  if [ -n "$OLD_VERSION" ] && [ "$OLD_VERSION" != "$NEW_VERSION" ]; then
+    echo "Done! Plugin updated globally: v${OLD_VERSION} → v${NEW_VERSION}"
+  elif [ -n "$OLD_VERSION" ]; then
+    echo "Done! Plugin reinstalled globally (v${NEW_VERSION})"
+  else
+    echo "Done! Plugin installed globally (v${NEW_VERSION})"
+  fi
   echo ""
   echo "Note: Global install skips project settings. Configure env vars manually if needed."
   exit 0
@@ -220,7 +300,16 @@ fs.writeFileSync('$SETTINGS', JSON.stringify(settings, null, 2) + '\n');
 console.log(added.length > 0 ? 'Added env vars: ' + added.join(', ') : 'All env vars already configured');
 "
 
+echo "Configuring project statusLine..."
+inject_status_line "$SETTINGS"
+
 echo ""
-echo "Done! Plugin installed successfully."
+if [ -n "$OLD_VERSION" ] && [ "$OLD_VERSION" != "$NEW_VERSION" ]; then
+  echo "Done! Plugin updated: v${OLD_VERSION} → v${NEW_VERSION}"
+elif [ -n "$OLD_VERSION" ]; then
+  echo "Done! Plugin reinstalled (v${NEW_VERSION})"
+else
+  echo "Done! Plugin installed (v${NEW_VERSION})"
+fi
 echo ""
 echo "The plugin is ready to use. Configure additional env vars in .claude/settings.json as needed."
