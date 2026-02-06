@@ -164,13 +164,6 @@ the codebase. NEVER declare COMPLETE while unimplemented requirements remain.
 When all requirements are implemented: delete the task file.
 Output: "Remaining: N requirements" or "All requirements implemented — task file deleted."
 
-## Team Mode (ALWAYS evaluate)
-Assess task scope first. ALWAYS include one of:
-- `TEAM_SUGGEST: [roles]` — if parallel review areas would benefit, then stop
-- `TEAM_SUGGEST: NONE` — if single reviewer is sufficient
-
-As teammate: claim tasks from shared list, coordinate via messages, own assigned review scope only.
-
 ## Fix-and-Verify
 
 If NOT COMPLETE → developer fixes → product-manager checks again (repeat until COMPLETE).

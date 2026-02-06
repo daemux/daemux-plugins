@@ -84,13 +84,6 @@ If a `.claude/.tasks/` file path is provided, read ONLY that file for requiremen
 Scan the codebase for already-implemented items. Pick 3-5 UNIMPLEMENTED
 related requirements. Design only those. Report: "Batch: N of ~M remaining."
 
-## Team Mode (ALWAYS evaluate)
-In blueprint output, ALWAYS include one of:
-- `TEAM_SUGGEST: [stage: roles]` — if a pipeline stage benefits from parallel teammates
-- `TEAM_SUGGEST: NONE` — if all work is sequential or touches shared files
-
-As teammate: claim tasks from shared list, coordinate via messages, own assigned scope only.
-
 ## Output Footer
 ```
 NEXT: product-manager(PRE) to validate approach before implementation
