@@ -19,8 +19,6 @@ Detect from prompt or auto-detect:
 - **backend** - Python/FastAPI, database, API endpoints
 - **frontend** - React, Vue, JS, HTML/CSS, UI components
 
-Use the **nano-banana** skill for images, icons, or visual assets.
-
 ## PROHIBITED (task fails if found)
 - Mock/placeholder code, comments instead of implementation
 - `pass`, empty functions, hardcoded test data
