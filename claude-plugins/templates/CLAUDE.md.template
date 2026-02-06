@@ -100,22 +100,17 @@ devops (standalone)
 3. Identify WHY it failed, not just WHAT failed
 4. Try a DIFFERENT approach if same fix failed twice
 
-**Persistence Wins:** Keep iterating until success — but within limits (see Loop Limits below).
+**Persistence Wins:** Keep iterating until success.
 
 ### Fix-and-Verify Loops
 
-**review-loop:** reviewer → PASS? → EXIT | ISSUES? → developer → reviewer (repeat, max 3 iterations)
+**review-loop:** reviewer → PASS? → EXIT | ISSUES? → developer → reviewer (repeat)
 
-**manager-loop:** product-manager → COMPLETE? → EXIT | ISSUES? → developer → product-manager (repeat, max 3 iterations)
+**manager-loop:** product-manager → COMPLETE? → EXIT | ISSUES? → developer → product-manager (repeat)
 
-**test-loop:** tester → PASS? → EXIT | FAIL? → developer → simplifier → reviewer → tester (repeat, max 3 iterations)
+**test-loop:** tester → PASS? → EXIT | FAIL? → developer → simplifier → reviewer → tester (repeat)
 
-### Loop Limits & Escalation
-
-- **Max 3 iterations** per fix-and-verify loop. After 3 failed attempts, STOP and ask the user for guidance.
-- **Agent failure vs task failure:** If an agent crashes or returns empty/ambiguous output, re-run it ONCE. If it fails again, ask the user. Do NOT treat agent crashes the same as test failures.
-- **Flaky tests:** If a test passes on re-run without code changes, note it as flaky and proceed. Do NOT enter fix loops for non-deterministic failures.
-- **Ambiguous agent output:** If an agent's output is unclear (no clear PASS/FAIL/COMPLETE), re-run the agent with explicit instructions to clarify. If still ambiguous after 1 retry, ask the user.
+If the same error persists unchanged after one full fix cycle, try a fundamentally different approach. If an agent crashes or returns empty output, re-run it once. If a test passes on re-run without code changes, note it as flaky and proceed.
 
 ### Gates & Prerequisites
 
@@ -144,20 +139,21 @@ Missing evidence means run that agent first. Do NOT proceed without it.
 **If you are a TEAMMATE, skip to "For Teammates" section below.**
 ---
 
-### Agent Teams (Evaluate for EVERY task)
+### Agent Teams (Evaluate per stage)
 
-**You MUST evaluate team suitability for every task and print your decision in the output format.**
+**You MUST evaluate team suitability for EACH workflow stage and print your decision in the output format.**
 
-**Use teams when ANY of these apply:**
-- Task has 3+ independent sub-tasks that can be worked on in parallel
-- Task spans multiple domains (e.g., backend + frontend + database)
-- An agent returns `TEAM_SUGGEST: [roles]` — this is a signal to create a team for that stage
-- Task has 5+ requirements
+Evaluate each stage independently — a task may use single agents for some stages and teams for others.
 
-**Use single agent when:**
-- Task is sequential by nature (each step depends on the previous)
-- Changes touch the same files (would cause conflicts)
-- Task is small scope (< 3 independent items)
+**Use team for a stage when:**
+- Multiple perspectives improve quality
+- Competing approaches find better solutions
+- Stage work splits into independent file groups
+
+**Use single agent for a stage when:**
+- Work touches the same files
+- Stage is a single focused operation
+- Adding perspectives adds no value
 
 **When creating a team:**
 
@@ -175,14 +171,12 @@ Spawn each teammate with detailed prompt including:
 ```
 
 **Guidelines:**
-- Use 2-10 teammates for maximum perspectives
+- Use 2-10 teammates per stage
 - Always specify Opus model for all teammates
 - Assign distinct, non-overlapping scopes to each teammate
 - Include full instructions in spawn prompts (don't reference external files)
 - One team at a time - dissolve before next stage
-
-**Handling TEAM_SUGGEST from agents:**
-When an agent outputs `TEAM_SUGGEST: [roles]`, create a team for that stage with the suggested roles before proceeding.
+- Assign 5-6 tasks per teammate
 
 ---
 ## FOR TEAMMATES ONLY
@@ -226,7 +220,7 @@ TASK TYPE: [backend/frontend/database/infra/standard]
 RECOMMENDED FLOW:
 <copy the EXACT flow from Agent Flows section - include ALL agents with [optional] ones>
 
-TEAMS: [YES - reason (e.g., "3 independent sub-tasks: X, Y, Z") | NO - reason (e.g., "sequential changes to same files")]
+TEAMS: [per-stage evaluation: which stages use teams and why, or NO if all stages use single agents]
 
 DEPLOYMENT: [AVAILABLE - deployment configured | NOT CONFIGURED - workflow ends at product-manager(POST)]
 
