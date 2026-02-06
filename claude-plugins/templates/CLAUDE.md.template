@@ -5,6 +5,7 @@
 ### Agent Delegation (NEVER violate)
 - ALWAYS delegate ALL tasks to agents - use either plugin agents or built-in agents (via Task tool)
 - NEVER perform any work directly - the main agent's role is ONLY to coordinate and delegate
+- This includes verification: if you need to confirm an agent's claims, delegate verification to another agent (e.g., tester) — do NOT run commands yourself
 - This applies to ALL task types: coding, research, exploration, file operations, testing, deployment, and any other work
 - If unsure which agent to use, use the Task tool with a general-purpose, explore or any other built-in agent
 
@@ -99,15 +100,22 @@ devops (standalone)
 3. Identify WHY it failed, not just WHAT failed
 4. Try a DIFFERENT approach if same fix failed twice
 
-**Persistence Wins:** Keep iterating until success.
+**Persistence Wins:** Keep iterating until success — but within limits (see Loop Limits below).
 
 ### Fix-and-Verify Loops
 
-**review-loop:** reviewer → PASS? → EXIT | ISSUES? → developer → reviewer (repeat)
+**review-loop:** reviewer → PASS? → EXIT | ISSUES? → developer → reviewer (repeat, max 3 iterations)
 
-**manager-loop:** product-manager → COMPLETE? → EXIT | ISSUES? → developer → product-manager (repeat)
+**manager-loop:** product-manager → COMPLETE? → EXIT | ISSUES? → developer → product-manager (repeat, max 3 iterations)
 
-**test-loop:** tester → PASS? → EXIT | FAIL? → developer → simplifier → reviewer → tester (repeat)
+**test-loop:** tester → PASS? → EXIT | FAIL? → developer → simplifier → reviewer → tester (repeat, max 3 iterations)
+
+### Loop Limits & Escalation
+
+- **Max 3 iterations** per fix-and-verify loop. After 3 failed attempts, STOP and ask the user for guidance.
+- **Agent failure vs task failure:** If an agent crashes or returns empty/ambiguous output, re-run it ONCE. If it fails again, ask the user. Do NOT treat agent crashes the same as test failures.
+- **Flaky tests:** If a test passes on re-run without code changes, note it as flaky and proceed. Do NOT enter fix loops for non-deterministic failures.
+- **Ambiguous agent output:** If an agent's output is unclear (no clear PASS/FAIL/COMPLETE), re-run the agent with explicit instructions to clarify. If still ambiguous after 1 retry, ask the user.
 
 ### Gates & Prerequisites
 
@@ -120,6 +128,8 @@ devops (standalone)
 - Deployment is optional when not configured
 
 Missing evidence means run that agent first. Do NOT proceed without it.
+
+**Verification rule:** Trust agent output at face value. If an agent reports PASS/COMPLETE, proceed to the next stage. Do NOT independently re-run tests or checks — that is the agent's job, not yours. If you doubt an agent's output, re-run that agent (not the commands yourself).
 
 ### Parallel Execution
 
@@ -134,11 +144,22 @@ Missing evidence means run that agent first. Do NOT proceed without it.
 **If you are a TEAMMATE, skip to "For Teammates" section below.**
 ---
 
-### Agent Teams (Use When Beneficial)
+### Agent Teams (Evaluate for EVERY task)
 
-**Evaluate each task:** Does it benefit from multiple perspectives, iteration, or parallel work?
+**You MUST evaluate team suitability for every task and print your decision in the output format.**
 
-**If YES, create team:**
+**Use teams when ANY of these apply:**
+- Task has 3+ independent sub-tasks that can be worked on in parallel
+- Task spans multiple domains (e.g., backend + frontend + database)
+- An agent returns `TEAM_SUGGEST: [roles]` — this is a signal to create a team for that stage
+- Task has 5+ requirements
+
+**Use single agent when:**
+- Task is sequential by nature (each step depends on the previous)
+- Changes touch the same files (would cause conflicts)
+- Task is small scope (< 3 independent items)
+
+**When creating a team:**
 
 ```
 Create agent team with [N] teammates, all using Opus model:
@@ -160,7 +181,8 @@ Spawn each teammate with detailed prompt including:
 - Include full instructions in spawn prompts (don't reference external files)
 - One team at a time - dissolve before next stage
 
-**Simple tasks:** Use single agent (no team).
+**Handling TEAM_SUGGEST from agents:**
+When an agent outputs `TEAM_SUGGEST: [roles]`, create a team for that stage with the suggested roles before proceeding.
 
 ---
 ## FOR TEAMMATES ONLY
@@ -203,6 +225,8 @@ TASK TYPE: [backend/frontend/database/infra/standard]
 
 RECOMMENDED FLOW:
 <copy the EXACT flow from Agent Flows section - include ALL agents with [optional] ones>
+
+TEAMS: [YES - reason (e.g., "3 independent sub-tasks: X, Y, Z") | NO - reason (e.g., "sequential changes to same files")]
 
 DEPLOYMENT: [AVAILABLE - deployment configured | NOT CONFIGURED - workflow ends at product-manager(POST)]
 
