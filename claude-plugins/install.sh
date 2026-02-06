@@ -101,6 +101,72 @@ if (settings.statusLine) {
 " -- "$settings_file" 2>/dev/null || true
 }
 
+# Inject required env vars into a settings.json file (non-destructive)
+inject_env_vars() {
+  local settings_file="$1"
+
+  if [ ! -f "$settings_file" ]; then
+    mkdir -p "$(dirname "$settings_file")"
+    echo '{}' > "$settings_file"
+  fi
+
+  node -e "
+const fs = require('fs');
+const filePath = process.argv[1];
+const settings = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+
+settings.env = settings.env || {};
+
+const defaults = {
+  'CLAUDE_CODE_ENABLE_TASKS': 'true',
+  'CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS': '1'
+};
+
+const added = [];
+for (const [key, value] of Object.entries(defaults)) {
+  if (!(key in settings.env)) {
+    settings.env[key] = value;
+    added.push(key);
+  }
+}
+
+if (added.length > 0) {
+  fs.writeFileSync(filePath, JSON.stringify(settings, null, 2) + '\n');
+  console.log('Added env vars: ' + added.join(', '));
+} else {
+  console.log('All env vars already configured');
+}
+" -- "$settings_file" \
+  || { echo "Warning: could not configure env vars (invalid settings.json?)"; }
+}
+
+# Remove plugin env vars from a settings.json file
+remove_env_vars() {
+  local settings_file="$1"
+
+  if [ ! -f "$settings_file" ]; then
+    return
+  fi
+
+  node -e "
+const fs = require('fs');
+const filePath = process.argv[1];
+const settings = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+
+if (settings.env) {
+  delete settings.env.CLAUDE_CODE_ENABLE_TASKS;
+  delete settings.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS;
+
+  if (Object.keys(settings.env).length === 0) {
+    delete settings.env;
+  }
+
+  fs.writeFileSync(filePath, JSON.stringify(settings, null, 2) + '\n');
+  console.log('Removed env vars');
+}
+" -- "$settings_file" 2>/dev/null || true
+}
+
 # Uninstall mode
 if [ "$ACTION" = "uninstall" ]; then
   echo "Uninstalling Daemux Claude Plugins (scope: $SCOPE)..."
@@ -130,6 +196,9 @@ fs.writeFileSync(filePath, JSON.stringify(data, null, 2) + '\n');
       rm -f ~/.claude/CLAUDE.md
     fi
 
+    echo "Cleaning global env vars..."
+    remove_env_vars ~/.claude/settings.json
+
     echo "Cleaning global statusLine..."
     remove_status_line ~/.claude/settings.json
 
@@ -142,28 +211,9 @@ fs.writeFileSync(filePath, JSON.stringify(data, null, 2) + '\n');
       rm -f .claude/CLAUDE.md
     fi
 
-    # Remove env vars from project settings
     SETTINGS=".claude/settings.json"
-    if [ -f "$SETTINGS" ]; then
-      echo "Cleaning project settings..."
-      node -e "
-const fs = require('fs');
-const filePath = process.argv[1];
-const settings = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-
-if (settings.env) {
-  delete settings.env.CLAUDE_CODE_ENABLE_TASKS;
-  delete settings.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS;
-
-  // Remove env object if empty
-  if (Object.keys(settings.env).length === 0) {
-    delete settings.env;
-  }
-}
-
-fs.writeFileSync(filePath, JSON.stringify(settings, null, 2) + '\n');
-" -- "$SETTINGS" 2>/dev/null || true
-    fi
+    echo "Cleaning project settings..."
+    remove_env_vars "$SETTINGS"
 
     echo "Cleaning project statusLine..."
     remove_status_line "$SETTINGS"
@@ -274,6 +324,9 @@ NEW_VERSION=$(node -e "
 if [ "$SCOPE" = "user" ]; then
   install_claude_md ~/.claude/CLAUDE.md
 
+  echo "Configuring global env vars..."
+  inject_env_vars ~/.claude/settings.json
+
   echo "Configuring global statusLine..."
   inject_status_line ~/.claude/settings.json
 
@@ -286,7 +339,7 @@ if [ "$SCOPE" = "user" ]; then
     echo "Done! Plugin installed globally (v${NEW_VERSION})"
   fi
   echo ""
-  echo "Note: Global install skips project settings."
+  echo "Note: Global install does not modify project-level settings."
   exit 0
 fi
 
@@ -295,35 +348,8 @@ mkdir -p .claude
 
 install_claude_md .claude/CLAUDE.md
 
-[ ! -f "$SETTINGS" ] && echo '{}' > "$SETTINGS"
-
 echo "Configuring project settings..."
-node -e "
-const fs = require('fs');
-const filePath = process.argv[1];
-const settings = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-
-settings.env = settings.env || {};
-
-const defaults = {
-  'CLAUDE_CODE_ENABLE_TASKS': 'true',
-  'CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS': '1'
-};
-
-const added = [];
-for (const [key, value] of Object.entries(defaults)) {
-  if (!(key in settings.env)) {
-    settings.env[key] = value;
-    added.push(key);
-  }
-}
-
-fs.writeFileSync(filePath, JSON.stringify(settings, null, 2) + '\n');
-const msg = added.length > 0
-  ? 'Added env vars: ' + added.join(', ')
-  : 'All env vars already configured';
-console.log(msg);
-" -- "$SETTINGS"
+inject_env_vars "$SETTINGS"
 
 echo "Configuring project statusLine..."
 inject_status_line "$SETTINGS"
