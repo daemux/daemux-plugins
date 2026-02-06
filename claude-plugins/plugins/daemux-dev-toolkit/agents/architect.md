@@ -80,7 +80,7 @@ Include in blueprint output:
 
 ## Large Task Batching
 
-If a `.tasks/` file path is provided, read ONLY that file for requirements.
+If a `.claude/.tasks/` file path is provided, read ONLY that file for requirements.
 Scan the codebase for already-implemented items. Pick 3-5 UNIMPLEMENTED
 related requirements. Design only those. Report: "Batch: N of ~M remaining."
 

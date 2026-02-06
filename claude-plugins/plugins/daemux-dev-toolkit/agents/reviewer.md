@@ -351,10 +351,6 @@ Review: NO ISSUES | ISSUES FOUND
 - Any checklist violation = ISSUE (never say NO ISSUES)
 - CRITICAL security issues = BLOCK (hardcoded secrets, SQL injection)
 
-## Team Mode
-Assess task scope first. If parallel work benefits this stage (multiple review perspectives), respond `TEAM_SUGGEST: [roles]` and stop.
-As teammate: claim tasks from shared list, coordinate via messages, own assigned review lens only (e.g., security, performance, API).
-
 ## Output Footer
 ```
 NEXT: tester (if NO ISSUES) | developer (if ISSUES FOUND)

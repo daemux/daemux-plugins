@@ -8,17 +8,17 @@
 - This applies to ALL task types: coding, research, exploration, file operations, testing, deployment, and any other work
 - If unsure which agent to use, use the Task tool with a general-purpose, explore or any other built-in agent
 
-### Deployer Agent Required
-ALL server operations MUST use the deployer agent (deploy, logs, status, health checks, migrations, remote commands).
-NEVER use Bash/SSH directly for deployment operations.
+### DevOps Agent Required
+ALL deployment and infrastructure operations SHOULD use the devops agent (deploy, logs, status, migrations, database/server optimization).
+Prefer using the devops agent over direct Bash/SSH for structured operations.
 
 ### Code Quality (enforced by agents)
 - No TODO/FIXME in committed code
 - No Mock/placeholder code
 - No hardcoded secrets
-- Decimal types for money (never float)
-- Timezone-aware dates
-- Parameterized queries only
+- Use appropriate data types for precision requirements
+- Sanitize and validate all external inputs
+- Follow language-specific security best practices
 
 ## Code Limits (MANDATORY)
 
@@ -35,37 +35,37 @@ NEVER use Bash/SSH directly for deployment operations.
 ### Task Type Detection
 
 Detect from user request:
-- **backend** - Python, FastAPI, API endpoints, database queries, server-side logic
-- **frontend** - React, Vue, JS, HTML/CSS, UI components, browser
-- **database** - Migrations, schema changes, SQL
-- **infra** - Server setup, deployment config, optimization
-- **standard** - Mixed or unclear
+- **backend** - Business logic, data processing, API endpoints, server code
+- **frontend** - User interface, visual components, client code
+- **database** - Data schema, migrations, data layer changes
+- **infra** - Infrastructure setup, deployment, server optimization
+- **standard** - Mixed or unclear scope
 
 ### Agent Flows
 
 #### Standard Flow
 ```
-architect → product-manager(PRE) → [docs-researcher] → developer → simplifier → reviewer → tester → product-manager(POST) → [deployer]
+architect → product-manager(PRE) → developer → simplifier → reviewer → tester → product-manager(POST) → [devops]
 ```
 
 #### Backend Flow
 ```
-architect → product-manager(PRE) → [docs-researcher] → [api-verifier(external,PRE)] → developer(backend) → simplifier → reviewer → [api-verifier(external,POST)] → tester(backend) → product-manager(POST) → [deployer]
+architect → product-manager(PRE) → developer(backend) → simplifier → reviewer → tester(backend) → product-manager(POST) → [devops]
 ```
 
 #### Frontend Flow
 ```
-architect → product-manager(PRE) → [docs-researcher] → [designer] → developer(frontend) → [designer(review)] → simplifier → api-verifier(contract) → api-verifier(integration) → reviewer → tester(frontend) → product-manager(POST) → [deployer]
+architect → product-manager(PRE) → [designer] → developer(frontend) → simplifier → reviewer → tester(frontend) → product-manager(POST) → [devops]
 ```
 
 #### Database Flow
 ```
-infra-ops(database,migrate) → simplifier → reviewer → product-manager(POST) → [deployer]
+devops(database,migrate) → simplifier → reviewer → product-manager(POST) → [devops(deploy)]
 ```
 
 #### Infra Flow
 ```
-infra-ops (standalone)
+devops (standalone)
 ```
 
 ### Agents Reference
@@ -74,25 +74,22 @@ infra-ops (standalone)
 |-------|-------------|
 | architect | BEFORE developer - designs architecture |
 | product-manager | PRE-DEV: validates approach. POST-DEV: after tests |
-| docs-researcher | Before developer for external libraries |
-| api-verifier | API verification (mode: external/contract/integration) |
-| developer | Code implementation (type: backend/frontend) |
+| developer | Code implementation (auto-detects context) |
 | simplifier | AFTER developer - simplifies code |
 | reviewer | After ANY code changes |
-| tester | After review passes (type: backend/frontend) |
-| infra-ops | Infrastructure ops (target: database/server, action: migrate/optimize) |
-| deployer | Deploy to production, view logs, check status |
+| tester | After review passes (auto-detects context) |
+| devops | DevOps operations (mode: deploy/database+migrate/database+optimize/server+migrate/server+optimize) |
 | designer | UI/UX design specs before frontend development |
-| designer(review) | After developer: design review + generate icons via nano-banana if needed |
+| designer(review) | After developer: design review + generate assets via MCP tools if needed |
 | Explore (Task tool) | Read/understand code |
 
 ### Optional Agents
 
 | Agent | When to Skip |
 |-------|--------------|
-| [deployer] | DEPLOY_SERVER_IP not configured (workflow ends at product-manager(POST)) |
+| [devops] | No deployment configured (workflow ends at product-manager(POST)) |
 | [designer] | Minor fixes, bug fixes, or non-visual changes |
-| [designer(review)] | Only use if [designer] was used (reviews implementation, generates images via nano-banana) |
+| [designer(review)] | Only use if [designer] was used (reviews implementation, generates assets via MCP tools) |
 
 ### Autonomous Iteration Philosophy
 
@@ -117,11 +114,10 @@ infra-ops (standalone)
 **Before product-manager (POST-DEV):**
 - `TESTS: PASSED` from tester
 - `Review: NO ISSUES` from reviewer
-- `Integration: PASSED` from api-verifier (frontend only)
 
-**Before deployer:**
+**Before devops:**
 - `APPROVED` or `COMPLETE` from product-manager
-- Deployment is optional when DEPLOY_SERVER_IP is not configured
+- Deployment is optional when not configured
 
 Missing evidence means run that agent first. Do NOT proceed without it.
 
@@ -133,46 +129,68 @@ Missing evidence means run that agent first. Do NOT proceed without it.
 
 **Sequential ONLY:** Same-file changes, simplifier → reviewer, review-fix cycles, deployer after tests
 
-### Agent Teams (Complex Tasks)
+---
+## FOR ORCHESTRATORS ONLY
+**If you are a TEAMMATE, skip to "For Teammates" section below.**
+---
 
-Use agent teams when a pipeline stage benefits from parallel work:
+### Agent Teams (Use When Beneficial)
 
-**Create team when:** 3+ modules/features in scope, multiple perspectives needed at same stage, frontend + backend can proceed independently, multi-source research phase.
+**Evaluate each task:** Does it benefit from multiple perspectives, iteration, or parallel work?
 
-**Stay with subagents when:** simple fix, single file, fully sequential, small scope.
+**If YES, create team:**
 
-**Rules:**
-1. Decide team-eligible stages before starting the flow
-2. Spawn only agents this task needs — not all agents
-3. Create shared tasks with dependencies matching the pipeline
-4. Each teammate owns separate files — no overlapping assignments
-5. Dissolve team after stage completes, continue pipeline
-6. Always pass current flow stage, remaining stages, and task summary when delegating
-7. If an agent responds with `TEAM_SUGGEST: [roles]`, create an agent team for that stage with the suggested roles
-8. One team at a time — clean up current team before creating next one
+```
+Create agent team with [N] teammates, all using Opus model:
+- [role-1]: [Specific responsibility and task details]
+- [role-2]: [Specific responsibility and task details]
+- [role-3]: [Specific responsibility and task details]
+...
 
-**Team-eligible stages:**
-- **Research:** architect + docs-researcher + [designer] in parallel
-- **Implementation:** developer teammates split by module/feature
-- **Review:** reviewer per perspective + [api-verifier] in parallel
+Spawn each teammate with detailed prompt including:
+- Their specific role and responsibilities
+- The task details
+- How to coordinate with other teammates
+```
 
-### Known Patterns
+**Guidelines:**
+- Use 2-10 teammates for maximum perspectives
+- Always specify Opus model for all teammates
+- Assign distinct, non-overlapping scopes to each teammate
+- Include full instructions in spawn prompts (don't reference external files)
+- One team at a time - dissolve before next stage
 
-**Localization:** Each language MUST be handled by a separate agent in parallel.
+**Simple tasks:** Use single agent (no team).
+
+---
+## FOR TEAMMATES ONLY
+**If you are the ORCHESTRATOR, skip this section.**
+---
+
+### Teammate Instructions
+
+**Ignore orchestration workflows above.**
+
+1. Your spawn prompt contains your full instructions
+2. Message teammates directly to coordinate
+3. Focus only on your assigned scope
+4. Complete your work, let team dissolve
+
+---
 
 ### Large Task Protocol
 
 For tasks with 5+ requirements:
 
-1. **Save requirements** to `.tasks/{short-topic}.md` before starting any agent
-2. **Each session:** pass the exact file path (e.g., `.tasks/auth-system.md`) to architect and product-manager
+1. **Save requirements** to `.claude/.tasks/{short-topic}.md` before starting any agent (create `.claude/.tasks/` directory if it doesn't exist)
+2. **Each session:** pass the exact file path (e.g., `.claude/.tasks/auth-system.md`) to architect and product-manager
 3. **After each batch:** `/clear` and continue — tell user which task file to reference
 4. **Done when:** product-manager confirms zero remaining and deletes the task file
 
 Rules:
-- ALWAYS pass the exact `.tasks/` file path when calling architect and product-manager agents
+- ALWAYS pass the exact `.claude/.tasks/` file path when calling architect and product-manager agents
 - Architect and product-manager will read ONLY the specified file — never guess the filename
-- Add `.tasks/` to `.gitignore`
+- Add `.claude/.tasks/` to `.gitignore`
 
 ### Output Format and Continuation
 
@@ -186,7 +204,7 @@ TASK TYPE: [backend/frontend/database/infra/standard]
 RECOMMENDED FLOW:
 <copy the EXACT flow from Agent Flows section - include ALL agents with [optional] ones>
 
-DEPLOYMENT: [AVAILABLE - DEPLOY_SERVER_IP configured | NOT CONFIGURED - workflow ends at product-manager(POST)]
+DEPLOYMENT: [AVAILABLE - deployment configured | NOT CONFIGURED - workflow ends at product-manager(POST)]
 
 TASK TRACKING: ALWAYS use TaskCreate/TaskUpdate/TaskList tools for multi-step tasks (3+ steps)
 
@@ -198,11 +216,11 @@ LAUNCHING: [first-agent-name]
 
 **Expected RECOMMENDED FLOW outputs (copy exactly):**
 
-- **backend**: `architect → product-manager(PRE) → [docs-researcher] → [api-verifier(external,PRE)] → developer(backend) → simplifier → reviewer → [api-verifier(external,POST)] → tester(backend) → product-manager(POST) → [deployer]`
-- **frontend**: `architect → product-manager(PRE) → [docs-researcher] → [designer] → developer(frontend) → [designer(review)] → simplifier → api-verifier(contract) → api-verifier(integration) → reviewer → tester(frontend) → product-manager(POST) → [deployer]`
-- **database**: `infra-ops(database,migrate) → simplifier → reviewer → product-manager(POST) → [deployer]`
-- **infra**: `infra-ops (standalone)`
-- **standard**: `architect → product-manager(PRE) → [docs-researcher] → developer → simplifier → reviewer → tester → product-manager(POST) → [deployer]`
+- **backend**: `architect → product-manager(PRE) → developer(backend) → simplifier → reviewer → tester(backend) → product-manager(POST) → [devops]`
+- **frontend**: `architect → product-manager(PRE) → [designer] → developer(frontend) → simplifier → reviewer → tester(frontend) → product-manager(POST) → [devops]`
+- **database**: `devops(database,migrate) → simplifier → reviewer → product-manager(POST) → [devops(deploy)]`
+- **infra**: `devops (standalone)`
+- **standard**: `architect → product-manager(PRE) → developer → simplifier → reviewer → tester → product-manager(POST) → [devops]`
 
 **MANDATORY: After outputting the workflow analysis above, you MUST:**
 1. **Create tasks** using TaskCreate for each major step in the workflow (if 3+ steps)
