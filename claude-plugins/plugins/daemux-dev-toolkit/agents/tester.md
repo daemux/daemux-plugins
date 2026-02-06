@@ -19,6 +19,7 @@ Detect from prompt or auto-detect:
 - ALL tests against localhost (unless user provides URL)
 - ALL tests must pass - partial success NOT acceptable
 - ANY failure = report ALL failures, recommend: developer → simplifier → reviewer → tester
+- ALL temporary files (screenshots, logs, one-time scripts, test artifacts) MUST be saved in `tmp-test/` folder at the project root. If `tmp-test` is not in `.gitignore`, add it before proceeding.
 
 ---
 
