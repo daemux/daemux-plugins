@@ -1,15 +1,20 @@
 #!/bin/bash
-# Daemux Claude Plugins - Install/Update Script
-# Run from any project directory to install or update the plugin
+# Daemux Claude Plugins - Install/Update/Uninstall Script
+# Run from any project directory to install, update, or uninstall the plugin
 
 set -e
 
 # Parse arguments
 SCOPE="project"
+ACTION="install"
 while [[ $# -gt 0 ]]; do
   case $1 in
     -g|--global)
       SCOPE="user"
+      shift
+      ;;
+    -u|--uninstall)
+      ACTION="uninstall"
       shift
       ;;
     *)
@@ -18,13 +23,97 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# Common paths
+MP=~/.claude/plugins/marketplaces/daemux-claude-plugins
+KNOWN_MP=~/.claude/plugins/known_marketplaces.json
+
+# Install CLAUDE.md template
+install_claude_md() {
+  local target_path=$1
+  local template_source="$MP/templates/CLAUDE.md.template"
+
+  if [ -f "$template_source" ]; then
+    echo "Installing CLAUDE.md..."
+    mkdir -p "$(dirname "$target_path")"
+    cp "$template_source" "$target_path"
+  fi
+}
+
+# Uninstall mode
+if [ "$ACTION" = "uninstall" ]; then
+  echo "Uninstalling Daemux Claude Plugins (scope: $SCOPE)..."
+
+  # Uninstall the plugin
+  claude plugin uninstall daemux-dev-toolkit@daemux-claude-plugins --scope $SCOPE 2>/dev/null || true
+
+  if [ "$SCOPE" = "user" ]; then
+    # Global uninstall - remove marketplace and global CLAUDE.md
+    echo "Removing marketplace..."
+    rm -rf "$MP"
+    rm -rf ~/.claude/plugins/cache/daemux-claude-plugins
+
+    echo "Removing marketplace registration..."
+    if [ -f "$KNOWN_MP" ]; then
+      node -e "
+const fs = require('fs');
+const data = JSON.parse(fs.readFileSync('$KNOWN_MP', 'utf8'));
+delete data['daemux-claude-plugins'];
+fs.writeFileSync('$KNOWN_MP', JSON.stringify(data, null, 2) + '\n');
+" 2>/dev/null || true
+    fi
+
+    if [ -f ~/.claude/CLAUDE.md ]; then
+      echo "Removing global CLAUDE.md..."
+      rm -f ~/.claude/CLAUDE.md
+    fi
+
+    echo ""
+    echo "Done! Plugin uninstalled globally."
+  else
+    # Project uninstall - only remove project settings
+    if [ -f .claude/CLAUDE.md ]; then
+      echo "Removing project CLAUDE.md..."
+      rm -f .claude/CLAUDE.md
+    fi
+
+    # Remove env vars from project settings
+    SETTINGS=".claude/settings.json"
+    if [ -f "$SETTINGS" ]; then
+      echo "Cleaning project settings..."
+      node -e "
+const fs = require('fs');
+const settings = JSON.parse(fs.readFileSync('$SETTINGS', 'utf8'));
+
+if (settings.env) {
+  delete settings.env.CLAUDE_CODE_ENABLE_TASKS;
+  delete settings.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS;
+
+  // Remove env object if empty
+  if (Object.keys(settings.env).length === 0) {
+    delete settings.env;
+  }
+}
+
+fs.writeFileSync('$SETTINGS', JSON.stringify(settings, null, 2) + '\n');
+" 2>/dev/null || true
+    fi
+
+    echo ""
+    echo "Done! Plugin uninstalled from this project."
+    echo ""
+    echo "Note: Marketplace files remain in $MP"
+    echo "Run with --global --uninstall to remove marketplace completely."
+  fi
+
+  exit 0
+fi
+
+# Install/Update mode
 if ! command -v claude &> /dev/null; then
   echo "Claude CLI not found. Installing..."
   curl -fsSL https://claude.ai/install.sh | bash
   echo ""
 fi
-
-MP=~/.claude/plugins/marketplaces/daemux-claude-plugins
 
 echo "Installing/updating Daemux Claude Plugins..."
 
@@ -38,20 +127,12 @@ mkdir -p "$MP"
 cp -a "$TEMP_DIR/claude-plugins/." "$MP/"
 rm -rf "$TEMP_DIR"
 
-rm -rf ~/.claude/plugins/marketplaces/gowalk-plugins 2>/dev/null || true
-rm -rf ~/.claude/plugins/marketplaces/gowalk-public-gowalk-claude-plugins 2>/dev/null || true
 rm -rf ~/.claude/plugins/marketplaces/daemux-daemux-plugins 2>/dev/null || true
 
 echo "Clearing plugin cache..."
-rm -rf ~/.claude/plugins/cache/gowalk-plugins 2>/dev/null || true
 rm -rf ~/.claude/plugins/cache/daemux-claude-plugins 2>/dev/null || true
 
-echo "Installing MCP dependencies..."
-npm install --prefix "$MP/plugins/daemux-dev-toolkit/mcp-servers/deploy" --production --silent 2>/dev/null
-npm install --prefix "$MP/plugins/daemux-dev-toolkit/mcp-servers/tailwindcss" --production --silent 2>/dev/null
-
 echo "Updating marketplace registration..."
-KNOWN_MP=~/.claude/plugins/known_marketplaces.json
 [ ! -f "$KNOWN_MP" ] && echo '{}' > "$KNOWN_MP"
 node -e "
 const fs = require('fs');
@@ -100,12 +181,7 @@ claude plugin install daemux-dev-toolkit@daemux-claude-plugins --scope $SCOPE 2>
 # "
 
 if [ "$SCOPE" = "user" ]; then
-  TEMPLATE_SOURCE="$MP/templates/CLAUDE.md.template"
-  mkdir -p ~/.claude
-  if [ -f "$TEMPLATE_SOURCE" ]; then
-    echo "Installing CLAUDE.md..."
-    cp "$TEMPLATE_SOURCE" ~/.claude/CLAUDE.md
-  fi
+  install_claude_md ~/.claude/CLAUDE.md
   echo ""
   echo "Done! Plugin installed globally."
   echo ""
@@ -116,11 +192,7 @@ fi
 SETTINGS=".claude/settings.json"
 mkdir -p .claude
 
-TEMPLATE_SOURCE="$MP/templates/CLAUDE.md.template"
-if [ -f "$TEMPLATE_SOURCE" ]; then
-  echo "Installing CLAUDE.md..."
-  cp "$TEMPLATE_SOURCE" ".claude/CLAUDE.md"
-fi
+install_claude_md .claude/CLAUDE.md
 
 [ ! -f "$SETTINGS" ] && echo '{}' > "$SETTINGS"
 
@@ -133,22 +205,7 @@ settings.env = settings.env || {};
 
 const defaults = {
   'CLAUDE_CODE_ENABLE_TASKS': 'true',
-  'CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS': '1',
-  'GEMINI_API_KEY': '',
-  'NANOBANANA_MODEL': 'gemini-3-pro-image-preview',
-  'DEPLOY_SERVER_USER': '',
-  'DEPLOY_SERVER_IP': '',
-  'DEPLOY_SERVER_PORT': '22',
-  'DEPLOY_PROJECT_NAME': '',
-  'DEPLOY_REMOTE_PATH': '',
-  'DEPLOY_SERVICES': '',
-  'DEPLOY_AUTH_METHOD': 'key',
-  'DEPLOY_SSH_KEY_PATH': '',
-  'DEPLOY_DB_HOST': '',
-  'DEPLOY_DB_PORT': '5432',
-  'DEPLOY_DB_NAME': '',
-  'DEPLOY_DB_USER': '',
-  'DEPLOY_DB_PASSWORD': ''
+  'CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS': '1'
 };
 
 const added = [];
@@ -166,6 +223,4 @@ console.log(added.length > 0 ? 'Added env vars: ' + added.join(', ') : 'All env 
 echo ""
 echo "Done! Plugin installed successfully."
 echo ""
-echo "Next steps:"
-echo "  1. Edit .claude/settings.json to configure your deploy server settings"
-echo "  2. Set GEMINI_API_KEY if using nano-banana image generation"
+echo "The plugin is ready to use. Configure additional env vars in .claude/settings.json as needed."

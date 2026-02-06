@@ -159,7 +159,7 @@ Simplicity is a feature:
 
 ## Large Task Completion Check
 
-If a `.tasks/` file path is provided, read it and compare all requirements against
+If a `.claude/.tasks/` file path is provided, read it and compare all requirements against
 the codebase. NEVER declare COMPLETE while unimplemented requirements remain.
 When all requirements are implemented: delete the task file.
 Output: "Remaining: N requirements" or "All requirements implemented — task file deleted."

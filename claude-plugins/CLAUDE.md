@@ -17,22 +17,11 @@ Use semantic versioning: `MAJOR.MINOR.PATCH` (e.g., `1.0.0` → `1.0.1` for fixe
 
 ## Plugin Structure
 
-```
-daemux-plugins/claude-plugins/
-├── .claude-plugin/
-│   └── marketplace.json      # Marketplace manifest (required)
-├── plugins/
-│   └── daemux-dev-toolkit/
-│       ├── .claude-plugin/
-│       │   └── plugin.json   # Plugin manifest (required)
-│       ├── agents/           # Agent definitions (.md files)
-│       ├── skills/           # Skills with SKILL.md
-│       └── hooks/            # hooks.json for event handling
-├── CLAUDE.md                 # This file
-└── README.md                 # User documentation
-```
+Agents are defined in `plugins/daemux-dev-toolkit/agents/` as markdown files with YAML frontmatter.
 
-**Important:** Don't put `agents/`, `skills/`, or `hooks/` inside `.claude-plugin/`. Only manifests go there.
+**Required manifests:**
+- `.claude-plugin/marketplace.json` - Marketplace metadata and plugin list
+- `plugins/daemux-dev-toolkit/.claude-plugin/plugin.json` - Plugin metadata
 
 ## Agent Definition Format
 
@@ -64,21 +53,9 @@ claude plugin validate ./plugins/daemux-dev-toolkit
 
 ## Publishing Updates
 
-1. Make your changes to agents/skills/hooks
+1. Make your changes to agents
 2. Bump version in both manifest files
 3. Commit and push to GitHub
-
-## File References in Hooks
-
-Use `${CLAUDE_PLUGIN_ROOT}` for paths within the plugin:
-
-```json
-{
-  "command": "${CLAUDE_PLUGIN_ROOT}/scripts/format.sh"
-}
-```
-
-Plugins are copied to cache, so relative paths outside the plugin won't work.
 
 ## Marketplace Configuration
 
@@ -107,7 +84,6 @@ The `extraKnownMarketplaces` in project `.claude/settings.json` auto-prompts tea
 | Update doesn't apply | Version not bumped | Increment version in both manifests |
 | Agent shows `inherit` model | YAML parsing failed | Quote the description field |
 | "Not installed at scope" | Missing from installed_plugins.json | Reinstall or add entry manually |
-| Hooks not running | Wrong directory structure | Ensure hooks.json is in `hooks/` folder |
 
 ##  Verify changes are GENERAL
    - No project-specific paths, filenames, or references
