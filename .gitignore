@@ -9,3 +9,4 @@ npm-debug.log*
 .env.local
 .env.*.local
 idea.md
+tmp-test/

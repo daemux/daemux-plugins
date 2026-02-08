@@ -6,7 +6,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type {
   MessageParam,
-  ContentBlock,
   ContentBlockParam,
   ToolUseBlockParam,
   ToolResultBlockParam,
@@ -18,6 +17,7 @@ import {
   buildClientOptions,
   buildOAuthSystemPromptAddition,
   validateCredentialFormat,
+  CLAUDE_CODE_SYSTEM_PREFIX,
   type AuthCredentials,
 } from './auth';
 import {
@@ -53,7 +53,13 @@ export interface LLMCredentials {
 export interface ToolDefinition {
   name: string;
   description: string;
-  input_schema: {
+  /** The Anthropic API expects snake_case, but daemux core uses camelCase */
+  input_schema?: {
+    type: 'object';
+    properties?: Record<string, unknown>;
+    required?: string[];
+  };
+  inputSchema?: {
     type: 'object';
     properties?: Record<string, unknown>;
     required?: string[];
@@ -166,11 +172,20 @@ export class AnthropicProvider implements LLMProvider {
       const clientOptions = buildClientOptions(authCreds);
       const testClient = new Anthropic(clientOptions);
 
-      await testClient.messages.create({
-        model: 'claude-3-haiku-20240307',
-        max_tokens: 1,
-        messages: [{ role: 'user', content: 'hi' }],
-      });
+      if (authCreds.type === 'token') {
+        await testClient.messages.create({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1,
+          system: [{ type: 'text', text: CLAUDE_CODE_SYSTEM_PREFIX }],
+          messages: [{ role: 'user', content: 'hi' }],
+        } as any);
+      } else {
+        await testClient.messages.create({
+          model: 'claude-3-haiku-20240307',
+          max_tokens: 1,
+          messages: [{ role: 'user', content: 'hi' }],
+        });
+      }
 
       return { valid: true };
     } catch (err) {
@@ -212,7 +227,9 @@ export class AnthropicProvider implements LLMProvider {
   }
 
   /**
-   * Streaming chat completion
+   * Streaming chat completion.
+   * OAuth betas are set via default headers during client construction,
+   * so both token and API key paths use `client.messages.stream`.
    */
   async *chat(options: LLMChatOptions): AsyncGenerator<LLMChatChunk> {
     if (!this.client || !this.credentials) {
@@ -223,14 +240,23 @@ export class AnthropicProvider implements LLMProvider {
     const messages = this.convertMessages(options.messages);
     const tools = options.tools ? this.convertTools(options.tools) : undefined;
 
-    const stream = this.client.messages.stream({
+    const baseParams = {
       model: options.model,
       max_tokens: options.maxTokens ?? 8192,
       system: systemPrompt,
       messages,
-      tools,
-    });
+      ...(tools ? { tools } : {}),
+    };
 
+    const stream = this.client.messages.stream(baseParams as any);
+
+    yield* this.processStream(stream);
+  }
+
+  /**
+   * Process a streaming response into LLMChatChunk events
+   */
+  private async *processStream(stream: any): AsyncGenerator<LLMChatChunk> {
     let currentToolUse: {
       id: string;
       name: string;
@@ -250,10 +276,7 @@ export class AnthropicProvider implements LLMProvider {
       } else if (event.type === 'content_block_delta') {
         const delta = event.delta;
         if (delta.type === 'text_delta') {
-          yield {
-            type: 'text',
-            content: delta.text,
-          };
+          yield { type: 'text', content: delta.text };
         } else if (delta.type === 'input_json_delta' && currentToolUse) {
           currentToolUse.inputJson += delta.partial_json;
         }
@@ -273,8 +296,6 @@ export class AnthropicProvider implements LLMProvider {
           };
           currentToolUse = null;
         }
-      } else if (event.type === 'message_stop') {
-        // Final message with usage
       }
     }
 
@@ -290,7 +311,8 @@ export class AnthropicProvider implements LLMProvider {
   }
 
   /**
-   * Non-streaming chat for compaction/summarization
+   * Non-streaming chat for compaction/summarization.
+   * OAuth betas are set via default headers, so both paths use `client.messages.create`.
    */
   async compactionChat(options: LLMChatOptions): Promise<LLMChatResponse> {
     if (!this.client || !this.credentials) {
@@ -301,15 +323,17 @@ export class AnthropicProvider implements LLMProvider {
     const systemPrompt = this.buildSystemPrompt(options.systemPrompt);
     const messages = this.convertMessages(options.messages);
 
-    const response = await this.client.messages.create({
+    const baseParams = {
       model,
       max_tokens: options.maxTokens ?? 4096,
       system: systemPrompt,
       messages,
-    });
+    };
+
+    const response = await this.client.messages.create(baseParams as any);
 
     return {
-      content: response.content.map((block: ContentBlock) => {
+      content: (response as any).content.map((block: any) => {
         if (block.type === 'text') return { type: 'text' as const, text: block.text };
         if (block.type === 'tool_use') {
           return {
@@ -321,10 +345,10 @@ export class AnthropicProvider implements LLMProvider {
         }
         return { type: 'text' as const, text: '' };
       }),
-      stopReason: this.mapStopReason(response.stop_reason),
+      stopReason: this.mapStopReason((response as any).stop_reason),
       usage: {
-        inputTokens: response.usage.input_tokens,
-        outputTokens: response.usage.output_tokens,
+        inputTokens: (response as any).usage.input_tokens,
+        outputTokens: (response as any).usage.output_tokens,
       },
     };
   }
@@ -339,12 +363,23 @@ export class AnthropicProvider implements LLMProvider {
   }
 
   /**
-   * Build system prompt with OAuth identity if needed
+   * Build system prompt.
+   * For OAuth tokens: returns array format with Claude Code identity prefix
+   * as the first element (required by the API), followed by the actual prompt.
+   * For API keys: returns the prompt as a plain string.
    */
-  private buildSystemPrompt(basePrompt?: string): string {
+  private buildSystemPrompt(basePrompt?: string): string | Array<{ type: 'text'; text: string }> {
     const base = basePrompt ?? 'You are a helpful AI assistant.';
-    const oauthAddition = buildOAuthSystemPromptAddition(this.credentials?.type === 'token');
-    return base + oauthAddition;
+
+    if (this.credentials?.type === 'token') {
+      const oauthHint = buildOAuthSystemPromptAddition();
+      return [
+        { type: 'text' as const, text: CLAUDE_CODE_SYSTEM_PREFIX },
+        { type: 'text' as const, text: `${oauthHint}\n\n${base}` },
+      ];
+    }
+
+    return base;
   }
 
   /**
@@ -400,14 +435,18 @@ export class AnthropicProvider implements LLMProvider {
   }
 
   /**
-   * Convert tools to Anthropic format
+   * Convert tools to Anthropic API format.
+   * Handles both snake_case (input_schema) and camelCase (inputSchema) from core.
    */
-  private convertTools(tools: ToolDefinition[]): Anthropic.Tool[] {
-    return tools.map(tool => ({
-      name: tool.name,
-      description: tool.description,
-      input_schema: tool.input_schema as Anthropic.Tool.InputSchema,
-    }));
+  private convertTools(tools: ToolDefinition[]): any[] {
+    return tools.map(tool => {
+      const schema = tool.input_schema ?? tool.inputSchema ?? { type: 'object', properties: {} };
+      return {
+        name: tool.name,
+        description: tool.description,
+        input_schema: schema,
+      };
+    });
   }
 
   /**
