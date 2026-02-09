@@ -13,102 +13,27 @@ import type {
   ImageBlockParam,
 } from '@anthropic-ai/sdk/resources/messages';
 
+import type {
+  LLMProvider,
+  LLMProviderCapabilities,
+  LLMModel,
+  LLMCredentials,
+  LLMChatOptions,
+  LLMChatChunk,
+  LLMChatResponse,
+  ToolDefinition,
+} from '@daemux/plugin-sdk';
 import {
   buildClientOptions,
   buildOAuthSystemPromptAddition,
   validateCredentialFormat,
   CLAUDE_CODE_SYSTEM_PREFIX,
-  type AuthCredentials,
 } from './auth';
 import {
   CLAUDE_MODELS,
   DEFAULT_MODEL,
   COMPACTION_MODEL,
-  type ClaudeModel,
 } from './models';
-
-/**
- * LLM Provider interface types (from daemux core)
- * These match the plugin-api-types.ts definitions
- */
-export interface LLMProviderCapabilities {
-  streaming: boolean;
-  toolUse: boolean;
-  vision: boolean;
-  maxContextWindow: number;
-}
-
-export interface LLMModel {
-  id: string;
-  name: string;
-  contextWindow: number;
-  maxOutputTokens: number;
-}
-
-export interface LLMCredentials {
-  type: 'token' | 'api_key';
-  value: string;
-}
-
-export interface ToolDefinition {
-  name: string;
-  description: string;
-  /** The Anthropic API expects snake_case, but daemux core uses camelCase */
-  input_schema?: {
-    type: 'object';
-    properties?: Record<string, unknown>;
-    required?: string[];
-  };
-  inputSchema?: {
-    type: 'object';
-    properties?: Record<string, unknown>;
-    required?: string[];
-  };
-}
-
-export interface LLMChatOptions {
-  model: string;
-  messages: Array<{ role: string; content: string | unknown[] }>;
-  tools?: ToolDefinition[];
-  maxTokens?: number;
-  systemPrompt?: string;
-}
-
-export interface LLMChatChunk {
-  type: 'text' | 'tool_use' | 'done';
-  content?: string;
-  toolUseId?: string;
-  toolName?: string;
-  toolInput?: Record<string, unknown>;
-  stopReason?: 'end_turn' | 'tool_use' | 'max_tokens';
-  usage?: { inputTokens: number; outputTokens: number };
-}
-
-export interface LLMChatResponse {
-  content: Array<{
-    type: 'text' | 'tool_use';
-    text?: string;
-    id?: string;
-    name?: string;
-    input?: Record<string, unknown>;
-  }>;
-  stopReason: 'end_turn' | 'tool_use' | 'max_tokens' | null;
-  usage: { inputTokens: number; outputTokens: number };
-}
-
-export interface LLMProvider {
-  id: string;
-  name: string;
-  capabilities: LLMProviderCapabilities;
-  initialize(credentials: LLMCredentials): Promise<void>;
-  isReady(): boolean;
-  verifyCredentials(credentials: LLMCredentials): Promise<{ valid: boolean; error?: string }>;
-  listModels(): LLMModel[];
-  getDefaultModel(): string;
-  chat(options: LLMChatOptions): AsyncGenerator<LLMChatChunk>;
-  compactionChat(options: LLMChatOptions): Promise<LLMChatResponse>;
-  shutdown(): Promise<void>;
-}
 
 /**
  * Anthropic Provider Implementation
@@ -124,26 +49,20 @@ export class AnthropicProvider implements LLMProvider {
   };
 
   private client: Anthropic | null = null;
-  private credentials: AuthCredentials | null = null;
+  private credentials: LLMCredentials | null = null;
   private ready = false;
 
   /**
    * Initialize the provider with credentials
    */
   async initialize(credentials: LLMCredentials): Promise<void> {
-    const authCreds: AuthCredentials = {
-      type: credentials.type,
-      value: credentials.value,
-    };
-
-    const formatResult = validateCredentialFormat(authCreds);
+    const formatResult = validateCredentialFormat(credentials);
     if (!formatResult.valid) {
       throw new Error(`Invalid credentials: ${formatResult.error}`);
     }
 
-    const clientOptions = buildClientOptions(authCreds);
-    this.client = new Anthropic(clientOptions);
-    this.credentials = authCreds;
+    this.client = new Anthropic(buildClientOptions(credentials));
+    this.credentials = credentials;
     this.ready = true;
   }
 
@@ -158,21 +77,15 @@ export class AnthropicProvider implements LLMProvider {
    * Verify credentials are valid by making a test API call
    */
   async verifyCredentials(credentials: LLMCredentials): Promise<{ valid: boolean; error?: string }> {
-    const authCreds: AuthCredentials = {
-      type: credentials.type,
-      value: credentials.value,
-    };
-
-    const formatResult = validateCredentialFormat(authCreds);
+    const formatResult = validateCredentialFormat(credentials);
     if (!formatResult.valid) {
       return formatResult;
     }
 
     try {
-      const clientOptions = buildClientOptions(authCreds);
-      const testClient = new Anthropic(clientOptions);
+      const testClient = new Anthropic(buildClientOptions(credentials));
 
-      if (authCreds.type === 'token') {
+      if (credentials.type === 'token') {
         await testClient.messages.create({
           model: 'claude-sonnet-4-20250514',
           max_tokens: 1,

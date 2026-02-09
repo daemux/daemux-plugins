@@ -1,0 +1,10 @@
+{
+  "name": "daemux-plugins",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "channels/*",
+    "llm-providers/*",
+    "features/*"
+  ]
+}

@@ -14,7 +14,15 @@ import type { PollerLogger } from './poller';
 import { markdownToTelegramHtml, chunkText, escapeHtml } from './format';
 import { convertTelegramMessage, isUserAllowed } from './channel-convert';
 import type { TelegramChannelConfig, TelegramUpdate, ChannelMessageType } from './types';
-import type { RichChannelMessage, ChannelSendOptions, EventHandlers, ChannelEventType } from './channel-types';
+import type { RichChannelMessage, ChannelSendOptions, ChannelEventType } from '@daemux/plugin-sdk';
+
+/** Internal event handler storage (arrays of handlers per event type) */
+type EventHandlers = {
+  connected: Array<() => void | Promise<void>>;
+  disconnected: Array<(reason?: string) => void | Promise<void>>;
+  error: Array<(error: Error) => void | Promise<void>>;
+  message: Array<(message: RichChannelMessage) => void | Promise<void>>;
+};
 
 const DEFAULT_MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 const HTML_PARSE_ERROR_RE = /can't parse entities|parse entities|find end of the entity/i;

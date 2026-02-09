@@ -10,6 +10,9 @@
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "@daemux/plugin-sdk": "workspace:*"
+  },
   "devDependencies": {
     "@types/node": "^22.19.9",
     "typescript": "^5.9.0"

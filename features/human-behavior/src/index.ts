@@ -4,6 +4,8 @@
  * Extracted from daemux-cli core as a standalone feature plugin.
  */
 
+import type { LogLevel } from '@daemux/plugin-sdk';
+
 // ---------------------------------------------------------------------------
 // Configuration
 // ---------------------------------------------------------------------------
@@ -42,7 +44,7 @@ function sleep(ms: number): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Logger Interface (accepted via plugin API)
+// Logger (minimal subset from SDK)
 // ---------------------------------------------------------------------------
 
 interface Logger {
@@ -216,11 +218,11 @@ export const manifest = {
 };
 
 // ---------------------------------------------------------------------------
-// Plugin API Interface (minimal subset needed)
+// Plugin API subset needed by this plugin
 // ---------------------------------------------------------------------------
 
 interface PluginAPI {
-  log(level: string, message: string, data?: Record<string, unknown>): void;
+  log(level: LogLevel, message: string, data?: Record<string, unknown>): void;
   getState<T>(key: string): Promise<T | undefined>;
   setState<T>(key: string, value: T): Promise<void>;
 }

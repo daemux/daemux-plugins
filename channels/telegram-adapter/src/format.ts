@@ -4,21 +4,7 @@
  * Uses HTML mode (not MarkdownV2) for simpler escaping and reliable rendering.
  */
 
-// ---------------------------------------------------------------------------
-// ChannelFormatter Interface (mirrors daemux-cli)
-// ---------------------------------------------------------------------------
-
-export interface ChannelFormatter {
-  bold(text: string): string;
-  italic(text: string): string;
-  strikethrough(text: string): string;
-  code(text: string): string;
-  codeBlock(text: string, language?: string): string;
-  link(text: string, url: string): string;
-  escape(text: string): string;
-  fromMarkdown(markdown: string): string;
-  chunk(text: string, maxLength: number): string[];
-}
+import type { ChannelFormatter } from '@daemux/plugin-sdk';
 
 // ---------------------------------------------------------------------------
 // HTML Escaping

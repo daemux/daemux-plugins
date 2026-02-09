@@ -4,9 +4,9 @@
  */
 
 import { AnthropicProvider } from './provider';
-import type { LLMProvider } from './provider';
+import type { LLMProvider } from '@daemux/plugin-sdk';
 
-// Re-export types and utilities
+// Re-export types from SDK and implementation
 export { AnthropicProvider } from './provider';
 export type {
   LLMProvider,
@@ -17,7 +17,7 @@ export type {
   LLMChatChunk,
   LLMChatResponse,
   ToolDefinition,
-} from './provider';
+} from '@daemux/plugin-sdk';
 
 export {
   CLAUDE_MODELS,
@@ -53,7 +53,7 @@ export const manifest = {
 let providerInstance: AnthropicProvider | null = null;
 
 /**
- * Plugin API interface (matches daemux PluginAPI)
+ * Plugin API subset needed by this plugin
  */
 interface PluginAPI {
   registerProvider(id: string, provider: LLMProvider): void;

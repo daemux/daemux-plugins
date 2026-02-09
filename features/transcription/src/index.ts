@@ -5,31 +5,9 @@
  */
 
 import { z } from 'zod';
+import type { TranscriptionProvider, TranscriptionOptions, TranscriptionResult } from '@daemux/plugin-sdk';
 
-// ---------------------------------------------------------------------------
-// Transcription Interfaces
-// ---------------------------------------------------------------------------
-
-export interface TranscriptionOptions {
-  model?: string;
-  language?: string;
-  responseFormat?: 'text' | 'json' | 'verbose_json';
-}
-
-export interface TranscriptionResult {
-  text: string;
-  language?: string;
-  duration?: number;
-}
-
-export interface TranscriptionProvider {
-  readonly id: string;
-  transcribe(
-    audio: Buffer,
-    fileName: string,
-    options?: TranscriptionOptions,
-  ): Promise<TranscriptionResult>;
-}
+export type { TranscriptionProvider, TranscriptionOptions, TranscriptionResult } from '@daemux/plugin-sdk';
 
 // ---------------------------------------------------------------------------
 // Response Validation Schema
@@ -190,15 +168,14 @@ export function createTranscriptionProvider(
 }
 
 // ---------------------------------------------------------------------------
-// Plugin Registration
+// Plugin Manifest & Lifecycle
 // ---------------------------------------------------------------------------
 
-interface PluginAPIWithTranscription {
-  registerTranscription(provider: TranscriptionProvider): void;
-}
+export const manifest = {
+  name: '@daemux/transcription',
+  version: '1.0.0',
+  description: 'OpenAI audio transcription provider for daemux',
+  author: 'daemux',
+};
 
-export function register(api: PluginAPIWithTranscription): void {
-  // Plugin registration is deferred until config is available.
-  // The host application calls createTranscriptionProvider() and
-  // then api.registerTranscription(provider) with the right API key.
-}
+export default { manifest, createTranscriptionProvider };

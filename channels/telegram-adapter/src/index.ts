@@ -16,9 +16,8 @@ export type { MediaSendOptions } from './api-send';
 export { TelegramPoller } from './poller';
 export { telegramHtmlFormatter, markdownToTelegramHtml, chunkText, escapeHtml } from './format';
 export { resolveMessageType, resolveFileId, resolveAttachment } from './message-resolver';
-export type { ChannelFormatter } from './format';
 export type { ResolvedAttachment } from './message-resolver';
-export type { RichChannelMessage, ChannelAttachment, ChannelSendOptions } from './channel-types';
+export type { ChannelFormatter, RichChannelMessage, ChannelAttachment, ChannelSendOptions } from '@daemux/plugin-sdk';
 export type {
   TelegramUser,
   TelegramChat,
@@ -42,31 +41,29 @@ export const manifest = {
 };
 
 // ---------------------------------------------------------------------------
-// Plugin API Interface (matches daemux PluginAPI subset)
+// Plugin API subset needed by this plugin
 // ---------------------------------------------------------------------------
 
-interface ChannelInterface {
-  id: string;
-  type: string;
-  connect(config: Record<string, unknown>): Promise<void>;
-  disconnect(): Promise<void>;
-  send(
-    target: { channelId: string; userId?: string; threadId?: string },
-    message: string,
-    options?: { attachments?: Array<{ type: string; data: Buffer; filename: string }>; replyToId?: string },
-  ): Promise<string>;
-  onMessage(handler: (message: {
-    id: string;
-    channelId: string;
-    senderId: string;
-    content: string;
-    timestamp: number;
-    [key: string]: unknown;
-  }) => Promise<void>): void;
-}
-
 interface PluginAPI {
-  registerChannel(channel: ChannelInterface): void;
+  registerChannel(channel: {
+    id: string;
+    type: string;
+    connect(config: Record<string, unknown>): Promise<void>;
+    disconnect(): Promise<void>;
+    send(
+      target: { channelId: string; userId?: string; threadId?: string },
+      message: string,
+      options?: { attachments?: Array<{ type: string; data: Buffer; filename: string }>; replyToId?: string },
+    ): Promise<string>;
+    onMessage(handler: (message: {
+      id: string;
+      channelId: string;
+      senderId: string;
+      content: string;
+      timestamp: number;
+      [key: string]: unknown;
+    }) => Promise<void>): void;
+  }): void;
   log(level: string, message: string, data?: Record<string, unknown>): void;
 }
 

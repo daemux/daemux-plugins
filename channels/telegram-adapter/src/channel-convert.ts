@@ -4,7 +4,7 @@
  */
 
 import type { TelegramMessage, TelegramChannelConfig } from './types';
-import type { RichChannelMessage, ChannelAttachment } from './channel-types';
+import type { RichChannelMessage, ChannelAttachment } from '@daemux/plugin-sdk';
 import { resolveMessageType, resolveAttachment, type ResolvedAttachment } from './message-resolver';
 
 // ---------------------------------------------------------------------------
