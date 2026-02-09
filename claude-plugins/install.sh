@@ -279,8 +279,7 @@ fs.writeFileSync(filePath, JSON.stringify(data, null, 2) + '\n');
 " -- "$KNOWN_MP" "$MP"
 
 echo "Installing plugin (scope: $SCOPE)..."
-claude plugin install daemux-dev-toolkit@daemux-claude-plugins --scope $SCOPE 2>/dev/null || \
-  claude plugin update daemux-dev-toolkit@daemux-claude-plugins --scope $SCOPE
+claude plugin install daemux-dev-toolkit@daemux-claude-plugins --scope $SCOPE
 
 # Configure default model in global settings (applies to both global and project installs)
 # DISABLED: sonnet[1m] currently broken for Max 20x users (regression since Dec 2025)
