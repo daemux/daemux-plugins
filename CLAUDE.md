@@ -13,16 +13,6 @@ features/transcription/           → @daemux/transcription
 claude-plugins/                   → Claude Code marketplace plugins (separate system, has its own CLAUDE.md)
 ```
 
-## Package Versions
-
-| Package | Version |
-|---------|---------|
-| `@daemux/plugin-sdk` | 0.5.0 |
-| `@daemux/anthropic-provider` | 1.1.0 |
-| `@daemux/telegram-adapter` | 1.0.0 |
-| `@daemux/human-behavior` | 0.4.0 |
-| `@daemux/transcription` | 0.4.0 |
-
 ## Build
 
 ```bash
