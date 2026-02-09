@@ -28,12 +28,12 @@ import {
   buildOAuthSystemPromptAddition,
   validateCredentialFormat,
   CLAUDE_CODE_SYSTEM_PREFIX,
-} from './auth';
+} from './auth.js';
 import {
   CLAUDE_MODELS,
   DEFAULT_MODEL,
   COMPACTION_MODEL,
-} from './models';
+} from './models.js';
 
 /**
  * Anthropic Provider Implementation

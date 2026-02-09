@@ -10,7 +10,9 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "verbatimModuleSyntax": true,
-    "types": ["bun"]
+    "declarationMap": true,
+    "sourceMap": true,
+    "types": ["node"]
   },
   "include": ["src"]
 }

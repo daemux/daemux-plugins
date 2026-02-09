@@ -1,5 +1,5 @@
 {
-  "name": "daemux-transcription",
+  "name": "@daemux/transcription",
   "version": "0.4.0",
   "description": "OpenAI audio transcription provider for voice messages",
   "main": "src/index.ts"

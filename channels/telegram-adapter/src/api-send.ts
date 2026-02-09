@@ -4,8 +4,8 @@
  * Separated from api.ts to keep function count per file within limits.
  */
 
-import type { TelegramApi } from './api';
-import type { TelegramMessage } from './types';
+import type { TelegramApi } from './api.js';
+import type { TelegramMessage } from './types.js';
 
 // ---------------------------------------------------------------------------
 // Common media send options

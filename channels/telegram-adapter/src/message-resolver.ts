@@ -3,7 +3,7 @@
  * Extracts message type and primary file ID from a Telegram message.
  */
 
-import type { TelegramMessage, ChannelMessageType } from './types';
+import type { TelegramMessage, ChannelMessageType } from './types.js';
 
 // ---------------------------------------------------------------------------
 // Attachment metadata extracted from a Telegram message

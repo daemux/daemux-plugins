@@ -4,16 +4,16 @@
  * Uses long polling, HTML formatting, and user allowlist enforcement.
  */
 
-import { TelegramApi, TelegramApiError } from './api';
+import { TelegramApi, TelegramApiError } from './api.js';
 import {
   sendMessage, sendPhoto, sendDocument, sendAudio, sendVideo,
   sendVoice, sendVideoNote, sendAnimation,
-} from './api-send';
-import { TelegramPoller } from './poller';
-import type { PollerLogger } from './poller';
-import { markdownToTelegramHtml, chunkText, escapeHtml } from './format';
-import { convertTelegramMessage, isUserAllowed } from './channel-convert';
-import type { TelegramChannelConfig, TelegramUpdate, ChannelMessageType } from './types';
+} from './api-send.js';
+import { TelegramPoller } from './poller.js';
+import type { PollerLogger } from './poller.js';
+import { markdownToTelegramHtml, chunkText, escapeHtml } from './format.js';
+import { convertTelegramMessage, isUserAllowed } from './channel-convert.js';
+import type { TelegramChannelConfig, TelegramUpdate, ChannelMessageType } from './types.js';
 import type { RichChannelMessage, ChannelSendOptions, ChannelEventType } from '@daemux/plugin-sdk';
 
 /** Internal event handler storage (arrays of handlers per event type) */

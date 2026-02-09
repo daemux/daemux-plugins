@@ -65,5 +65,4 @@ The plugin is ready to use after installation. Core features are enabled automat
   }
 }
 ```
-Teams is temporary disabled due to unstable work.
 Add additional environment variables as needed for your project.

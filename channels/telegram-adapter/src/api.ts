@@ -9,7 +9,7 @@ import type {
   TelegramBotInfo,
   TelegramFileInfo,
   TelegramUpdate,
-} from './types';
+} from './types.js';
 
 const BASE_URL = 'https://api.telegram.org';
 const DEFAULT_TIMEOUT_MS = 30_000;

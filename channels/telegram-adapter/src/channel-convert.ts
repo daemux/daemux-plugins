@@ -3,9 +3,9 @@
  * Converts Telegram messages to RichChannelMessage format.
  */
 
-import type { TelegramMessage, TelegramChannelConfig } from './types';
+import type { TelegramMessage, TelegramChannelConfig } from './types.js';
 import type { RichChannelMessage, ChannelAttachment } from '@daemux/plugin-sdk';
-import { resolveMessageType, resolveAttachment, type ResolvedAttachment } from './message-resolver';
+import { resolveMessageType, resolveAttachment, type ResolvedAttachment } from './message-resolver.js';
 
 // ---------------------------------------------------------------------------
 // User Allowlist Check

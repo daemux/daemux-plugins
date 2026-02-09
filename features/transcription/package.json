@@ -1,14 +1,33 @@
 {
-  "name": "daemux-transcription",
+  "name": "@daemux/transcription",
   "version": "0.4.0",
+  "description": "OpenAI audio transcription provider for voice messages",
   "type": "module",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist", ".claude-plugin"],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit"
+  },
   "dependencies": {
     "@daemux/plugin-sdk": "workspace:*",
     "zod": "^3.24.0"
   },
   "devDependencies": {
-    "@types/bun": "^1.2.0",
+    "@types/node": "^22.0.0",
     "typescript": "^5.9.0"
-  }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/daemux/daemux-plugins.git",
+    "directory": "features/transcription"
+  },
+  "keywords": ["daemux", "transcription", "plugin"],
+  "license": "MIT"
 }

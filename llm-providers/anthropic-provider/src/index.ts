@@ -3,11 +3,11 @@
  * Entry point with activate/deactivate lifecycle
  */
 
-import { AnthropicProvider } from './provider';
+import { AnthropicProvider } from './provider.js';
 import type { LLMProvider } from '@daemux/plugin-sdk';
 
 // Re-export types from SDK and implementation
-export { AnthropicProvider } from './provider';
+export { AnthropicProvider } from './provider.js';
 export type {
   LLMProvider,
   LLMProviderCapabilities,
@@ -25,7 +25,7 @@ export {
   COMPACTION_MODEL,
   getModel,
   isValidModel,
-} from './models';
+} from './models.js';
 
 export {
   TOKEN_PREFIX,
@@ -35,7 +35,7 @@ export {
   buildOAuthSystemPromptAddition,
   detectCredentialType,
   validateCredentialFormat,
-} from './auth';
+} from './auth.js';
 
 /**
  * Plugin manifest

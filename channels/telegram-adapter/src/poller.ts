@@ -3,9 +3,9 @@
  * Handles update fetching with exponential backoff and graceful shutdown.
  */
 
-import type { TelegramUpdate } from './types';
-import type { TelegramApi } from './api';
-import { TelegramApiError } from './api';
+import type { TelegramUpdate } from './types.js';
+import type { TelegramApi } from './api.js';
+import { TelegramApiError } from './api.js';
 
 // ---------------------------------------------------------------------------
 // Types

@@ -15,7 +15,7 @@ export type {
   LLMChatChunk,
   LLMChatResponse,
   LLMProvider,
-} from './types/llm';
+} from './types/llm.js';
 
 // Channel types
 export type {
@@ -26,16 +26,15 @@ export type {
   ChannelEventHandler,
   ChannelEventType,
   ChannelFormatter,
-} from './types/channel';
+} from './types/channel.js';
 
 // Transcription types
 export type {
   TranscriptionOptions,
   TranscriptionResult,
   TranscriptionProvider,
-} from './types/transcription';
+} from './types/transcription.js';
 
 // Plugin system types
-export type {
-  LogLevel,
-} from './types/plugin';
+/** Log severity levels used by plugin loggers. */
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';

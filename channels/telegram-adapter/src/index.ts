@@ -3,20 +3,20 @@
  * Registers the TelegramChannel with the daemux plugin system.
  */
 
-import { TelegramChannel } from './channel';
+import { TelegramChannel } from './channel.js';
 
 // Re-export public API
-export { TelegramChannel } from './channel';
-export { TelegramApi, TelegramApiError } from './api';
+export { TelegramChannel } from './channel.js';
+export { TelegramApi, TelegramApiError } from './api.js';
 export {
   sendMessage, sendPhoto, sendDocument, sendAudio, sendVideo,
   sendVoice, sendVideoNote, sendSticker, sendAnimation,
-} from './api-send';
-export type { MediaSendOptions } from './api-send';
-export { TelegramPoller } from './poller';
-export { telegramHtmlFormatter, markdownToTelegramHtml, chunkText, escapeHtml } from './format';
-export { resolveMessageType, resolveFileId, resolveAttachment } from './message-resolver';
-export type { ResolvedAttachment } from './message-resolver';
+} from './api-send.js';
+export type { MediaSendOptions } from './api-send.js';
+export { TelegramPoller } from './poller.js';
+export { telegramHtmlFormatter, markdownToTelegramHtml, chunkText, escapeHtml } from './format.js';
+export { resolveMessageType, resolveFileId, resolveAttachment } from './message-resolver.js';
+export type { ResolvedAttachment } from './message-resolver.js';
 export type { ChannelFormatter, RichChannelMessage, ChannelAttachment, ChannelSendOptions } from '@daemux/plugin-sdk';
 export type {
   TelegramUser,
@@ -27,7 +27,7 @@ export type {
   TelegramFileInfo,
   TelegramBotInfo,
   ChannelMessageType,
-} from './types';
+} from './types.js';
 
 // ---------------------------------------------------------------------------
 // Plugin Manifest

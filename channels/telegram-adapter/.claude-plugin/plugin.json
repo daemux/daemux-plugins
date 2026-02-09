@@ -1,6 +1,6 @@
 {
   "name": "@daemux/telegram-adapter",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Telegram Bot API channel adapter for daemux",
   "author": "daemux",
   "channel": true,

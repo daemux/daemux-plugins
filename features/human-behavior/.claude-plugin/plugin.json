@@ -1,5 +1,5 @@
 {
-  "name": "daemux-human-behavior",
+  "name": "@daemux/human-behavior",
   "version": "0.4.0",
   "description": "Human-like response behavior simulation for messaging channels",
   "main": "src/index.ts"
