@@ -1,6 +1,6 @@
 /**
  * Channel Type Definitions
- * Rich message types, attachments, send options, and the EnhancedChannel interface.
+ * Rich message types, attachments, send options, and event handlers.
  */
 
 // ---------------------------------------------------------------------------
@@ -111,55 +111,6 @@ export type ChannelEventHandler = {
 export type ChannelEventType = keyof ChannelEventHandler;
 
 // ---------------------------------------------------------------------------
-// Enhanced Channel Interface
-// ---------------------------------------------------------------------------
-
-export interface EnhancedChannel {
-  /** Unique channel instance ID */
-  readonly id: string;
-  /** Channel type identifier (e.g., 'telegram', 'discord') */
-  readonly type: string;
-  /** Whether the channel is currently connected */
-  readonly connected: boolean;
-
-  /** Connect to the channel service */
-  connect(config: Record<string, unknown>): Promise<void>;
-  /** Disconnect from the channel service */
-  disconnect(): Promise<void>;
-
-  /** Send a text message */
-  sendText(
-    chatId: string,
-    text: string,
-    options?: ChannelSendOptions,
-  ): Promise<string>;
-
-  /** Send a media attachment */
-  sendMedia(
-    chatId: string,
-    attachment: {
-      type: ChannelMessageType;
-      data: Buffer;
-      fileName: string;
-      mimeType?: string;
-      caption?: string;
-    },
-    options?: ChannelSendOptions,
-  ): Promise<string>;
-
-  /** Download a file attachment by its remote ID/URL */
-  downloadAttachment(
-    fileId: string,
-  ): Promise<{ data: Buffer; mimeType?: string; fileName?: string }>;
-
-  /** Register an event handler */
-  on<E extends ChannelEventType>(
-    event: E,
-    handler: ChannelEventHandler[E],
-  ): () => void;
-}
-
-// ---------------------------------------------------------------------------
 // Channel Formatter Interface
 // ---------------------------------------------------------------------------
 
@@ -182,46 +133,4 @@ export interface ChannelFormatter {
   fromMarkdown(markdown: string): string;
   /** Split text into chunks respecting format boundaries */
   chunk(text: string, maxLength: number): string[];
-}
-
-// ---------------------------------------------------------------------------
-// Basic Channel Interface (from plugin-api-types)
-// ---------------------------------------------------------------------------
-
-export interface ChannelMessage {
-  id: string;
-  channelId: string;
-  senderId: string;
-  senderName?: string;
-  content: string;
-  attachments?: Array<{
-    type: string;
-    url?: string;
-    data?: Buffer;
-  }>;
-  replyToId?: string;
-  timestamp: number;
-  metadata?: Record<string, unknown>;
-}
-
-export interface ChannelTarget {
-  channelId: string;
-  userId?: string;
-  threadId?: string;
-}
-
-export interface Channel {
-  id: string;
-  type: string;
-  connect(config: Record<string, unknown>): Promise<void>;
-  disconnect(): Promise<void>;
-  send(
-    target: ChannelTarget,
-    message: string,
-    options?: {
-      attachments?: Array<{ type: string; data: Buffer; filename: string }>;
-      replyToId?: string;
-    },
-  ): Promise<string>;
-  onMessage(handler: (message: ChannelMessage) => Promise<void>): void;
 }

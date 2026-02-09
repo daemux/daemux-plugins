@@ -25,11 +25,7 @@ export type {
   ChannelSendOptions,
   ChannelEventHandler,
   ChannelEventType,
-  EnhancedChannel,
   ChannelFormatter,
-  ChannelMessage,
-  ChannelTarget,
-  Channel,
 } from './types/channel';
 
 // Transcription types
@@ -42,18 +38,4 @@ export type {
 // Plugin system types
 export type {
   LogLevel,
-  Logger,
-  MemoryEntry,
-  MemoryProvider,
-  HookEvent,
-  HookContext,
-  HookResult,
-  HookHandler,
-  AgentDefinition,
-  AgentResult,
-  TaskStatus,
-  Task,
-  PluginManifest,
-  PluginAPI,
-  Plugin,
 } from './types/plugin';
