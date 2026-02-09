@@ -1,0 +1,36 @@
+{
+  "name": "@daemux/telegram-adapter",
+  "version": "1.0.0",
+  "description": "Telegram Bot API channel adapter for daemux",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.9",
+    "typescript": "^5.9.0"
+  },
+  "peerDependencies": {
+    "daemux": "^0.1.0"
+  },
+  "peerDependenciesMeta": {
+    "daemux": {
+      "optional": true
+    }
+  },
+  "files": [
+    "dist",
+    ".claude-plugin"
+  ],
+  "keywords": [
+    "daemux",
+    "telegram",
+    "channel",
+    "bot"
+  ],
+  "license": "MIT"
+}

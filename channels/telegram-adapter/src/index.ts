@@ -1,0 +1,105 @@
+/**
+ * Telegram Adapter Plugin Entry Point
+ * Registers the TelegramChannel with the daemux plugin system.
+ */
+
+import { TelegramChannel } from './channel';
+
+// Re-export public API
+export { TelegramChannel } from './channel';
+export { TelegramApi, TelegramApiError } from './api';
+export {
+  sendMessage, sendPhoto, sendDocument, sendAudio, sendVideo,
+  sendVoice, sendVideoNote, sendSticker, sendAnimation,
+} from './api-send';
+export type { MediaSendOptions } from './api-send';
+export { TelegramPoller } from './poller';
+export { telegramHtmlFormatter, markdownToTelegramHtml, chunkText, escapeHtml } from './format';
+export { resolveMessageType, resolveFileId, resolveAttachment } from './message-resolver';
+export type { ChannelFormatter } from './format';
+export type { ResolvedAttachment } from './message-resolver';
+export type { RichChannelMessage, ChannelAttachment, ChannelSendOptions } from './channel-types';
+export type {
+  TelegramUser,
+  TelegramChat,
+  TelegramMessage,
+  TelegramUpdate,
+  TelegramChannelConfig,
+  TelegramFileInfo,
+  TelegramBotInfo,
+  ChannelMessageType,
+} from './types';
+
+// ---------------------------------------------------------------------------
+// Plugin Manifest
+// ---------------------------------------------------------------------------
+
+export const manifest = {
+  name: '@daemux/telegram-adapter',
+  version: '1.0.0',
+  description: 'Telegram Bot API channel adapter for daemux',
+  author: 'daemux',
+};
+
+// ---------------------------------------------------------------------------
+// Plugin API Interface (matches daemux PluginAPI subset)
+// ---------------------------------------------------------------------------
+
+interface ChannelInterface {
+  id: string;
+  type: string;
+  connect(config: Record<string, unknown>): Promise<void>;
+  disconnect(): Promise<void>;
+  send(
+    target: { channelId: string; userId?: string; threadId?: string },
+    message: string,
+    options?: { attachments?: Array<{ type: string; data: Buffer; filename: string }>; replyToId?: string },
+  ): Promise<string>;
+  onMessage(handler: (message: {
+    id: string;
+    channelId: string;
+    senderId: string;
+    content: string;
+    timestamp: number;
+    [key: string]: unknown;
+  }) => Promise<void>): void;
+}
+
+interface PluginAPI {
+  registerChannel(channel: ChannelInterface): void;
+  log(level: string, message: string, data?: Record<string, unknown>): void;
+}
+
+// ---------------------------------------------------------------------------
+// Plugin Lifecycle
+// ---------------------------------------------------------------------------
+
+let channelInstance: TelegramChannel | null = null;
+
+/** Activate the plugin. Called by the daemux plugin loader. */
+export async function activate(api: PluginAPI): Promise<void> {
+  api.log('info', 'Activating Telegram adapter plugin');
+
+  channelInstance = new TelegramChannel();
+  api.registerChannel(channelInstance);
+
+  api.log('info', 'Telegram channel registered successfully');
+}
+
+/** Deactivate the plugin. Called when the plugin is unloaded. */
+export async function deactivate(): Promise<void> {
+  if (channelInstance) {
+    if (channelInstance.connected) {
+      await channelInstance.disconnect();
+    }
+    channelInstance = null;
+  }
+}
+
+/** Get the current channel instance (for programmatic access). */
+export function getChannel(): TelegramChannel | null {
+  return channelInstance;
+}
+
+/** Default export for plugin loading (matches anthropic-provider pattern). */
+export default { manifest, activate, deactivate };
