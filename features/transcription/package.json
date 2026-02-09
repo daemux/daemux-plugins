@@ -1,0 +1,13 @@
+{
+  "name": "daemux-transcription",
+  "version": "0.4.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "dependencies": {
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.0",
+    "typescript": "^5.9.0"
+  }
+}
