@@ -1,0 +1,5 @@
+{
+  "name": "@daemux/fastlane-mcp",
+  "version": "0.1.0",
+  "description": "Fastlane MCP server for App Store Connect management"
+}

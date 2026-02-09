@@ -1,0 +1,5 @@
+{
+  "name": "@daemux/codemagic-mcp",
+  "version": "0.1.0",
+  "description": "Codemagic CI/CD MCP server"
+}
