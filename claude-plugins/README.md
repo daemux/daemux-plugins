@@ -61,7 +61,7 @@ The plugin is ready to use after installation. Core features are enabled automat
 {
   "env": {
     "CLAUDE_CODE_ENABLE_TASKS": "true",
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "0"
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   }
 }
 ```

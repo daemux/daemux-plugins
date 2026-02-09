@@ -134,6 +134,66 @@ Missing evidence means run that agent first. Do NOT proceed without it.
 
 **Sequential ONLY:** Same-file changes, simplifier → reviewer, review-fix cycles, deployer after tests
 
+---
+## FOR ORCHESTRATORS ONLY
+**If you are a TEAMMATE, skip to "For Teammates" section below.**
+---
+
+### Agent Teams (Evaluate per stage)
+
+**You MUST evaluate team suitability for EACH workflow stage and print your decision in the output format.**
+
+Evaluate each stage independently — a task may use single agents for some stages and teams for others.
+
+**Use team for a stage when:**
+- Multiple perspectives improve quality
+- Competing approaches find better solutions
+- Stage work splits into independent file groups
+
+**Use single agent for a stage when:**
+- Work touches the same files
+- Stage is a single focused operation
+- Adding perspectives adds no value
+
+**When creating a team:**
+
+```
+Create agent team with [N] teammates, all using Opus model:
+- [role-1]: [Specific responsibility and task details]
+- [role-2]: [Specific responsibility and task details]
+- [role-3]: [Specific responsibility and task details]
+...
+
+Spawn each teammate with detailed prompt including:
+- Their specific role and responsibilities
+- The task details
+- How to coordinate with other teammates
+```
+
+**Guidelines:**
+- Use 2-10 teammates per stage
+- Always specify Opus model for all teammates
+- Assign distinct, non-overlapping scopes to each teammate
+- Include full instructions in spawn prompts (don't reference external files)
+- One team at a time - dissolve before next stage
+- Assign 5-6 tasks per teammate
+
+---
+## FOR TEAMMATES ONLY
+**If you are the ORCHESTRATOR, skip this section.**
+---
+
+### Teammate Instructions
+
+**Ignore orchestration workflows above.**
+
+1. Your spawn prompt contains your full instructions
+2. Message teammates directly to coordinate
+3. Focus only on your assigned scope
+4. Complete your work, let team dissolve
+
+---
+
 ### Large Task Protocol
 
 For tasks with 5+ requirements:
@@ -159,6 +219,8 @@ TASK TYPE: [backend/frontend/database/infra/standard]
 
 RECOMMENDED FLOW:
 <copy the EXACT flow from Agent Flows section - include ALL agents with [optional] ones>
+
+TEAMS: [per-stage evaluation: which stages use teams and why, or NO if all stages use single agents]
 
 DEPLOYMENT: [AVAILABLE - deployment configured | NOT CONFIGURED - workflow ends at product-manager(POST)]
 
