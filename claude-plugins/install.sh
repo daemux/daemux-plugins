@@ -172,7 +172,11 @@ if [ "$ACTION" = "uninstall" ]; then
   echo "Uninstalling Daemux Claude Plugins (scope: $SCOPE)..."
 
   # Uninstall the plugin
-  claude plugin uninstall daemux-dev-toolkit@daemux-claude-plugins --scope $SCOPE 2>/dev/null || true
+  if [ "$SCOPE" = "user" ]; then
+    claude plugin uninstall daemux-dev-toolkit@daemux-claude-plugins 2>/dev/null || true
+  else
+    claude plugin uninstall daemux-dev-toolkit@daemux-claude-plugins --scope $SCOPE 2>/dev/null || true
+  fi
 
   if [ "$SCOPE" = "user" ]; then
     # Global uninstall - remove marketplace and global CLAUDE.md
@@ -279,7 +283,11 @@ fs.writeFileSync(filePath, JSON.stringify(data, null, 2) + '\n');
 " -- "$KNOWN_MP" "$MP"
 
 echo "Installing plugin (scope: $SCOPE)..."
-claude plugin install daemux-dev-toolkit@daemux-claude-plugins --scope $SCOPE
+if [ "$SCOPE" = "user" ]; then
+  claude plugin install daemux-dev-toolkit@daemux-claude-plugins
+else
+  claude plugin install daemux-dev-toolkit@daemux-claude-plugins --scope $SCOPE
+fi
 
 # Configure default model in global settings (applies to both global and project installs)
 # DISABLED: sonnet[1m] currently broken for Max 20x users (regression since Dec 2025)
