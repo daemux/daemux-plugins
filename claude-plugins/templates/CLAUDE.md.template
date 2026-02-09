@@ -155,6 +155,9 @@ Evaluate each stage independently — a task may use single agents for some stag
 - Stage is a single focused operation
 - Adding perspectives adds no value
 
+**Team Enforcement (MANDATORY):**
+If `TEAMS:` output includes any stage using teams, you MUST call `TeamCreate` before spawning agents for that stage. Spawning agents via `Task` without `team_name` does NOT count as using teams. Violation = workflow non-compliance.
+
 **When creating a team:**
 
 ```
