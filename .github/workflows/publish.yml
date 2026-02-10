@@ -23,7 +23,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          registry-url: https://registry.npmjs.org
 
       - uses: oven-sh/setup-bun@v2
 
@@ -41,7 +40,7 @@ jobs:
       - name: Publish plugin-sdk
         run: npm -w packages/plugin-sdk publish --access public
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish all packages
         run: |
@@ -49,4 +48,4 @@ jobs:
             npm -w "$pkg" publish --access public 2>&1 || echo "::warning::Failed to publish $pkg (may already exist)"
           done
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
