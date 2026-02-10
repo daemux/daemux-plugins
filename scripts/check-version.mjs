@@ -6,7 +6,8 @@ import { dirname, join } from 'node:path';
 
 const __filename = fileURLToPath(import.meta.url);
 const repoRoot = dirname(dirname(__filename));
-const cpDir = join(repoRoot, 'claude-plugins', 'default-development');
+const pluginArg = process.argv[2] || 'default-development';
+const cpDir = join(repoRoot, 'claude-plugins', pluginArg);
 
 function readJsonFile(relPath) {
   const fullPath = join(cpDir, relPath);
@@ -15,7 +16,8 @@ function readJsonFile(relPath) {
 
 const pkg = readJsonFile('package.json');
 const marketplace = readJsonFile('.claude-plugin/marketplace.json');
-const plugin = readJsonFile('plugins/daemux-dev-toolkit/.claude-plugin/plugin.json');
+const pluginName = marketplace.plugins[0].name;
+const plugin = readJsonFile(`plugins/${pluginName}/.claude-plugin/plugin.json`);
 
 const versions = {
   'package.json': pkg.version,
@@ -26,7 +28,7 @@ const versions = {
 
 const values = new Set(Object.values(versions));
 
-console.log('Version check:');
+console.log(`Version check for "${pluginArg}":`);
 for (const [source, version] of Object.entries(versions)) {
   console.log(`  ${source}: ${version}`);
 }

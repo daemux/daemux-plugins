@@ -1,0 +1,63 @@
+default_platform(:ios)
+
+# Resolve paths absolutely to avoid symlink-relative breakage.
+# CM_BUILD_DIR is set by Codemagic CI; locally we derive from __FILE__.
+ROOT_DIR = ENV.fetch("CM_BUILD_DIR", File.expand_path("../..", __FILE__))
+APP_ROOT = ENV.fetch("APP_ROOT", "app")
+
+def metadata_changed?(path)
+  !sh("git diff --name-only HEAD~1 -- #{path}").strip.empty?
+rescue StandardError
+  true
+end
+
+def asc_api_key
+  key_path = ENV["FASTLANE_API_KEY_PATH"]
+  if key_path && File.exist?(key_path)
+    app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_KEY_IDENTIFIER"],
+      issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
+      key_filepath: key_path,
+      is_key_content_base64: false
+    )
+  else
+    app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_KEY_IDENTIFIER"],
+      issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
+      key_content: ENV["APP_STORE_CONNECT_PRIVATE_KEY"],
+      is_key_content_base64: false
+    )
+  end
+end
+
+platform :ios do
+  lane :deploy_ios do
+    deliver(
+      api_key: asc_api_key,
+      app_identifier: ENV["BUNDLE_ID"],
+      ipa: Dir.glob("#{ROOT_DIR}/#{APP_ROOT}/build/ios/ipa/*.ipa").first,
+      skip_metadata: !metadata_changed?("fastlane/metadata/ios/"),
+      skip_screenshots: !metadata_changed?("fastlane/screenshots/ios/"),
+      sync_screenshots: true,
+      metadata_path: "#{ROOT_DIR}/fastlane/metadata/ios",
+      screenshots_path: "#{ROOT_DIR}/fastlane/screenshots/ios",
+      submit_for_review: ENV.fetch("SUBMIT_FOR_REVIEW", "true") == "true",
+      automatic_release: ENV.fetch("AUTOMATIC_RELEASE", "true") == "true",
+      force: true,
+      app_rating_config_path: "#{ROOT_DIR}/fastlane/app_rating_config.json",
+      price_tier: ENV.fetch("PRICE_TIER", "0").to_i,
+      run_precheck_before_submit: true,
+      precheck_include_in_app_purchases: false,
+      primary_category: ENV.fetch("PRIMARY_CATEGORY", "UTILITIES"),
+      secondary_category: ENV.fetch("SECONDARY_CATEGORY", "PRODUCTIVITY")
+    )
+  end
+
+  lane :sync_iap do
+    manage_iap(
+      api_key: asc_api_key,
+      app_id: ENV["BUNDLE_ID"],
+      config_path: "#{ROOT_DIR}/fastlane/iap_config.json"
+    )
+  end
+end

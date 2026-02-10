@@ -1,0 +1,9 @@
+{
+  "name": "store-automator",
+  "version": "0.5.0",
+  "description": "App Store & Google Play automation agents for Flutter app publishing",
+  "author": {
+    "name": "Daemux"
+  },
+  "keywords": ["flutter", "app-store", "google-play", "fastlane", "screenshots", "metadata"]
+}

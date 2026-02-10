@@ -1,0 +1,1 @@
+gem "fastlane-plugin-iap", git: "https://github.com/daemux/fastlane-plugin-iap"

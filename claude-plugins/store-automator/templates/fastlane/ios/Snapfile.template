@@ -1,0 +1,28 @@
+root_dir = ENV.fetch("CM_BUILD_DIR", File.expand_path("../..", __FILE__))
+
+devices([
+  "iPhone 16 Pro Max",
+  "iPhone 16 Pro",
+  "iPad Pro 13-inch (M4)",
+  "iPad Pro 12.9-inch (6th generation)"
+])
+
+languages([
+  "en-US",
+  "ja",
+  "de-DE",
+  "fr-FR",
+  "es-ES",
+  "pt-BR",
+  "zh-Hans",
+  "zh-Hant",
+  "ko",
+  "ru",
+  "ar-SA",
+  "hi"
+])
+
+scheme(ENV.fetch("APP_SCHEME", "Runner"))
+output_directory("#{root_dir}/fastlane/screenshots/ios")
+clear_previous_screenshots(false)
+concurrent_simulators(true)

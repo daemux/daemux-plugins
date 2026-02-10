@@ -1,0 +1,43 @@
+default_platform(:android)
+
+# Resolve paths absolutely to avoid symlink-relative breakage.
+# CM_BUILD_DIR is set by Codemagic CI; locally we derive from __FILE__.
+ROOT_DIR = ENV.fetch("CM_BUILD_DIR", File.expand_path("../..", __FILE__))
+APP_ROOT = ENV.fetch("APP_ROOT", "app")
+
+def metadata_changed?(path)
+  !sh("git diff --name-only HEAD~1 -- #{path}").strip.empty?
+rescue StandardError
+  true
+end
+
+platform :android do
+  lane :deploy_android do
+    upload_to_play_store(
+      aab: "#{ROOT_DIR}/#{APP_ROOT}/build/app/outputs/bundle/release/app-release.aab",
+      track: ENV.fetch("TRACK", "internal"),
+      json_key: ENV["GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH"],
+      skip_upload_metadata: !metadata_changed?("fastlane/metadata/android/"),
+      skip_upload_screenshots: !metadata_changed?("fastlane/screenshots/android/"),
+      skip_upload_images: !metadata_changed?("fastlane/screenshots/android/"),
+      skip_upload_changelogs: false,
+      metadata_path: "#{ROOT_DIR}/fastlane/metadata/android",
+      rollout: ENV.fetch("ROLLOUT_FRACTION", "").empty? ? nil : ENV["ROLLOUT_FRACTION"].to_f,
+      in_app_update_priority: ENV.fetch("IN_APP_UPDATE_PRIORITY", "3").to_i
+    )
+  end
+
+  lane :sync_google_iap do
+    manage_google_iap(
+      json_key: ENV["GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH"],
+      package_name: ENV["PACKAGE_NAME"],
+      config_path: "#{ROOT_DIR}/fastlane/iap_config.json"
+    )
+  end
+
+  lane :update_data_safety do
+    script = "#{ROOT_DIR}/scripts/update_data_safety.py"
+    csv = "#{ROOT_DIR}/fastlane/data_safety.csv"
+    sh("python3", script) if File.exist?(csv)
+  end
+end

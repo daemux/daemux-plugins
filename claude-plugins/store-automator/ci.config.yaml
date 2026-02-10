@@ -1,0 +1,55 @@
+# === FLUTTER PROJECT ===
+# Set to subdirectory if Flutter project is not at repo root (e.g., "app")
+flutter_root: "."
+
+# === CREDENTIALS ===
+credentials:
+  apple:
+    p8_key_path: creds/AuthKey.p8
+    key_id: "REPLACE_WITH_KEY_ID"
+    issuer_id: "REPLACE_WITH_ISSUER_ID"
+  google:
+    service_account_json_path: creds/play-service-account.json
+  android:
+    keystore_password: "REPLACE_WITH_PASSWORD"
+
+# === APP IDENTITY ===
+app:
+  name: "REPLACE_WITH_APP_NAME"
+  bundle_id: "com.yourcompany.yourapp"
+  package_name: "com.yourcompany.yourapp"
+  sku: "yourapp001"
+  apple_id: "your@email.com"
+
+# === iOS SETTINGS ===
+ios:
+  primary_category: "UTILITIES"
+  secondary_category: "PRODUCTIVITY"
+  price_tier: 0
+  submit_for_review: true
+  automatic_release: true
+
+# === ANDROID SETTINGS ===
+android:
+  track: "internal"
+  rollout_fraction: "1.0"
+  in_app_update_priority: 3
+
+# === METADATA LANGUAGES ===
+metadata:
+  languages:
+    - en-US
+
+# === WEB PAGES ===
+web:
+  domain: "yourapp-pages.pages.dev"  # *.pages.dev domain is sufficient, no custom DNS needed
+  cloudflare_project_name: "yourapp-pages"
+  tagline: "Your app tagline here"
+  primary_color: "#2563EB"
+  secondary_color: "#7C3AED"
+  company_name: "Your Company"
+  contact_email: "support@yourcompany.com"
+  support_email: "support@yourcompany.com"
+  jurisdiction: "State of California, United States"
+  app_store_url: ""
+  google_play_url: ""

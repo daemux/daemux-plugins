@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${APP_NAME} - ${TAGLINE}</title>
+  <meta name="description" content="${TAGLINE}">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <nav class="nav">
+    <div class="container">
+      <a href="/" class="nav-brand">${APP_NAME}</a>
+      <ul class="nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#screenshots">Screenshots</a></li>
+        <li><a href="#download">Download</a></li>
+        <li><a href="support.html">Support</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="container">
+      <h1>${APP_NAME}</h1>
+      <p>${TAGLINE}</p>
+      <div class="hero-actions">
+        <a href="${APP_STORE_URL}" class="badge-link" aria-label="Download on the App Store">
+          <img src="https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/en-us" alt="Download on the App Store" height="48">
+        </a>
+        <a href="${GOOGLE_PLAY_URL}" class="badge-link" aria-label="Get it on Google Play">
+          <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="48">
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section id="features" class="section section-alt">
+    <div class="container">
+      <h2 class="text-center" style="margin-bottom: 3rem;">Why ${APP_NAME}?</h2>
+      <div class="grid grid-3">
+        <div class="card feature-card">
+          <div class="feature-icon">1</div>
+          <h3>Intuitive Design</h3>
+          <p>Clean, modern interface that feels natural from the first tap. No learning curve required.</p>
+        </div>
+        <div class="card feature-card">
+          <div class="feature-icon">2</div>
+          <h3>Lightning Fast</h3>
+          <p>Built for performance. Every action responds instantly so you can focus on what matters.</p>
+        </div>
+        <div class="card feature-card">
+          <div class="feature-icon">3</div>
+          <h3>Privacy First</h3>
+          <p>Your data stays yours. End-to-end encryption and transparent data practices you can trust.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="screenshots" class="section">
+    <div class="container">
+      <h2 class="text-center" style="margin-bottom: 3rem;">See It in Action</h2>
+      <div class="screenshots">
+        <img src="screenshots/01_hero.png" alt="App screenshot 1" loading="lazy">
+        <img src="screenshots/02_feature1.png" alt="App screenshot 2" loading="lazy">
+        <img src="screenshots/03_feature2.png" alt="App screenshot 3" loading="lazy">
+        <img src="screenshots/04_social.png" alt="App screenshot 4" loading="lazy">
+        <img src="screenshots/05_settings.png" alt="App screenshot 5" loading="lazy">
+      </div>
+    </div>
+  </section>
+
+  <section id="download" class="section section-alt">
+    <div class="container text-center">
+      <h2 style="margin-bottom: 1rem;">Ready to Get Started?</h2>
+      <p style="max-width: 500px; margin: 0 auto 2rem;">Download ${APP_NAME} now and see the difference for yourself. Available on iOS and Android.</p>
+      <div class="hero-actions">
+        <a href="${APP_STORE_URL}" class="btn btn-primary">App Store</a>
+        <a href="${GOOGLE_PLAY_URL}" class="btn btn-secondary">Google Play</a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <div class="footer-brand">${APP_NAME}</div>
+          <p class="footer-desc">${TAGLINE}</p>
+        </div>
+        <div class="footer-col">
+          <h4>Product</h4>
+          <ul>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#screenshots">Screenshots</a></li>
+            <li><a href="#download">Download</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Support</h4>
+          <ul>
+            <li><a href="support.html">Help Center</a></li>
+            <li><a href="mailto:${SUPPORT_EMAIL}">Contact Us</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Legal</h4>
+          <ul>
+            <li><a href="privacy.html">Privacy Policy</a></li>
+            <li><a href="terms.html">Terms of Service</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        &copy; ${CURRENT_YEAR} ${COMPANY_NAME}. All rights reserved.
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

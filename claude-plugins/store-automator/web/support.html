@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Support - ${APP_NAME}</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <nav class="nav">
+    <div class="container">
+      <a href="/" class="nav-brand">${APP_NAME}</a>
+      <ul class="nav-links">
+        <li><a href="/">Home</a></li>
+        <li><a href="privacy.html">Privacy</a></li>
+        <li><a href="terms.html">Terms</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <section class="hero" style="padding-bottom: 2rem;">
+    <div class="container">
+      <h1>Support</h1>
+      <p>Find answers to common questions or get in touch with our team.</p>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top: 0;">
+    <div class="container" style="max-width: 800px;">
+      <h2 style="margin-bottom: 1.5rem;">Frequently Asked Questions</h2>
+
+      <div class="faq-item">
+        <button class="faq-question" data-faq-toggle>
+          How do I create an account?
+        </button>
+        <div class="faq-answer">
+          <p>Open ${APP_NAME} and tap "Sign Up". You can create an account using your email address, Google account, or Apple ID. Follow the on-screen instructions to complete registration.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" data-faq-toggle>
+          How do I manage my subscription?
+        </button>
+        <div class="faq-answer">
+          <p><strong>iOS:</strong> Go to Settings > [Your Name] > Subscriptions > ${APP_NAME}.</p>
+          <p><strong>Android:</strong> Open Google Play Store > Menu > Subscriptions > ${APP_NAME}.</p>
+          <p>From there you can change your plan, cancel, or manage your billing.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" data-faq-toggle>
+          How do I cancel my subscription?
+        </button>
+        <div class="faq-answer">
+          <p>Subscriptions are managed through your device's app store. Cancel at least 24 hours before your next renewal date to avoid being charged. Your premium features will remain active until the end of the current billing period.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" data-faq-toggle>
+          How do I request a refund?
+        </button>
+        <div class="faq-answer">
+          <p><strong>iOS:</strong> Visit <a href="https://reportaproblem.apple.com">reportaproblem.apple.com</a> to request a refund from Apple.</p>
+          <p><strong>Android:</strong> Open Google Play Store > Account > Order history, then find the purchase and request a refund.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" data-faq-toggle>
+          How do I delete my account?
+        </button>
+        <div class="faq-answer">
+          <p>Go to Settings within the app > Account > Delete Account. This will permanently delete your account and all associated data. This action cannot be undone. You can also email us at <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a> to request account deletion.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" data-faq-toggle>
+          What devices are supported?
+        </button>
+        <div class="faq-answer">
+          <p><strong>iOS:</strong> iPhone and iPad running iOS 15.0 or later.</p>
+          <p><strong>Android:</strong> Devices running Android 8.0 (Oreo) or later.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" data-faq-toggle>
+          The app is not working correctly. What should I do?
+        </button>
+        <div class="faq-answer">
+          <p>Try these steps:</p>
+          <ol>
+            <li>Make sure you have the latest version of the app installed</li>
+            <li>Restart the app completely (close it from the task switcher)</li>
+            <li>Restart your device</li>
+            <li>Check your internet connection</li>
+          </ol>
+          <p>If the issue persists, please contact us with a description of the problem and your device information.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt">
+    <div class="container" style="max-width: 600px;">
+      <div class="card contact-card">
+        <h3>Still Need Help?</h3>
+        <p>Our support team is here to help you with any questions or issues.</p>
+        <a href="mailto:${SUPPORT_EMAIL}" class="btn btn-primary">Email Support</a>
+        <p style="margin-top: 1rem; font-size: 0.9rem;">${SUPPORT_EMAIL}</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container" style="max-width: 600px;">
+      <h2 class="text-center" style="margin-bottom: 1rem;">Report a Bug</h2>
+      <p class="text-center" style="margin-bottom: 1.5rem;">Found a bug? Please include the following when reporting:</p>
+      <div class="card">
+        <ul style="list-style: disc; padding-left: 1.5rem;">
+          <li style="margin-bottom: 0.5rem;">Device model and OS version</li>
+          <li style="margin-bottom: 0.5rem;">App version (found in Settings)</li>
+          <li style="margin-bottom: 0.5rem;">Steps to reproduce the issue</li>
+          <li style="margin-bottom: 0.5rem;">What you expected to happen</li>
+          <li>Screenshots or screen recordings if possible</li>
+        </ul>
+        <div style="text-align: center; margin-top: 1.5rem;">
+          <a href="mailto:${SUPPORT_EMAIL}?subject=Bug%20Report%20-%20${APP_NAME}" class="btn btn-outline">Report Bug</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-bottom">
+        &copy; ${CURRENT_YEAR} ${COMPANY_NAME}. All rights reserved.
+        | <a href="privacy.html">Privacy</a>
+        | <a href="terms.html">Terms</a>
+        | <a href="support.html">Support</a>
+      </div>
+    </div>
+  </footer>
+  <script>
+    document.querySelectorAll("[data-faq-toggle]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        this.parentElement.classList.toggle("open");
+      });
+    });
+  </script>
+</body>
+</html>

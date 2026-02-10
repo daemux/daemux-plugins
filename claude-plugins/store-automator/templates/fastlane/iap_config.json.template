@@ -1,0 +1,53 @@
+{
+  "subscription_groups": [
+    {
+      "reference_name": "Premium",
+      "localizations": {
+        "en-US": { "name": "Premium", "custom_name": "Premium Plans" }
+      },
+      "subscriptions": [
+        {
+          "product_id": "${BUNDLE_ID}.premium.monthly",
+          "reference_name": "Premium Monthly",
+          "duration": "ONE_MONTH",
+          "group_level": 1,
+          "localizations": {
+            "en-US": {
+              "name": "Monthly",
+              "description": "Full access, billed monthly"
+            }
+          },
+          "prices": {
+            "USD": "9.99"
+          },
+          "introductory_offer": {
+            "type": "FREE",
+            "duration": "ONE_WEEK",
+            "periods": 1
+          }
+        },
+        {
+          "product_id": "${BUNDLE_ID}.premium.yearly",
+          "reference_name": "Premium Yearly",
+          "duration": "ONE_YEAR",
+          "group_level": 1,
+          "localizations": {
+            "en-US": {
+              "name": "Yearly",
+              "description": "Full access, billed yearly"
+            }
+          },
+          "prices": {
+            "USD": "69.99"
+          },
+          "introductory_offer": {
+            "type": "FREE",
+            "duration": "ONE_MONTH",
+            "periods": 1
+          }
+        }
+      ]
+    }
+  ],
+  "in_app_purchases": []
+}

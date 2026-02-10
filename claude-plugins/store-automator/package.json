@@ -1,0 +1,44 @@
+{
+  "name": "@daemux/store-automator",
+  "version": "0.5.0",
+  "description": "Full App Store & Google Play automation for Flutter apps with Claude Code agents",
+  "type": "module",
+  "bin": {
+    "store-automator": "./bin/cli.mjs"
+  },
+  "scripts": {
+    "postinstall": "node bin/cli.mjs --postinstall"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "scripts/",
+    ".claude-plugin/",
+    "plugins/",
+    "templates/"
+  ],
+  "keywords": [
+    "claude",
+    "claude-code",
+    "plugin",
+    "flutter",
+    "app-store",
+    "google-play",
+    "fastlane",
+    "codemagic",
+    "ci-cd",
+    "daemux"
+  ],
+  "author": { "name": "Daemux" },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/daemux/daemux-plugins.git",
+    "directory": "claude-plugins/store-automator"
+  },
+  "publishConfig": { "access": "public" },
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "update-notifier": "^7.3.1"
+  }
+}
