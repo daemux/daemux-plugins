@@ -16,5 +16,5 @@ jobs:
           node-version: 20
       - uses: oven-sh/setup-bun@v2
       - run: bun install
-      - run: npm run typecheck
       - run: npm run build
+      - run: npm run typecheck
