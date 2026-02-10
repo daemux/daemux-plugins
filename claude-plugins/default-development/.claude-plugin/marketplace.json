@@ -5,14 +5,14 @@
   },
   "metadata": {
     "description": "General-purpose development toolkit with agents and workflows",
-    "version": "1.24.0"
+    "version": "1.25.0"
   },
   "plugins": [
     {
       "name": "daemux-dev-toolkit",
       "source": "./plugins/daemux-dev-toolkit",
       "description": "General-purpose development toolkit with 8 agents for any development workflow",
-      "version": "1.24.0",
+      "version": "1.25.0",
       "keywords": ["development", "agents", "workflow", "devops"]
     }
   ]

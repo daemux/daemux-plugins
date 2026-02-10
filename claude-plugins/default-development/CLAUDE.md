@@ -54,7 +54,7 @@ claude --plugin-dir ./plugins/daemux-dev-toolkit
 # Validate plugin syntax
 claude plugin validate ./plugins/daemux-dev-toolkit
 
-# Test the installer locally (from claude-plugins/ directory)
+# Test the installer locally (from claude-plugins/default-development/ directory)
 node bin/cli.mjs              # project install
 node bin/cli.mjs --global     # global install
 node bin/cli.mjs --uninstall  # project uninstall
@@ -67,7 +67,7 @@ Distribution is via npm (`@daemux/claude-plugin`). The old `install.sh` / curl-b
 
 ### Automatic (CI)
 
-Push to `main` with changes in `claude-plugins/` triggers `.github/workflows/publish-claude-plugin.yml`:
+Push to `main` with changes in `claude-plugins/default-development/` triggers `.github/workflows/publish-claude-plugin.yml`:
 1. Checks version sync across all 3 files
 2. Skips if version is already published on npm
 3. Publishes to npm with `--access public`
@@ -77,7 +77,7 @@ Requires `NPM_TOKEN` secret in GitHub repo settings.
 ### Manual
 
 ```bash
-cd claude-plugins
+cd claude-plugins/default-development
 npm publish --access public
 ```
 
@@ -85,7 +85,7 @@ npm publish --access public
 
 1. Make your changes to agents/code
 2. Bump version in all 3 files (`package.json`, `marketplace.json`, `plugin.json`)
-3. Run `node ../scripts/check-version.mjs` to verify sync
+3. Run `node ../../scripts/check-version.mjs` to verify sync
 4. Commit and push to main
 
 ## Marketplace Configuration
@@ -116,7 +116,7 @@ The `extraKnownMarketplaces` in project `.claude/settings.json` auto-prompts tea
 | Agent shows `inherit` model | YAML parsing failed | Quote the description field |
 | "Not installed at scope" | Missing from installed_plugins.json | Reinstall or add entry manually |
 | CI publish skipped | Version already published | Bump version before pushing |
-| Version mismatch error | 3 version files out of sync | Run `node scripts/check-version.mjs` and fix |
+| Version mismatch error | 3 version files out of sync | Run `node ../../scripts/check-version.mjs` and fix |
 
 ## Verify changes are GENERAL
    - No project-specific paths, filenames, or references

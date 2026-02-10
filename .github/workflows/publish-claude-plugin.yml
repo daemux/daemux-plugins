@@ -3,21 +3,33 @@ on:
   push:
     branches: [main]
     paths:
-      - 'claude-plugins/**'
+      - 'claude-plugins/default-development/**'
 jobs:
   publish:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: claude-plugins/default-development
     steps:
+      - name: Verify NPM_TOKEN is set
+        working-directory: .
+        run: |
+          if [ -z "$NPM_TOKEN" ]; then
+            echo "::error::NPM_TOKEN secret is not set. Configure it in repository Settings > Secrets."
+            exit 1
+          fi
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           registry-url: https://registry.npmjs.org
       - name: Check version sync
+        working-directory: .
         run: node scripts/check-version.mjs
       - name: Check if version already published
         id: check
-        working-directory: claude-plugins
         run: |
           CURRENT=$(node -p "require('./package.json').version")
           PUBLISHED=$(npm view @daemux/claude-plugin version 2>/dev/null || echo "0.0.0")
@@ -28,11 +40,9 @@ jobs:
           fi
       - name: Install dependencies
         if: steps.check.outputs.skip != 'true'
-        working-directory: claude-plugins
         run: npm install
       - name: Publish to npm
         if: steps.check.outputs.skip != 'true'
-        working-directory: claude-plugins
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

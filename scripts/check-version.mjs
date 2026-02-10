@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path';
 
 const __filename = fileURLToPath(import.meta.url);
 const repoRoot = dirname(dirname(__filename));
-const cpDir = join(repoRoot, 'claude-plugins');
+const cpDir = join(repoRoot, 'claude-plugins', 'default-development');
 
 function readJsonFile(relPath) {
   const fullPath = join(cpDir, relPath);

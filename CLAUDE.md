@@ -10,7 +10,8 @@ llm-providers/anthropic-provider/ → @daemux/anthropic-provider
 channels/telegram-adapter/        → @daemux/telegram-adapter
 features/human-behavior/          → @daemux/human-behavior
 features/transcription/           → @daemux/transcription
-claude-plugins/                   → @daemux/claude-plugin (npm package, has its own CLAUDE.md)
+claude-plugins/default-development/ → @daemux/claude-plugin (npm package, has its own CLAUDE.md)
+claude-plugins/store-automator/     → (future plugin, not yet implemented)
 ```
 
 ## Build

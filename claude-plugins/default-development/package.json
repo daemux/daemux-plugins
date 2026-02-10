@@ -1,6 +1,6 @@
 {
   "name": "@daemux/claude-plugin",
-  "version": "1.24.0",
+  "version": "1.25.0",
   "description": "Install and manage Daemux Claude Code plugins",
   "type": "module",
   "bin": {
@@ -19,7 +19,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/daemux/daemux-plugins.git",
-    "directory": "claude-plugins"
+    "directory": "claude-plugins/default-development"
   },
   "engines": { "node": ">=18" },
   "dependencies": {

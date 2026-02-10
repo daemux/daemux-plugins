@@ -87,5 +87,5 @@ Add additional environment variables as needed for your project.
 ## Pin a Specific Version
 
 ```bash
-npx @daemux/claude-plugin@1.24.0
+npx @daemux/claude-plugin@1.25.0
 ```
