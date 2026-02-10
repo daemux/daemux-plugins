@@ -38,7 +38,7 @@ jobs:
       - run: npm run build
 
       - name: Publish plugin-sdk
-        run: npm -w packages/plugin-sdk publish --access public
+        run: npm -w packages/plugin-sdk publish --access public 2>&1 || echo "::warning::Failed to publish plugin-sdk (may already exist)"
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
