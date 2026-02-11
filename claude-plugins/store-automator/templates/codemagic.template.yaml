@@ -235,6 +235,10 @@ workflows:
           if [ -z "$APP_VERSION" ]; then
             APP_VERSION="1.0.0"
           fi
+          # Normalize to semver (1.0 -> 1.0.0, 1 -> 1.0.0)
+          PARTS=$(echo "$APP_VERSION" | tr '.' '\n' | wc -l | tr -d ' ')
+          if [ "$PARTS" -eq 1 ]; then APP_VERSION="${APP_VERSION}.0.0"; fi
+          if [ "$PARTS" -eq 2 ]; then APP_VERSION="${APP_VERSION}.0"; fi
           sed -i '' "s/^version:.*/version: ${APP_VERSION}+${BUILD_NUMBER}/" $APP_ROOT/pubspec.yaml
           echo "Building: $APP_VERSION+$BUILD_NUMBER"
 
