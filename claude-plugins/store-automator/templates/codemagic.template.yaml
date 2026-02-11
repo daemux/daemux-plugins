@@ -70,7 +70,7 @@ workflows:
           gem install bundler
           bundle install
 
-      - name: Check app record exists
+      - name: Ensure app record exists
         script: |
           echo "Checking if $BUNDLE_ID exists in App Store Connect..."
           EXISTING=$(app-store-connect apps list \
@@ -86,41 +86,58 @@ workflows:
 
           if [ "$EXISTING" = "yes" ]; then
             echo "App record exists for $BUNDLE_ID"
-            echo "APP_RECORD_EXISTS=true" >> $CM_ENV
           else
-            echo ""
-            echo "=========================================="
-            echo "WARNING: APP NOT FOUND IN APP STORE CONNECT"
-            echo "=========================================="
-            echo ""
-            echo "Apple does not allow programmatic app creation via API keys."
-            echo "The IPA will still be built and available in artifacts."
-            echo "To complete setup, create the app manually:"
-            echo "  1. Go to https://appstoreconnect.apple.com"
-            echo "  2. Click '+' > 'New App'"
-            echo "  3. Bundle ID: $BUNDLE_ID"
-            echo "  4. Name: $APP_NAME"
-            echo "  5. SKU: $SKU"
-            echo ""
-            echo "After creating the app, just push again."
-            echo "APP_RECORD_EXISTS=false" >> $CM_ENV
+            echo "App not found. Attempting to create via API..."
+
+            # Ensure bundle ID is registered
+            app-store-connect bundle-ids create \
+              --identifier "$BUNDLE_ID" \
+              --name "$APP_NAME" \
+              --platform IOS 2>/dev/null || echo "Bundle ID may already exist"
+
+            # Get the bundle ID resource ID
+            BUNDLE_ID_RES=$(app-store-connect bundle-ids list \
+              --identifier-id "$BUNDLE_ID" --json 2>/dev/null \
+              | python3 -c "import sys,json; print(json.load(sys.stdin)[0]['id'])" 2>/dev/null)
+
+            if [ -z "$BUNDLE_ID_RES" ]; then
+              echo "ERROR: Could not find or create bundle ID $BUNDLE_ID"
+              exit 1
+            fi
+
+            # Try to create the app record
+            if app-store-connect apps create \
+              --name "$APP_NAME" \
+              --primary-locale "en-US" \
+              --sku "$SKU" \
+              --bundle-id-id "$BUNDLE_ID_RES" 2>/tmp/app_create_err.log; then
+              echo "App record created successfully for $BUNDLE_ID"
+            else
+              cat /tmp/app_create_err.log
+              echo ""
+              echo "=========================================="
+              echo "BUILD FAILED - CANNOT CREATE APP RECORD"
+              echo "=========================================="
+              echo ""
+              echo "Create the app manually:"
+              echo "  1. Go to https://appstoreconnect.apple.com"
+              echo "  2. Click '+' > 'New App'"
+              echo "  3. Bundle ID: $BUNDLE_ID"
+              echo "  4. Name: $APP_NAME"
+              echo "  5. SKU: $SKU"
+              echo ""
+              echo "After creating the app, just push again."
+              exit 1
+            fi
           fi
 
       - name: Upload iOS metadata and screenshots
         script: |
-          if [ "$APP_RECORD_EXISTS" = "false" ]; then
-            echo "Skipping metadata upload - app record does not exist in App Store Connect."
-            exit 0
-          fi
           cd $CM_BUILD_DIR/$APP_ROOT/ios
           bundle exec fastlane upload_metadata_ios
 
       - name: Sync IAP and subscriptions
         script: |
-          if [ "$APP_RECORD_EXISTS" = "false" ]; then
-            echo "Skipping IAP sync - app record does not exist yet."
-            exit 0
-          fi
           if ./scripts/check_changed.sh fastlane/iap_config.json; then
             cd $CM_BUILD_DIR/$APP_ROOT/ios
             bundle exec fastlane sync_iap
@@ -216,11 +233,6 @@ workflows:
 
       - name: Upload IPA to App Store
         script: |
-          if [ "$APP_RECORD_EXISTS" = "false" ]; then
-            echo "Skipping binary upload - app record does not exist in App Store Connect."
-            echo "Create the app manually first (see instructions above), then push again."
-            exit 0
-          fi
           cd $CM_BUILD_DIR/$APP_ROOT/ios
           bundle exec fastlane upload_binary_ios
 
