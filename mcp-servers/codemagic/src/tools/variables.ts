@@ -61,8 +61,13 @@ export function registerVariableGroupTools(
     },
     ({ teamId, name, advancedSecurity, variables }) => handleToolCall(async () => {
       const resolved = resolveTeamId(teamId, defaultTeamId);
-      const body: Record<string, unknown> = { name };
-      if (advancedSecurity !== undefined) body.advanced_security = advancedSecurity;
+      const body: Record<string, unknown> = {
+        name,
+        advanced_security: {
+          enabled: advancedSecurity ?? false,
+          selected_apps: [],
+        },
+      };
 
       const group = await v3.post<CmVariableGroup>(
         `/teams/${encodeURIComponent(resolved)}/variable-groups`,
@@ -95,7 +100,12 @@ export function registerVariableGroupTools(
     ({ variableGroupId, name, advancedSecurity }) => handleToolCall(() => {
       const body: Record<string, unknown> = {};
       if (name !== undefined) body.name = name;
-      if (advancedSecurity !== undefined) body.advanced_security = advancedSecurity;
+      if (advancedSecurity !== undefined) {
+        body.advanced_security = {
+          enabled: advancedSecurity,
+          selected_apps: [],
+        };
+      }
 
       return v3.patch<CmVariableGroup>(
         `/variable-groups/${encodeURIComponent(variableGroupId)}`,

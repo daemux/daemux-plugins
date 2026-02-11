@@ -1,6 +1,6 @@
 {
   "name": "@daemux/codemagic-mcp",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Codemagic CI/CD MCP server for managing apps, builds, and code signing",
   "type": "module",
   "main": "dist/index.js",

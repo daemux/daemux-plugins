@@ -88,10 +88,15 @@ export interface CmTeamMember {
   readonly role: string;
 }
 
+export interface CmAdvancedSecurity {
+  readonly enabled: boolean;
+  readonly selected_apps: string[];
+}
+
 export interface CmVariableGroup {
   readonly id: string;
   readonly name: string;
-  readonly advanced_security?: boolean;
+  readonly advanced_security?: CmAdvancedSecurity;
 }
 
 export interface CmVariable {

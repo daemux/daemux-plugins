@@ -17,7 +17,7 @@ async function createSecureVariableGroup(
 ): Promise<CmVariableGroup> {
   const group = await v3.post<CmVariableGroup>(
     `/teams/${encodeURIComponent(teamId)}/variable-groups`,
-    { name: groupName, advanced_security: true },
+    { name: groupName, advanced_security: { enabled: false, selected_apps: [] } },
   );
 
   await v3.post(
