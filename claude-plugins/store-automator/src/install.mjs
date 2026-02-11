@@ -12,7 +12,7 @@ import { promptForTokens } from './prompt.mjs';
 import { getMcpServers, writeMcpJson, updateMcpAppId, updateMcpTeamId } from './mcp-setup.mjs';
 import { installClaudeMd, installCiTemplates, installFirebaseTemplates } from './templates.mjs';
 import { findAppByRepo, addApp, normalizeRepoUrl } from './codemagic-api.mjs';
-import { writeCiAppId, writeCiTeamId } from './ci-config.mjs';
+import { writeCiAppId, writeCiTeamId, writeCiBundleId, writeCiPackageName } from './ci-config.mjs';
 
 function checkClaudeCli() {
   const result = exec('command -v claude') || exec('which claude');
@@ -182,6 +182,12 @@ export async function runInstall(scope, isPostinstall = false, cliTokens = {}) {
   installClaudeMd(join(baseDir, 'CLAUDE.md'), packageDir);
   installCiTemplates(projectDir, packageDir);
   installFirebaseTemplates(projectDir, packageDir);
+
+  if (tokens.bundleId) {
+    const written = writeCiBundleId(projectDir, tokens.bundleId);
+    if (written) console.log(`Bundle ID set in ci.config.yaml: ${tokens.bundleId}`);
+    writeCiPackageName(projectDir, tokens.bundleId);
+  }
 
   await setupCodemagicApp(projectDir, tokens.codemagicToken, tokens.codemagicTeamId);
 

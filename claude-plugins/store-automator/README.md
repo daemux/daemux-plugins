@@ -27,7 +27,7 @@ npm install @daemux/store-automator
 
 The postinstall script will:
 
-1. Prompt for MCP server tokens (Stitch, Cloudflare, Codemagic)
+1. Prompt for bundle ID and MCP server tokens (Stitch, Cloudflare, Codemagic)
 2. Configure `.mcp.json` with MCP servers (Playwright, mobile-mcp, Stitch, Cloudflare, Codemagic)
 3. Install the plugin marketplace and register agents
 4. Copy `CLAUDE.md` template to `.claude/CLAUDE.md`
@@ -122,13 +122,14 @@ For CI/CD environments or scripted setups, pass tokens as CLI flags to skip inte
 
 ```bash
 npx @daemux/store-automator \
+  --bundle-id=com.company.app \
   --codemagic-token=YOUR_CM_TOKEN \
   --stitch-key=YOUR_STITCH_KEY \
   --cloudflare-token=YOUR_CF_TOKEN \
   --cloudflare-account-id=YOUR_CF_ACCOUNT_ID
 ```
 
-Any tokens provided via flags will skip the corresponding interactive prompt. If all four tokens are provided, the entire interactive session is skipped.
+Any tokens provided via flags will skip the corresponding interactive prompt. If all four tokens are provided, the entire interactive session is skipped. The bundle ID, if provided, is automatically written to `bundle_id` and `package_name` in `ci.config.yaml`.
 
 ## CLI Options
 
@@ -141,6 +142,9 @@ Options:
   --postinstall                  Run as postinstall hook (auto-detected)
   -v, --version                  Show version number
   -h, --help                     Show help
+
+App Configuration:
+  --bundle-id=ID                 Bundle ID / Package Name (e.g., com.company.app)
 
 MCP Token Flags (skip interactive prompts):
   --codemagic-token=TOKEN        Codemagic API token

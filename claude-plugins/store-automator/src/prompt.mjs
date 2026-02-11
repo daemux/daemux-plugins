@@ -22,8 +22,16 @@ function allTokensProvided(cliTokens) {
   );
 }
 
+function allPromptsProvided(cliTokens) {
+  return (
+    cliTokens.bundleId !== undefined &&
+    allTokensProvided(cliTokens)
+  );
+}
+
 export async function promptForTokens(cliTokens = {}) {
   const result = {
+    bundleId: cliTokens.bundleId ?? '',
     stitchApiKey: cliTokens.stitchApiKey ?? '',
     cloudflareToken: cliTokens.cloudflareToken ?? '',
     cloudflareAccountId: cliTokens.cloudflareAccountId ?? '',
@@ -31,14 +39,14 @@ export async function promptForTokens(cliTokens = {}) {
     codemagicTeamId: cliTokens.codemagicTeamId ?? '',
   };
 
-  if (allTokensProvided(cliTokens)) {
-    console.log('All MCP tokens provided via CLI flags, skipping prompts.');
+  if (allPromptsProvided(cliTokens)) {
+    console.log('All configuration provided via CLI flags, skipping prompts.');
     return result;
   }
 
   if (!isInteractive()) {
-    console.log('Non-interactive terminal detected, skipping token prompts.');
-    console.log('Run "npx store-automator" manually to configure MCP tokens.');
+    console.log('Non-interactive terminal detected, skipping prompts.');
+    console.log('Run "npx store-automator" manually to configure.');
     return result;
   }
 
@@ -48,11 +56,27 @@ export async function promptForTokens(cliTokens = {}) {
   });
 
   console.log('');
-  console.log('MCP Server Configuration');
-  console.log('Press Enter to skip any token you do not have yet.');
-  console.log('');
 
   try {
+    if (cliTokens.bundleId === undefined) {
+      console.log('App Configuration');
+      console.log('');
+      result.bundleId = await ask(
+        rl,
+        'Bundle ID / Package Name (e.g., com.company.app): '
+      );
+      console.log('');
+    }
+
+    if (allTokensProvided(cliTokens)) {
+      console.log('All MCP tokens provided via CLI flags.');
+      return result;
+    }
+
+    console.log('MCP Server Configuration');
+    console.log('Press Enter to skip any token you do not have yet.');
+    console.log('');
+
     if (cliTokens.stitchApiKey === undefined) {
       result.stitchApiKey = await ask(
         rl,

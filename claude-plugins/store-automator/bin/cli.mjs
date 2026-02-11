@@ -27,12 +27,13 @@ function flagValue(arg, prefix) {
   return arg.startsWith(prefix) ? arg.slice(prefix.length) : undefined;
 }
 
-const tokenFlags = {
+const valueFlags = {
   '--codemagic-token=': 'codemagicToken',
   '--codemagic-team-id=': 'codemagicTeamId',
   '--stitch-key=': 'stitchApiKey',
   '--cloudflare-token=': 'cloudflareToken',
   '--cloudflare-account-id=': 'cloudflareAccountId',
+  '--bundle-id=': 'bundleId',
 };
 
 for (const arg of args) {
@@ -42,7 +43,7 @@ for (const arg of args) {
   if ((v = flagValue(arg, '--workflow=')) !== undefined) { cmWorkflowId = v; continue; }
 
   let matched = false;
-  for (const [prefix, key] of Object.entries(tokenFlags)) {
+  for (const [prefix, key] of Object.entries(valueFlags)) {
     if ((v = flagValue(arg, prefix)) !== undefined) {
       cliTokens[key] = v;
       matched = true;
@@ -86,6 +87,9 @@ Options:
   -v, --version                  Show version number
   -h, --help                     Show help
 
+App Configuration:
+  --bundle-id=ID                 Bundle ID / Package Name (e.g., com.company.app)
+
 MCP Token Flags (skip interactive prompts):
   --codemagic-token=TOKEN        Codemagic API token
   --codemagic-team-id=ID         Codemagic Team ID (from Teams page)
@@ -115,7 +119,7 @@ Examples:
   npx @daemux/store-automator --github-setup           Configure GitHub Actions
 
 Non-interactive install (CI/CD):
-  npx @daemux/store-automator --codemagic-token=TOKEN --codemagic-team-id=ID --stitch-key=KEY
+  npx @daemux/store-automator --bundle-id=com.company.app --codemagic-token=TOKEN --codemagic-team-id=ID --stitch-key=KEY
   npx @daemux/store-automator --cloudflare-token=TOKEN --cloudflare-account-id=ID`);
       process.exit(0);
       break; // eslint: no-fallthrough
