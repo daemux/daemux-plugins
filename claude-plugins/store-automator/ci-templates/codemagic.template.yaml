@@ -171,9 +171,13 @@ workflows:
             echo "App record already exists for $BUNDLE_ID"
             echo "APP_RECORD_EXISTS=true" >> $CM_ENV
           else
-            echo "App not found. Attempting to create via API..."
-            pip3 install PyJWT cryptography requests 2>/dev/null
-            if python3 scripts/create_app_record.py; then
+            echo "App not found. Creating via fastlane produce..."
+            P8_TMP="/tmp/fastlane_api_key.p8"
+            echo "$APP_STORE_CONNECT_PRIVATE_KEY" > "$P8_TMP"
+            export FASTLANE_API_KEY_PATH="$P8_TMP"
+            cd $CM_BUILD_DIR/$APP_ROOT/ios
+            if bundle exec fastlane create_app; then
+              echo "App record created successfully"
               echo "APP_RECORD_EXISTS=true" >> $CM_ENV
             else
               echo ""
