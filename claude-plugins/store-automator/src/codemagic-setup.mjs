@@ -1,8 +1,10 @@
 import { findAppByRepo, addApp, startBuild, getBuildStatus, normalizeRepoUrl } from './codemagic-api.mjs';
 import { exec, resolveToken } from './utils.mjs';
 import { execFileSync } from 'child_process';
-import { writeCiAppId } from './ci-config.mjs';
-import { updateMcpAppId } from './mcp-setup.mjs';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { writeCiAppId, writeCiTeamId } from './ci-config.mjs';
+import { updateMcpAppId, updateMcpTeamId } from './mcp-setup.mjs';
 
 const POLL_INTERVAL_MS = 30_000;
 const POLL_TIMEOUT_MS = 15 * 60 * 1000;
@@ -94,6 +96,24 @@ async function pollBuildStatus(token, buildId) {
   return 'timeout';
 }
 
+function resolveCliTeamId() {
+  const prefix = '--codemagic-team-id=';
+  for (const arg of process.argv) {
+    if (arg.startsWith(prefix)) return arg.slice(prefix.length);
+  }
+  return undefined;
+}
+
+function readCiTeamId() {
+  try {
+    const content = readFileSync(join(process.cwd(), 'ci.config.yaml'), 'utf8');
+    const match = content.match(/^\s*team_id:\s*"([^"]+)"/m);
+    return match ? match[1] : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function runCodemagicSetup(options) {
   const {
     tokenArg = '',
@@ -105,8 +125,10 @@ export async function runCodemagicSetup(options) {
 
   const token = resolveToken(tokenArg);
   const repoUrl = resolveRepoUrl();
+  const teamId = resolveCliTeamId() || readCiTeamId();
 
   console.log(`Repository: ${repoUrl}`);
+  if (teamId) console.log(`Team ID: ${teamId}`);
   console.log('Checking Codemagic for existing app...');
 
   let app = await findAppByRepo(token, repoUrl);
@@ -115,7 +137,7 @@ export async function runCodemagicSetup(options) {
     console.log(`App already registered: ${app.appName || app._id}`);
   } else {
     console.log('App not found. Adding to Codemagic...');
-    app = await addApp(token, repoUrl);
+    app = await addApp(token, repoUrl, teamId);
     console.log(`App added: ${app.appName || app._id}`);
 
     console.log('Setting up GitHub webhook...');
@@ -125,6 +147,11 @@ export async function runCodemagicSetup(options) {
   const appId = app._id;
   const appIdWritten = writeCiAppId(process.cwd(), appId);
   updateMcpAppId(process.cwd(), appId);
+
+  if (teamId) {
+    writeCiTeamId(process.cwd(), teamId);
+    updateMcpTeamId(process.cwd(), teamId);
+  }
 
   if (!trigger) {
     console.log('\nSetup complete. Use --trigger to start a build.\n');

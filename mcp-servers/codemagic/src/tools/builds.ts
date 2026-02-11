@@ -6,7 +6,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type { LegacyClient } from '../api/legacy-client.js';
 import type { V3Client } from '../api/v3-client.js';
-import { handleToolCall, resolveAppId } from '../api/errors.js';
+import { handleToolCall, resolveAppId, resolveTeamId } from '../api/errors.js';
 import type { CmBuild, V3BuildsResponse } from '../types/api-types.js';
 
 function stripUndefined(obj: Record<string, unknown>): Record<string, unknown> {
@@ -20,6 +20,7 @@ export function registerBuildTools(
   legacy: LegacyClient,
   v3: V3Client,
   defaultAppId?: string,
+  defaultTeamId?: string,
 ): void {
   server.tool(
     'start_build',
@@ -66,7 +67,7 @@ export function registerBuildTools(
     'list_builds',
     'List builds for a team (V3 API)',
     {
-      teamId: z.string().describe('Team ID'),
+      teamId: z.string().optional().describe('Team ID (uses default if omitted)'),
       appId: z.string().optional().describe('Filter by application ID'),
       status: z.string().optional().describe('Filter by build status'),
       workflowId: z.string().optional().describe('Filter by workflow ID'),
@@ -75,11 +76,12 @@ export function registerBuildTools(
       label: z.string().optional().describe('Filter by label'),
     },
     ({ teamId, appId, status, workflowId, branch, tag, label }) =>
-      handleToolCall(() =>
-        v3.get<V3BuildsResponse>(
-          `/teams/${encodeURIComponent(teamId)}/builds`,
+      handleToolCall(() => {
+        const resolved = resolveTeamId(teamId, defaultTeamId);
+        return v3.get<V3BuildsResponse>(
+          `/teams/${encodeURIComponent(resolved)}/builds`,
           { appId, status, workflowId, branch, tag, label },
-        ),
-      ),
+        );
+      }),
   );
 }

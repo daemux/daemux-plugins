@@ -50,8 +50,10 @@ export async function findAppByRepo(token, repoUrl) {
   }) || null;
 }
 
-export async function addApp(token, repoUrl) {
-  return cmFetch(token, 'POST', '/apps', { repositoryUrl: repoUrl });
+export async function addApp(token, repoUrl, teamId) {
+  const body = { repositoryUrl: repoUrl };
+  if (teamId) body.teamId = teamId;
+  return cmFetch(token, 'POST', '/apps', body);
 }
 
 export async function startBuild(token, appId, workflowId, branch) {

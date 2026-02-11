@@ -29,6 +29,7 @@ function flagValue(arg, prefix) {
 
 const tokenFlags = {
   '--codemagic-token=': 'codemagicToken',
+  '--codemagic-team-id=': 'codemagicTeamId',
   '--stitch-key=': 'stitchApiKey',
   '--cloudflare-token=': 'cloudflareToken',
   '--cloudflare-account-id=': 'cloudflareAccountId',
@@ -87,6 +88,7 @@ Options:
 
 MCP Token Flags (skip interactive prompts):
   --codemagic-token=TOKEN        Codemagic API token
+  --codemagic-team-id=ID         Codemagic Team ID (from Teams page)
   --stitch-key=KEY               Stitch MCP API key
   --cloudflare-token=TOKEN       Cloudflare API token
   --cloudflare-account-id=ID     Cloudflare account ID
@@ -113,7 +115,7 @@ Examples:
   npx @daemux/store-automator --github-setup           Configure GitHub Actions
 
 Non-interactive install (CI/CD):
-  npx @daemux/store-automator --codemagic-token=TOKEN --stitch-key=KEY
+  npx @daemux/store-automator --codemagic-token=TOKEN --codemagic-team-id=ID --stitch-key=KEY
   npx @daemux/store-automator --cloudflare-token=TOKEN --cloudflare-account-id=ID`);
       process.exit(0);
       break; // eslint: no-fallthrough

@@ -8,7 +8,9 @@ import type { LegacyClient } from '../api/legacy-client.js';
 import { handleToolCall, resolveAppId } from '../api/errors.js';
 import type { CmApp, CmAppsResponse } from '../types/api-types.js';
 
-export function registerAppTools(server: McpServer, legacy: LegacyClient, defaultAppId?: string): void {
+export function registerAppTools(
+  server: McpServer, legacy: LegacyClient, defaultAppId?: string, defaultTeamId?: string,
+): void {
   server.tool(
     'list_apps',
     'List all Codemagic applications',
@@ -42,7 +44,8 @@ export function registerAppTools(server: McpServer, legacy: LegacyClient, defaul
     },
     ({ repositoryUrl, teamId, projectType, sshKey }) => handleToolCall(() => {
       const body: Record<string, unknown> = { repositoryUrl };
-      if (teamId) body.teamId = teamId;
+      const resolvedTeamId = teamId ?? defaultTeamId;
+      if (resolvedTeamId) body.teamId = resolvedTeamId;
       if (projectType) body.projectType = projectType;
 
       if (sshKey) {

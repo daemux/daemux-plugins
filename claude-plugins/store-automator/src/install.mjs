@@ -9,10 +9,10 @@ import {
 } from './utils.mjs';
 import { injectEnvVars, injectStatusLine } from './settings.mjs';
 import { promptForTokens } from './prompt.mjs';
-import { getMcpServers, writeMcpJson, updateMcpAppId } from './mcp-setup.mjs';
+import { getMcpServers, writeMcpJson, updateMcpAppId, updateMcpTeamId } from './mcp-setup.mjs';
 import { installClaudeMd, installCiTemplates, installFirebaseTemplates } from './templates.mjs';
 import { findAppByRepo, addApp, normalizeRepoUrl } from './codemagic-api.mjs';
-import { writeCiAppId } from './ci-config.mjs';
+import { writeCiAppId, writeCiTeamId } from './ci-config.mjs';
 
 function checkClaudeCli() {
   const result = exec('command -v claude') || exec('which claude');
@@ -112,7 +112,7 @@ function setupGitHubActions(codemagicToken) {
   }
 }
 
-async function setupCodemagicApp(projectDir, codemagicToken) {
+async function setupCodemagicApp(projectDir, codemagicToken, codemagicTeamId) {
   if (!codemagicToken) return;
 
   let repoUrl;
@@ -130,7 +130,7 @@ async function setupCodemagicApp(projectDir, codemagicToken) {
   try {
     let app = await findAppByRepo(codemagicToken, repoUrl);
     if (!app) {
-      app = await addApp(codemagicToken, repoUrl);
+      app = await addApp(codemagicToken, repoUrl, codemagicTeamId);
       console.log(`Codemagic app created: ${app.appName || app._id}`);
     } else {
       console.log(`Codemagic app found: ${app.appName || app._id}`);
@@ -142,6 +142,11 @@ async function setupCodemagicApp(projectDir, codemagicToken) {
     }
 
     updateMcpAppId(projectDir, app._id);
+
+    if (codemagicTeamId) {
+      writeCiTeamId(projectDir, codemagicTeamId);
+      updateMcpTeamId(projectDir, codemagicTeamId);
+    }
   } catch (err) {
     console.log(`Codemagic auto-setup skipped: ${err.message || err}`);
   }
@@ -178,7 +183,7 @@ export async function runInstall(scope, isPostinstall = false, cliTokens = {}) {
   installCiTemplates(projectDir, packageDir);
   installFirebaseTemplates(projectDir, packageDir);
 
-  await setupCodemagicApp(projectDir, tokens.codemagicToken);
+  await setupCodemagicApp(projectDir, tokens.codemagicToken, tokens.codemagicTeamId);
 
   const scopeLabel = scope === 'user' ? 'global' : 'project';
   console.log(`Configuring ${scopeLabel} settings...`);

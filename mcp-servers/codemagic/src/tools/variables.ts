@@ -5,10 +5,12 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type { V3Client } from '../api/v3-client.js';
-import { handleToolCall } from '../api/errors.js';
+import { handleToolCall, resolveTeamId } from '../api/errors.js';
 import type { CmVariableGroup } from '../types/api-types.js';
 
-export function registerVariableGroupTools(server: McpServer, v3: V3Client, defaultAppId?: string): void {
+export function registerVariableGroupTools(
+  server: McpServer, v3: V3Client, defaultAppId?: string, defaultTeamId?: string,
+): void {
   server.tool(
     'list_variable_groups',
     'List variable groups for a team or application',
@@ -17,13 +19,14 @@ export function registerVariableGroupTools(server: McpServer, v3: V3Client, defa
       appId: z.string().optional().describe('Application ID (provide teamId or appId, uses default if both omitted)'),
     },
     ({ teamId, appId }) => handleToolCall(() => {
+      const resolvedTeamId = teamId ?? defaultTeamId;
       const resolvedAppId = appId ?? defaultAppId;
-      if (!teamId && !resolvedAppId) {
+      if (!resolvedTeamId && !resolvedAppId) {
         throw new Error('Provide either teamId or appId (no default configured)');
       }
 
-      const path = teamId
-        ? `/teams/${encodeURIComponent(teamId)}/variable-groups`
+      const path = resolvedTeamId
+        ? `/teams/${encodeURIComponent(resolvedTeamId)}/variable-groups`
         : `/apps/${encodeURIComponent(resolvedAppId!)}/variable-groups`;
 
       return v3.get<CmVariableGroup[]>(path);
@@ -47,7 +50,7 @@ export function registerVariableGroupTools(server: McpServer, v3: V3Client, defa
     'create_variable_group',
     'Create a new variable group',
     {
-      teamId: z.string().describe('Team ID to create the group in'),
+      teamId: z.string().optional().describe('Team ID to create the group in (uses default if omitted)'),
       name: z.string().describe('Variable group name'),
       advancedSecurity: z.boolean().optional().describe('Enable advanced security'),
       variables: z.array(z.object({
@@ -57,11 +60,12 @@ export function registerVariableGroupTools(server: McpServer, v3: V3Client, defa
       })).optional().describe('Initial variables to add'),
     },
     ({ teamId, name, advancedSecurity, variables }) => handleToolCall(async () => {
+      const resolved = resolveTeamId(teamId, defaultTeamId);
       const body: Record<string, unknown> = { name };
       if (advancedSecurity !== undefined) body.advanced_security = advancedSecurity;
 
       const group = await v3.post<CmVariableGroup>(
-        `/teams/${encodeURIComponent(teamId)}/variable-groups`,
+        `/teams/${encodeURIComponent(resolved)}/variable-groups`,
         body,
       );
 

@@ -44,7 +44,7 @@ The Codemagic pipeline runs two parallel workflows on push to `main`:
 
 ### Token Configuration
 
-The Codemagic API token is auto-configured via the codemagic MCP server in `.mcp.json` (set during install). You do not need to resolve the token manually -- all MCP tool calls authenticate automatically. If the codemagic MCP server is missing from `.mcp.json`, instruct the user to re-run `npx @daemux/store-automator` or add `--codemagic-token=TOKEN` to configure it.
+The Codemagic API token and Team ID are auto-configured via the codemagic MCP server in `.mcp.json` (set during install). You do not need to resolve the token manually -- all MCP tool calls authenticate automatically. The `CODEMAGIC_TEAM_ID` env var enables default team resolution for team-scoped tools (`list_builds`, `get_team`, `list_team_members`, `create_variable_group`, `setup_asc_credentials`, `setup_code_signing`). If the codemagic MCP server is missing from `.mcp.json`, instruct the user to re-run `npx @daemux/store-automator` or add `--codemagic-token=TOKEN --codemagic-team-id=ID` to configure it.
 
 ### Triggering Builds
 
@@ -76,20 +76,20 @@ Build states: `queued` -> `preparing` -> `building` -> `testing` -> `publishing`
 | `start_build` | Start a new build |
 | `get_build` | Get details of a specific build |
 | `cancel_build` | Cancel a running build |
-| `list_builds` | List builds for a team (V3 API) |
+| `list_builds` | List builds for a team (V3 API, uses default team if omitted) |
 | `get_artifact_url` | Get the download URL for a build artifact |
 | `create_public_artifact_url` | Create a time-limited public URL for an artifact |
 | `list_caches` | List build caches for an application |
 | `delete_caches` | Delete build caches for an application |
-| `setup_asc_credentials` | Create variable group with App Store Connect credentials |
-| `setup_code_signing` | Create variable group with iOS code signing cert and profile |
+| `setup_asc_credentials` | Create variable group with ASC credentials (uses default team if omitted) |
+| `setup_code_signing` | Create variable group with iOS signing (uses default team if omitted) |
 | `get_user` | Get the current authenticated user info |
 | `list_teams` | List all teams the user belongs to |
-| `get_team` | Get details of a specific team |
-| `list_team_members` | List members of a specific team |
+| `get_team` | Get details of a specific team (uses default team if omitted) |
+| `list_team_members` | List members of a team (uses default team if omitted) |
 | `list_variable_groups` | List variable groups for a team or application |
 | `get_variable_group` | Get details of a specific variable group |
-| `create_variable_group` | Create a new variable group |
+| `create_variable_group` | Create a new variable group (uses default team if omitted) |
 | `update_variable_group` | Update a variable group name or security setting |
 | `delete_variable_group` | Delete a variable group |
 | `list_variables` | List variables in a variable group |
@@ -366,7 +366,7 @@ Analyze Firestore usage patterns and optimize queries, indexes, and security rul
 
 | File | Purpose |
 |------|---------|
-| `ci.config.yaml` | Single source of truth for all CI/CD config |
+| `ci.config.yaml` | Single source of truth for all CI/CD config (includes team_id, app_id) |
 | `codemagic.yaml` | Generated from template -- do not edit directly |
 | `templates/codemagic.template.yaml` | Codemagic workflow template |
 | `scripts/generate.sh` | Generates codemagic.yaml from ci.config.yaml |

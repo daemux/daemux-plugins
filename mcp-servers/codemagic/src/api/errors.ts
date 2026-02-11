@@ -49,6 +49,12 @@ export function resolveAppId(appId: string | undefined, defaultAppId: string | u
   return resolved;
 }
 
+export function resolveTeamId(teamId: string | undefined, defaultTeamId: string | undefined): string {
+  const resolved = teamId ?? defaultTeamId;
+  if (!resolved) throw new Error('teamId is required (no default configured)');
+  return resolved;
+}
+
 export async function handleToolCall(fn: () => Promise<unknown>): Promise<CallToolResult> {
   try {
     const result = await fn();

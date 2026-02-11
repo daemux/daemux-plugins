@@ -2,17 +2,21 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
 const CI_CONFIG_FILE = 'ci.config.yaml';
-const APP_ID_PATTERN = /^(\s*app_id:\s*)"[^"]*"/m;
+const FIELD_PATTERNS = {
+  app_id: /^(\s*app_id:\s*)"[^"]*"/m,
+  team_id: /^(\s*team_id:\s*)"[^"]*"/m,
+};
 
-export function writeCiAppId(projectDir, appId) {
+function writeCiField(projectDir, field, value) {
   const configPath = join(projectDir, CI_CONFIG_FILE);
   if (!existsSync(configPath)) return false;
 
   try {
+    const pattern = FIELD_PATTERNS[field];
     const content = readFileSync(configPath, 'utf8');
-    if (!APP_ID_PATTERN.test(content)) return false;
+    if (!pattern.test(content)) return false;
 
-    const updated = content.replace(APP_ID_PATTERN, `$1"${appId}"`);
+    const updated = content.replace(pattern, `$1"${value}"`);
     if (updated === content) return false;
 
     writeFileSync(configPath, updated, 'utf8');
@@ -20,4 +24,12 @@ export function writeCiAppId(projectDir, appId) {
   } catch {
     return false;
   }
+}
+
+export function writeCiAppId(projectDir, appId) {
+  return writeCiField(projectDir, 'app_id', appId);
+}
+
+export function writeCiTeamId(projectDir, teamId) {
+  return writeCiField(projectDir, 'team_id', teamId);
 }
