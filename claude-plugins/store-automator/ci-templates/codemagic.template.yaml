@@ -89,16 +89,28 @@ workflows:
           else
             echo "App not found. Attempting to create via API..."
 
-            # Ensure bundle ID is registered
+            # Ensure bundle ID is registered in Developer Portal
+            echo "Registering bundle ID $BUNDLE_ID..."
             app-store-connect bundle-ids create \
               --identifier "$BUNDLE_ID" \
-              --name "$APP_NAME" \
-              --platform IOS 2>/dev/null || echo "Bundle ID may already exist"
+              --name "${APP_NAME}_ios" \
+              --platform IOS 2>&1 || echo "Bundle ID may already exist (this is OK)"
 
-            # Get the bundle ID resource ID
-            BUNDLE_ID_RES=$(app-store-connect bundle-ids list \
-              --identifier-id "$BUNDLE_ID" --json 2>/dev/null \
-              | python3 -c "import sys,json; print(json.load(sys.stdin)[0]['id'])" 2>/dev/null)
+            # Get the bundle ID resource ID by listing all and filtering
+            echo "Looking up bundle ID resource..."
+            BUNDLE_ID_RES=$(app-store-connect bundle-ids list --json 2>/dev/null \
+              | python3 -c "
+          import sys, json
+          try:
+              ids = json.load(sys.stdin)
+              for b in ids:
+                  attrs = b.get('attributes', {})
+                  if attrs.get('identifier') == '$BUNDLE_ID':
+                      print(b['id'])
+                      break
+          except:
+              pass
+          " 2>/dev/null)
 
             if [ -z "$BUNDLE_ID_RES" ]; then
               echo "ERROR: Could not find or create bundle ID $BUNDLE_ID"
