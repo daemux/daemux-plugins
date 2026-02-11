@@ -163,8 +163,13 @@ workflows:
       - name: Ensure Android upload keystore
         script: |
           KEYSTORE_PATH="$CM_BUILD_DIR/android/upload.keystore"
+          CREDS_PATH="$CM_BUILD_DIR/creds/android_upload.keystore"
+          GENERATED=false
           if [ -f "$KEYSTORE_PATH" ]; then
             echo "Using existing upload keystore from repo"
+          elif [ -f "$CREDS_PATH" ]; then
+            echo "Restoring upload keystore from creds/"
+            cp "$CREDS_PATH" "$KEYSTORE_PATH"
           else
             echo "Generating new upload keystore..."
             keytool -genkey -v \
@@ -177,8 +182,18 @@ workflows:
               -storepass "$KEYSTORE_PASSWORD" \
               -keypass "$KEYSTORE_PASSWORD" \
               -dname "CN=Upload Key, O=Developer, C=US"
+            GENERATED=true
+          fi
+          # Always ensure creds/ backup exists
+          mkdir -p "$CM_BUILD_DIR/creds"
+          if [ ! -f "$CREDS_PATH" ] || ! cmp -s "$KEYSTORE_PATH" "$CREDS_PATH"; then
+            cp "$KEYSTORE_PATH" "$CREDS_PATH"
+            echo "Keystore backed up to creds/android_upload.keystore"
+          fi
+          # Commit keystore files if newly generated
+          if [ "$GENERATED" = "true" ]; then
             cd "$CM_BUILD_DIR"
-            git add android/upload.keystore
+            git add --force android/upload.keystore creds/android_upload.keystore
             git commit -m "chore: add Android upload keystore [skip ci]"
             git push origin HEAD
             echo "Upload keystore generated and committed to repo"
