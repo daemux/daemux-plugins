@@ -31,18 +31,6 @@ def asc_api_key
 end
 
 platform :ios do
-  lane :create_app do
-    produce(
-      api_key: asc_api_key,
-      app_identifier: ENV["BUNDLE_ID"],
-      app_name: ENV["APP_NAME"],
-      sku: ENV["SKU"],
-      language: "English",
-      app_version: "1.0",
-      enable_services: {}
-    )
-  end
-
   lane :deploy_ios do
     deliver(
       api_key: asc_api_key,

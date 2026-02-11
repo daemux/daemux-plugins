@@ -153,7 +153,7 @@ workflows:
           gem install bundler
           bundle install
 
-      - name: Create app record (idempotent)
+      - name: Check app record exists
         script: |
           echo "Checking if $BUNDLE_ID exists in App Store Connect..."
           EXISTING=$(app-store-connect apps list \
@@ -168,34 +168,25 @@ workflows:
           " 2>/dev/null)
 
           if [ "$EXISTING" = "yes" ]; then
-            echo "App record already exists for $BUNDLE_ID"
+            echo "App record exists for $BUNDLE_ID"
             echo "APP_RECORD_EXISTS=true" >> $CM_ENV
           else
-            echo "App not found. Creating via fastlane produce..."
-            P8_TMP="/tmp/fastlane_api_key.p8"
-            echo "$APP_STORE_CONNECT_PRIVATE_KEY" > "$P8_TMP"
-            export FASTLANE_API_KEY_PATH="$P8_TMP"
-            cd $CM_BUILD_DIR/$APP_ROOT/ios
-            if bundle exec fastlane create_app; then
-              echo "App record created successfully"
-              echo "APP_RECORD_EXISTS=true" >> $CM_ENV
-            else
-              echo ""
-              echo "=========================================="
-              echo "APP CREATION FAILED - MANUAL STEP REQUIRED"
-              echo "=========================================="
-              echo ""
-              echo "Your IPA will still be built and available in artifacts."
-              echo "To complete setup, create the app manually:"
-              echo "  1. Go to https://appstoreconnect.apple.com"
-              echo "  2. Click '+' > 'New App'"
-              echo "  3. Bundle ID: $BUNDLE_ID"
-              echo "  4. Name: $APP_NAME"
-              echo "  5. SKU: $SKU"
-              echo ""
-              echo "After creating the app, just push again."
-              echo "APP_RECORD_EXISTS=false" >> $CM_ENV
-            fi
+            echo ""
+            echo "=========================================="
+            echo "APP NOT FOUND - MANUAL STEP REQUIRED"
+            echo "=========================================="
+            echo ""
+            echo "Apple does not allow programmatic app creation via API keys."
+            echo "Your IPA will still be built and available in artifacts."
+            echo "To complete setup, create the app manually:"
+            echo "  1. Go to https://appstoreconnect.apple.com"
+            echo "  2. Click '+' > 'New App'"
+            echo "  3. Bundle ID: $BUNDLE_ID"
+            echo "  4. Name: $APP_NAME"
+            echo "  5. SKU: $SKU"
+            echo ""
+            echo "After creating the app, just push again."
+            echo "APP_RECORD_EXISTS=false" >> $CM_ENV
           fi
 
       - name: Deploy to App Store
