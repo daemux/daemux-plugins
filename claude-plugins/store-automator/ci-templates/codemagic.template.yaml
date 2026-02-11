@@ -60,6 +60,64 @@ workflows:
           cat "$CM_BUILD_DIR/$P8_KEY_PATH" >> $CM_ENV
           echo "" >> $CM_ENV
           echo "KEYDELIMITER" >> $CM_ENV
+          # Write P8 key to temp file once for all Fastlane steps
+          P8_TMP="/tmp/fastlane_api_key.p8"
+          cat "$CM_BUILD_DIR/$P8_KEY_PATH" > "$P8_TMP"
+          echo "FASTLANE_API_KEY_PATH=$P8_TMP" >> $CM_ENV
+
+      - name: Install Fastlane
+        script: |
+          cd $CM_BUILD_DIR/$APP_ROOT/ios
+          gem install bundler
+          bundle install
+
+      - name: Check app record exists
+        script: |
+          echo "Checking if $BUNDLE_ID exists in App Store Connect..."
+          EXISTING=$(app-store-connect apps list \
+            --bundle-id-identifier "$BUNDLE_ID" --json 2>&1 \
+            | python3 -c "
+          import sys, json
+          try:
+              apps = json.load(sys.stdin)
+              print('yes' if apps else 'no')
+          except:
+              print('no')
+          " 2>/dev/null)
+
+          if [ "$EXISTING" = "yes" ]; then
+            echo "App record exists for $BUNDLE_ID"
+          else
+            echo ""
+            echo "=========================================="
+            echo "BUILD FAILED - APP NOT FOUND"
+            echo "=========================================="
+            echo ""
+            echo "Apple does not allow programmatic app creation via API keys."
+            echo "To fix this, create the app manually:"
+            echo "  1. Go to https://appstoreconnect.apple.com"
+            echo "  2. Click '+' > 'New App'"
+            echo "  3. Bundle ID: $BUNDLE_ID"
+            echo "  4. Name: $APP_NAME"
+            echo "  5. SKU: $SKU"
+            echo ""
+            echo "After creating the app, just push again."
+            exit 1
+          fi
+
+      - name: Upload iOS metadata and screenshots
+        script: |
+          cd $CM_BUILD_DIR/$APP_ROOT/ios
+          bundle exec fastlane upload_metadata_ios
+
+      - name: Sync IAP and subscriptions
+        script: |
+          if ./scripts/check_changed.sh fastlane/iap_config.json; then
+            cd $CM_BUILD_DIR/$APP_ROOT/ios
+            bundle exec fastlane sync_iap
+          else
+            echo "IAP config unchanged - skipping"
+          fi
 
       - name: Set up iOS code signing
         script: |
@@ -147,74 +205,10 @@ workflows:
       - name: Build iOS
         script: cd $CM_BUILD_DIR/$APP_ROOT && flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
 
-      - name: Install Fastlane
+      - name: Upload IPA to App Store
         script: |
           cd $CM_BUILD_DIR/$APP_ROOT/ios
-          gem install bundler
-          bundle install
-
-      - name: Check app record exists
-        script: |
-          echo "Checking if $BUNDLE_ID exists in App Store Connect..."
-          EXISTING=$(app-store-connect apps list \
-            --bundle-id-identifier "$BUNDLE_ID" --json 2>&1 \
-            | python3 -c "
-          import sys, json
-          try:
-              apps = json.load(sys.stdin)
-              print('yes' if apps else 'no')
-          except:
-              print('no')
-          " 2>/dev/null)
-
-          if [ "$EXISTING" = "yes" ]; then
-            echo "App record exists for $BUNDLE_ID"
-            echo "APP_RECORD_EXISTS=true" >> $CM_ENV
-          else
-            echo ""
-            echo "=========================================="
-            echo "APP NOT FOUND - MANUAL STEP REQUIRED"
-            echo "=========================================="
-            echo ""
-            echo "Apple does not allow programmatic app creation via API keys."
-            echo "Your IPA will still be built and available in artifacts."
-            echo "To complete setup, create the app manually:"
-            echo "  1. Go to https://appstoreconnect.apple.com"
-            echo "  2. Click '+' > 'New App'"
-            echo "  3. Bundle ID: $BUNDLE_ID"
-            echo "  4. Name: $APP_NAME"
-            echo "  5. SKU: $SKU"
-            echo ""
-            echo "After creating the app, just push again."
-            echo "APP_RECORD_EXISTS=false" >> $CM_ENV
-          fi
-
-      - name: Deploy to App Store
-        script: |
-          if [ "$APP_RECORD_EXISTS" = "false" ]; then
-            echo "Skipping deployment - app record does not exist in App Store Connect."
-            echo "Create the app manually first (see instructions above), then push again."
-            exit 0
-          fi
-          # Write P8 key to file for Fastlane (avoids Spaceship::Tunes nil issue)
-          P8_TMP="/tmp/fastlane_api_key.p8"
-          echo "$APP_STORE_CONNECT_PRIVATE_KEY" > "$P8_TMP"
-          export FASTLANE_API_KEY_PATH="$P8_TMP"
-          cd $CM_BUILD_DIR/$APP_ROOT/ios
-          bundle exec fastlane deploy_ios
-
-      - name: Sync IAP and subscriptions
-        script: |
-          if [ "$APP_RECORD_EXISTS" = "false" ]; then
-            echo "Skipping IAP sync - app record does not exist yet."
-            exit 0
-          fi
-          if ./scripts/check_changed.sh fastlane/iap_config.json; then
-            cd $CM_BUILD_DIR/$APP_ROOT/ios
-            bundle exec fastlane sync_iap
-          else
-            echo "IAP config unchanged - skipping"
-          fi
+          bundle exec fastlane upload_binary_ios
 
     artifacts:
       - ${APP_ROOT}/build/ios/ipa/*.ipa
