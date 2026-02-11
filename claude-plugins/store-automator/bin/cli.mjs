@@ -21,19 +21,34 @@ let cmWorkflowId = 'default';
 let cmTrigger = false;
 let cmWait = false;
 
+const cliTokens = {};
+
+function flagValue(arg, prefix) {
+  return arg.startsWith(prefix) ? arg.slice(prefix.length) : undefined;
+}
+
+const tokenFlags = {
+  '--codemagic-token=': 'codemagicToken',
+  '--stitch-key=': 'stitchApiKey',
+  '--cloudflare-token=': 'cloudflareToken',
+  '--cloudflare-account-id=': 'cloudflareAccountId',
+};
+
 for (const arg of args) {
-  if (arg.startsWith('--token=')) {
-    cmTokenArg = arg.slice(8);
-    continue;
+  let v;
+  if ((v = flagValue(arg, '--token=')) !== undefined) { cmTokenArg = v; continue; }
+  if ((v = flagValue(arg, '--branch=')) !== undefined) { cmBranch = v; continue; }
+  if ((v = flagValue(arg, '--workflow=')) !== undefined) { cmWorkflowId = v; continue; }
+
+  let matched = false;
+  for (const [prefix, key] of Object.entries(tokenFlags)) {
+    if ((v = flagValue(arg, prefix)) !== undefined) {
+      cliTokens[key] = v;
+      matched = true;
+      break;
+    }
   }
-  if (arg.startsWith('--branch=')) {
-    cmBranch = arg.slice(9);
-    continue;
-  }
-  if (arg.startsWith('--workflow=')) {
-    cmWorkflowId = arg.slice(11);
-    continue;
-  }
+  if (matched) continue;
 
   switch (arg) {
     case '-g':
@@ -64,23 +79,29 @@ for (const arg of args) {
       console.log(`Usage: npx @daemux/store-automator [options]
 
 Options:
-  -g, --global          Install globally (~/.claude) instead of project scope
-  -u, --uninstall       Uninstall plugin and remove files
-  --postinstall         Run as postinstall hook (auto-detected)
-  -v, --version         Show version number
-  -h, --help            Show help
+  -g, --global                   Install globally (~/.claude) instead of project scope
+  -u, --uninstall                Uninstall plugin and remove files
+  --postinstall                  Run as postinstall hook (auto-detected)
+  -v, --version                  Show version number
+  -h, --help                     Show help
+
+MCP Token Flags (skip interactive prompts):
+  --codemagic-token=TOKEN        Codemagic API token
+  --stitch-key=KEY               Stitch MCP API key
+  --cloudflare-token=TOKEN       Cloudflare API token
+  --cloudflare-account-id=ID     Cloudflare account ID
 
 Codemagic:
-  --codemagic-setup     Register repo and optionally trigger build
-  --token=TOKEN         API token (or set CM_API_TOKEN env var)
-  --branch=BRANCH       Branch to build (default: main)
-  --workflow=ID         Workflow ID (default: default)
-  --trigger             Trigger build after setup
-  --wait                Wait for build completion (implies --trigger)
+  --codemagic-setup              Register repo and optionally trigger build
+  --token=TOKEN                  API token (or set CM_API_TOKEN env var)
+  --branch=BRANCH                Branch to build (default: main)
+  --workflow=ID                  Workflow ID (default: default)
+  --trigger                      Trigger build after setup
+  --wait                         Wait for build completion (implies --trigger)
 
 GitHub Actions (auto-configured during install if gh CLI available):
-  --github-setup        Set CM_API_TOKEN secret for GitHub Actions
-  --token=TOKEN         API token (or set CM_API_TOKEN env var)
+  --github-setup                 Set CM_API_TOKEN secret for GitHub Actions
+  --token=TOKEN                  API token (or set CM_API_TOKEN env var)
 
 Examples:
   npx @daemux/store-automator                          Install for project
@@ -89,7 +110,11 @@ Examples:
   npx @daemux/store-automator -g -u                    Uninstall globally
   npx @daemux/store-automator --codemagic-setup        Register with Codemagic
   npx @daemux/store-automator --codemagic-setup --trigger --wait  Trigger and wait
-  npx @daemux/store-automator --github-setup           Configure GitHub Actions`);
+  npx @daemux/store-automator --github-setup           Configure GitHub Actions
+
+Non-interactive install (CI/CD):
+  npx @daemux/store-automator --codemagic-token=TOKEN --stitch-key=KEY
+  npx @daemux/store-automator --cloudflare-token=TOKEN --cloudflare-account-id=ID`);
       process.exit(0);
       break; // eslint: no-fallthrough
     case '-v':
@@ -122,7 +147,7 @@ try {
     await runUninstall(scope);
   } else {
     const { runInstall } = await import('../src/install.mjs');
-    await runInstall(scope, isPostinstall);
+    await runInstall(scope, isPostinstall, cliTokens);
   }
 } catch (err) {
   if (isPostinstall) {

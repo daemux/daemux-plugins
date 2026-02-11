@@ -27,8 +27,8 @@ npm install @daemux/store-automator
 
 The postinstall script will:
 
-1. Prompt for MCP server tokens (Stitch, Cloudflare)
-2. Configure `.mcp.json` with MCP servers (Playwright, mobile-mcp, Stitch, Cloudflare)
+1. Prompt for MCP server tokens (Stitch, Cloudflare, Codemagic)
+2. Configure `.mcp.json` with MCP servers (Playwright, mobile-mcp, Stitch, Cloudflare, Codemagic)
 3. Install the plugin marketplace and register agents
 4. Copy `CLAUDE.md` template to `.claude/CLAUDE.md`
 5. Copy CI/CD templates (Fastlane, scripts, web pages, ci.config.yaml)
@@ -112,8 +112,54 @@ The package configures these MCP servers in `.mcp.json`:
 |--------|---------|---------------|
 | playwright | Browser automation for testing web pages | None |
 | mobile-mcp | Mobile device automation | None |
-| stitch | AI design tool for screenshot generation | Google API Key |
-| cloudflare | Cloudflare Pages deployment | API Token + Account ID |
+| stitch | AI design tool for screenshot generation | `STITCH_API_KEY` |
+| cloudflare | Cloudflare Pages deployment | `CLOUDFLARE_API_TOKEN` + Account ID |
+| codemagic | Codemagic CI/CD build management (27 tools) | `CODEMAGIC_API_TOKEN` |
+
+## Non-interactive Install
+
+For CI/CD environments or scripted setups, pass tokens as CLI flags to skip interactive prompts:
+
+```bash
+npx @daemux/store-automator \
+  --codemagic-token=YOUR_CM_TOKEN \
+  --stitch-key=YOUR_STITCH_KEY \
+  --cloudflare-token=YOUR_CF_TOKEN \
+  --cloudflare-account-id=YOUR_CF_ACCOUNT_ID
+```
+
+Any tokens provided via flags will skip the corresponding interactive prompt. If all four tokens are provided, the entire interactive session is skipped.
+
+## CLI Options
+
+```
+Usage: npx @daemux/store-automator [options]
+
+Options:
+  -g, --global                   Install globally (~/.claude) instead of project scope
+  -u, --uninstall                Uninstall plugin and remove files
+  --postinstall                  Run as postinstall hook (auto-detected)
+  -v, --version                  Show version number
+  -h, --help                     Show help
+
+MCP Token Flags (skip interactive prompts):
+  --codemagic-token=TOKEN        Codemagic API token
+  --stitch-key=KEY               Stitch MCP API key
+  --cloudflare-token=TOKEN       Cloudflare API token
+  --cloudflare-account-id=ID     Cloudflare account ID
+
+Codemagic:
+  --codemagic-setup              Register repo and optionally trigger build
+  --token=TOKEN                  API token (or set CM_API_TOKEN env var)
+  --branch=BRANCH                Branch to build (default: main)
+  --workflow=ID                  Workflow ID (default: default)
+  --trigger                      Trigger build after setup
+  --wait                         Wait for build completion (implies --trigger)
+
+GitHub Actions:
+  --github-setup                 Set CM_API_TOKEN secret for GitHub Actions
+  --token=TOKEN                  API token (or set CM_API_TOKEN env var)
+```
 
 ## License
 

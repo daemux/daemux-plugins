@@ -38,7 +38,7 @@ Prefer using the devops agent over direct Bash/SSH for structured operations.
 ## Configuration Files
 
 ### ci.config.yaml
-Single source of truth: credentials, app identity, store settings, web domain, Codemagic CI/CD (app_id for GitHub Actions auto-trigger, workflow IDs).
+Single source of truth: credentials, app identity, store settings, web domain, Codemagic CI/CD (app_id for GitHub Actions auto-trigger, workflow IDs). The Codemagic API token is managed by the codemagic MCP server in `.mcp.json`.
 
 ### fastlane/metadata/ Structure
 All store listing texts are stored in fastlane directories and managed by the appstore-meta-creator agent:

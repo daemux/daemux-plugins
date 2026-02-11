@@ -1,19 +1,12 @@
 import { findAppByRepo, addApp, startBuild, getBuildStatus, normalizeRepoUrl } from './codemagic-api.mjs';
-import { exec } from './utils.mjs';
+import { exec, resolveToken } from './utils.mjs';
 import { execFileSync } from 'child_process';
+import { writeCiAppId } from './ci-config.mjs';
+import { updateMcpAppId } from './mcp-setup.mjs';
 
 const POLL_INTERVAL_MS = 30_000;
 const POLL_TIMEOUT_MS = 15 * 60 * 1000;
 const TERMINAL_STATUSES = new Set(['finished', 'failed', 'canceled']);
-
-function resolveToken(tokenArg) {
-  const token = process.env.CM_API_TOKEN || tokenArg;
-  if (!token) {
-    console.error('Codemagic API token required. Set CM_API_TOKEN or pass --token=...');
-    process.exit(1);
-  }
-  return token;
-}
 
 function resolveRepoUrl() {
   const url = exec('git remote get-url origin');
@@ -130,12 +123,18 @@ export async function runCodemagicSetup(options) {
   }
 
   const appId = app._id;
+  const appIdWritten = writeCiAppId(process.cwd(), appId);
+  updateMcpAppId(process.cwd(), appId);
 
   if (!trigger) {
     console.log('\nSetup complete. Use --trigger to start a build.\n');
+    if (appIdWritten) {
+      console.log('codemagic.app_id written to ci.config.yaml.');
+    } else {
+      console.log('Fill codemagic.app_id in ci.config.yaml manually.');
+    }
     console.log('To enable GitHub Actions auto-trigger:');
-    console.log('  1. Fill codemagic.app_id in ci.config.yaml');
-    console.log('  2. Run: npx @daemux/store-automator --github-setup');
+    console.log('  Run: npx @daemux/store-automator --github-setup');
     return { appId, buildId: null, status: null };
   }
 

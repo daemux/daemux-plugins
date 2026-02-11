@@ -57,6 +57,7 @@ web:
 # === CODEMAGIC CI/CD ===
 # Fill after creating app in Codemagic (https://codemagic.io/apps)
 # Find app_id in your Codemagic dashboard URL: codemagic.io/app/{app_id}
+# API token is stored in .mcp.json (codemagic MCP server, set during install)
 codemagic:
   app_id: ""
   workflows:

@@ -9,8 +9,10 @@ import {
 } from './utils.mjs';
 import { injectEnvVars, injectStatusLine } from './settings.mjs';
 import { promptForTokens } from './prompt.mjs';
-import { getMcpServers, writeMcpJson } from './mcp-setup.mjs';
+import { getMcpServers, writeMcpJson, updateMcpAppId } from './mcp-setup.mjs';
 import { installClaudeMd, installCiTemplates, installFirebaseTemplates } from './templates.mjs';
+import { findAppByRepo, addApp, normalizeRepoUrl } from './codemagic-api.mjs';
+import { writeCiAppId } from './ci-config.mjs';
 
 function checkClaudeCli() {
   const result = exec('command -v claude') || exec('which claude');
@@ -110,12 +112,47 @@ function setupGitHubActions(codemagicToken) {
   }
 }
 
-export async function runInstall(scope, isPostinstall = false) {
+async function setupCodemagicApp(projectDir, codemagicToken) {
+  if (!codemagicToken) return;
+
+  let repoUrl;
+  try {
+    const raw = execSync('git remote get-url origin', {
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    }).trim();
+    if (!raw) return;
+    repoUrl = normalizeRepoUrl(raw);
+  } catch {
+    return;
+  }
+
+  try {
+    let app = await findAppByRepo(codemagicToken, repoUrl);
+    if (!app) {
+      app = await addApp(codemagicToken, repoUrl);
+      console.log(`Codemagic app created: ${app.appName || app._id}`);
+    } else {
+      console.log(`Codemagic app found: ${app.appName || app._id}`);
+    }
+
+    const written = writeCiAppId(projectDir, app._id);
+    if (written) {
+      console.log(`Codemagic app_id written to ci.config.yaml`);
+    }
+
+    updateMcpAppId(projectDir, app._id);
+  } catch (err) {
+    console.log(`Codemagic auto-setup skipped: ${err.message || err}`);
+  }
+}
+
+export async function runInstall(scope, isPostinstall = false, cliTokens = {}) {
   checkClaudeCli();
 
   console.log('Installing/updating Daemux Store Automator...');
 
-  const tokens = await promptForTokens();
+  const tokens = await promptForTokens(cliTokens);
 
   const projectDir = process.cwd();
   const servers = getMcpServers(tokens);
@@ -141,6 +178,8 @@ export async function runInstall(scope, isPostinstall = false) {
   installCiTemplates(projectDir, packageDir);
   installFirebaseTemplates(projectDir, packageDir);
 
+  await setupCodemagicApp(projectDir, tokens.codemagicToken);
+
   const scopeLabel = scope === 'user' ? 'global' : 'project';
   console.log(`Configuring ${scopeLabel} settings...`);
   const settingsPath = join(baseDir, 'settings.json');
@@ -157,7 +196,7 @@ export async function runInstall(scope, isPostinstall = false) {
   printSummary(scope, oldVersion, newVersion);
   console.log('');
   console.log('Next steps:');
-  console.log('  1. Fill ci.config.yaml (including codemagic.app_id)');
+  console.log('  1. Fill ci.config.yaml (codemagic.app_id is auto-configured if token was provided)');
   console.log('  2. Add creds/AuthKey.p8 and creds/play-service-account.json');
   console.log('  3. Start Claude Code');
   if (!ghConfigured) {

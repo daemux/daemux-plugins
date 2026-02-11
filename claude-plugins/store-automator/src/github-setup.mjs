@@ -1,14 +1,5 @@
-import { exec } from './utils.mjs';
+import { exec, resolveToken } from './utils.mjs';
 import { execFileSync } from 'child_process';
-
-function resolveToken(tokenArg) {
-  const token = process.env.CM_API_TOKEN || tokenArg;
-  if (!token) {
-    console.error('Codemagic API token required. Set CM_API_TOKEN or pass --token=...');
-    process.exit(1);
-  }
-  return token;
-}
 
 function checkGhCli() {
   const ghPath = exec('which gh');
@@ -47,6 +38,6 @@ export async function runGitHubSetup(options) {
   setGitHubSecret('CM_API_TOKEN', token);
 
   console.log('\nGitHub Actions setup complete.');
-  console.log('Next: Fill codemagic.app_id in ci.config.yaml.');
+  console.log('Next: Verify codemagic.app_id in ci.config.yaml (auto-configured during install).');
   console.log('GitHub Actions will trigger configured Codemagic workflows on push to main.');
 }

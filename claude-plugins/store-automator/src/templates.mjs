@@ -39,11 +39,8 @@ function copyIfMissing(srcPath, destPath, label, isDirectory) {
 export function installClaudeMd(targetPath, packageDir) {
   const template = join(packageDir, 'templates', 'CLAUDE.md.template');
   if (!existsSync(template)) return;
-  if (existsSync(targetPath)) {
-    console.log('CLAUDE.md already exists, skipping (will not overwrite).');
-    return;
-  }
-  console.log('Installing CLAUDE.md...');
+  const action = existsSync(targetPath) ? 'Updating' : 'Installing';
+  console.log(`${action} CLAUDE.md...`);
   ensureDir(join(targetPath, '..'));
   copyFileSync(template, targetPath);
 }

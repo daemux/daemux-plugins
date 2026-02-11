@@ -8,22 +8,23 @@ import type { V3Client } from '../api/v3-client.js';
 import { handleToolCall } from '../api/errors.js';
 import type { CmVariableGroup } from '../types/api-types.js';
 
-export function registerVariableGroupTools(server: McpServer, v3: V3Client): void {
+export function registerVariableGroupTools(server: McpServer, v3: V3Client, defaultAppId?: string): void {
   server.tool(
     'list_variable_groups',
     'List variable groups for a team or application',
     {
       teamId: z.string().optional().describe('Team ID (provide teamId or appId)'),
-      appId: z.string().optional().describe('Application ID (provide teamId or appId)'),
+      appId: z.string().optional().describe('Application ID (provide teamId or appId, uses default if both omitted)'),
     },
     ({ teamId, appId }) => handleToolCall(() => {
-      if (!teamId && !appId) {
-        throw new Error('Provide either teamId or appId');
+      const resolvedAppId = appId ?? defaultAppId;
+      if (!teamId && !resolvedAppId) {
+        throw new Error('Provide either teamId or appId (no default configured)');
       }
 
       const path = teamId
         ? `/teams/${encodeURIComponent(teamId)}/variable-groups`
-        : `/apps/${encodeURIComponent(appId!)}/variable-groups`;
+        : `/apps/${encodeURIComponent(resolvedAppId!)}/variable-groups`;
 
       return v3.get<CmVariableGroup[]>(path);
     }),

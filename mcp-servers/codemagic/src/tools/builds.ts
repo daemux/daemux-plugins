@@ -6,7 +6,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type { LegacyClient } from '../api/legacy-client.js';
 import type { V3Client } from '../api/v3-client.js';
-import { handleToolCall } from '../api/errors.js';
+import { handleToolCall, resolveAppId } from '../api/errors.js';
 import type { CmBuild, V3BuildsResponse } from '../types/api-types.js';
 
 function stripUndefined(obj: Record<string, unknown>): Record<string, unknown> {
@@ -19,12 +19,13 @@ export function registerBuildTools(
   server: McpServer,
   legacy: LegacyClient,
   v3: V3Client,
+  defaultAppId?: string,
 ): void {
   server.tool(
     'start_build',
     'Start a new build on Codemagic',
     {
-      appId: z.string().describe('Application ID'),
+      appId: z.string().optional().describe('Application ID (uses default if omitted)'),
       workflowId: z.string().describe('Workflow ID to run'),
       branch: z.string().optional().describe('Git branch to build'),
       tag: z.string().optional().describe('Git tag to build'),
@@ -35,7 +36,7 @@ export function registerBuildTools(
     ({ appId, workflowId, branch, tag, environment, labels, instanceType }) =>
       handleToolCall(() =>
         legacy.post<CmBuild>('/builds', stripUndefined({
-          appId, workflowId, branch, tag, environment, labels, instanceType,
+          appId: resolveAppId(appId, defaultAppId), workflowId, branch, tag, environment, labels, instanceType,
         })),
       ),
   );

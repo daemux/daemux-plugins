@@ -43,6 +43,12 @@ export function formatErrorForMcp(error: unknown): CallToolResult {
   };
 }
 
+export function resolveAppId(appId: string | undefined, defaultAppId: string | undefined): string {
+  const resolved = appId ?? defaultAppId;
+  if (!resolved) throw new Error('appId is required (no default configured)');
+  return resolved;
+}
+
 export async function handleToolCall(fn: () => Promise<unknown>): Promise<CallToolResult> {
   try {
     const result = await fn();

@@ -42,37 +42,61 @@ The Codemagic pipeline runs two parallel workflows on push to `main`:
 **iOS Release**: Flutter analyze -> Flutter test -> Build IPA -> Code signing -> Upload metadata + screenshots -> Deploy to App Store Connect -> Sync IAP
 **Android Release**: Flutter analyze -> Flutter test -> Build AAB -> Keystore signing -> Check Google Play readiness -> Deploy to Google Play -> Sync IAP
 
+### Token Configuration
+
+The Codemagic API token is auto-configured via the codemagic MCP server in `.mcp.json` (set during install). You do not need to resolve the token manually -- all MCP tool calls authenticate automatically. If the codemagic MCP server is missing from `.mcp.json`, instruct the user to re-run `npx @daemux/store-automator` or add `--codemagic-token=TOKEN` to configure it.
+
 ### Triggering Builds
 
-**Option 1: Git push** (preferred)
+**Option 1: Git push** (preferred when webhooks are configured)
 ```bash
 git push origin main
 ```
 Codemagic triggers both iOS and Android workflows automatically on push to `main`.
 
-**Option 2: Codemagic REST API**
-```bash
-# Requires CM_API_TOKEN environment variable
-# Uses src/codemagic-api.mjs functions: startBuild(token, appId, workflowId, branch)
-node -e "
-  import {startBuild} from './src/codemagic-api.mjs';
-  const r = await startBuild(process.env.CM_API_TOKEN, '<appId>', '<workflowId>', 'main');
-  console.log(JSON.stringify(r, null, 2));
-"
-```
+**Option 2: Codemagic MCP** (preferred for full automation -- allows status polling and log reading)
+Use the `start_build` MCP tool:
+- `appId`: from `codemagic.app_id` in `ci.config.yaml`
+- `workflowId`: from `codemagic.workflows` in `ci.config.yaml`
+- `branch`: `main` (or as needed)
 
 ### Monitoring Build Status
 
-```bash
-# Poll build status via API
-node -e "
-  import {getBuildStatus} from './src/codemagic-api.mjs';
-  const r = await getBuildStatus(process.env.CM_API_TOKEN, '<buildId>');
-  console.log(JSON.stringify(r, null, 2));
-"
-```
+Use the `get_build` MCP tool with the `buildId` returned from `start_build`. Poll every 60 seconds until the build reaches a terminal state.
 
 Build states: `queued` -> `preparing` -> `building` -> `testing` -> `publishing` -> `finished` | `failed` | `canceled`
+
+### Available Codemagic MCP Tools
+
+| Tool | Description |
+|------|-------------|
+| `list_apps` | List all Codemagic applications |
+| `get_app` | Get details of a specific application |
+| `add_app` | Add a new application to Codemagic |
+| `start_build` | Start a new build |
+| `get_build` | Get details of a specific build |
+| `cancel_build` | Cancel a running build |
+| `list_builds` | List builds for a team (V3 API) |
+| `get_artifact_url` | Get the download URL for a build artifact |
+| `create_public_artifact_url` | Create a time-limited public URL for an artifact |
+| `list_caches` | List build caches for an application |
+| `delete_caches` | Delete build caches for an application |
+| `setup_asc_credentials` | Create variable group with App Store Connect credentials |
+| `setup_code_signing` | Create variable group with iOS code signing cert and profile |
+| `get_user` | Get the current authenticated user info |
+| `list_teams` | List all teams the user belongs to |
+| `get_team` | Get details of a specific team |
+| `list_team_members` | List members of a specific team |
+| `list_variable_groups` | List variable groups for a team or application |
+| `get_variable_group` | Get details of a specific variable group |
+| `create_variable_group` | Create a new variable group |
+| `update_variable_group` | Update a variable group name or security setting |
+| `delete_variable_group` | Delete a variable group |
+| `list_variables` | List variables in a variable group |
+| `get_variable` | Get a specific variable from a variable group |
+| `update_variable` | Update a variable in a variable group |
+| `delete_variable` | Delete a variable from a variable group |
+| `bulk_import_variables` | Import multiple variables into a variable group |
 
 ### Build Failure Analysis
 
@@ -107,24 +131,9 @@ Versions are auto-incremented:
 - Build number = latest store build number + 1
 - Both platforms share the same version name (e.g., 1.0.0), synced from iOS
 
-### Health Check Process
+### Health Check and Log Analysis
 
-After triggering a build:
-1. Poll build status every 60 seconds until completion
-2. Check both iOS and Android workflows independently
-3. If one passes and one fails, report partial success and investigate the failure
-4. Verify artifacts exist (IPA for iOS, AAB for Android)
-5. Check store submission status after successful upload
-
-### Log Analysis
-
-When analyzing Codemagic build logs:
-1. Look for `ERROR`, `FAILURE`, `EXCEPTION`, `BUILD FAILED` patterns
-2. Check Flutter analyze output for lint warnings/errors
-3. Check test results for failures and skipped tests
-4. Check code signing logs for certificate/profile issues
-5. Check Fastlane output for store upload errors
-6. Note which pipeline step failed and its exit code
+After triggering a build, poll status every 60 seconds. Check both iOS and Android independently. If one passes and one fails, report partial success and investigate. Verify artifacts (IPA/AAB) and store submission status after success. In logs, look for `ERROR`, `FAILURE`, `EXCEPTION`, `BUILD FAILED`, check Flutter analyze, test results, code signing, and Fastlane output.
 
 ### Output Format
 
@@ -134,18 +143,7 @@ PLATFORM: iOS | Android | Both
 BUILD ID: [id]
 STATUS: queued | building | testing | publishing | finished | failed
 VERSION: [version]+[build_number]
-
-For failures:
-- Failed step: [step name]
-- Error: [summary]
-- Root cause: [analysis]
-- Fix: [action taken or recommended]
-
-For success:
-- iOS: [App Store submission status]
-- Android: [Google Play upload status]
-- Artifacts: [list]
-
+RESULT: [success details or failure analysis with root cause and fix]
 RECOMMENDATION: [next action if needed]
 ```
 
@@ -375,7 +373,7 @@ Analyze Firestore usage patterns and optimize queries, indexes, and security rul
 | `scripts/check_changed.sh` | Detects changed files for conditional uploads |
 | `scripts/manage_version_ios.py` | iOS version auto-increment |
 | `scripts/check_google_play.py` | Google Play readiness checker |
-| `src/codemagic-api.mjs` | Codemagic REST API client |
+| `.mcp.json (codemagic)` | Codemagic MCP server config and API token |
 | `fastlane/metadata/` | Store listing metadata (iOS + Android) |
 | `fastlane/iap_config.json` | In-app purchase configuration |
 | `web/deploy-cloudflare.mjs` | Cloudflare Pages deployment script |

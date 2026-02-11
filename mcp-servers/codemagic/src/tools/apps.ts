@@ -5,10 +5,10 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type { LegacyClient } from '../api/legacy-client.js';
-import { handleToolCall } from '../api/errors.js';
+import { handleToolCall, resolveAppId } from '../api/errors.js';
 import type { CmApp, CmAppsResponse } from '../types/api-types.js';
 
-export function registerAppTools(server: McpServer, legacy: LegacyClient): void {
+export function registerAppTools(server: McpServer, legacy: LegacyClient, defaultAppId?: string): void {
   server.tool(
     'list_apps',
     'List all Codemagic applications',
@@ -22,9 +22,9 @@ export function registerAppTools(server: McpServer, legacy: LegacyClient): void 
   server.tool(
     'get_app',
     'Get details of a specific Codemagic application',
-    { appId: z.string().describe('The application ID') },
+    { appId: z.string().optional().describe('The application ID (uses default if omitted)') },
     ({ appId }) => handleToolCall(() =>
-      legacy.get<CmApp>(`/apps/${encodeURIComponent(appId)}`),
+      legacy.get<CmApp>(`/apps/${encodeURIComponent(resolveAppId(appId, defaultAppId))}`),
     ),
   );
 

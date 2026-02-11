@@ -12,11 +12,32 @@ function ask(rl, question) {
   });
 }
 
-export async function promptForTokens() {
+function allTokensProvided(cliTokens) {
+  return (
+    cliTokens.stitchApiKey !== undefined &&
+    cliTokens.cloudflareToken !== undefined &&
+    cliTokens.cloudflareAccountId !== undefined &&
+    cliTokens.codemagicToken !== undefined
+  );
+}
+
+export async function promptForTokens(cliTokens = {}) {
+  const result = {
+    stitchApiKey: cliTokens.stitchApiKey ?? '',
+    cloudflareToken: cliTokens.cloudflareToken ?? '',
+    cloudflareAccountId: cliTokens.cloudflareAccountId ?? '',
+    codemagicToken: cliTokens.codemagicToken ?? '',
+  };
+
+  if (allTokensProvided(cliTokens)) {
+    console.log('All MCP tokens provided via CLI flags, skipping prompts.');
+    return result;
+  }
+
   if (!isInteractive()) {
     console.log('Non-interactive terminal detected, skipping token prompts.');
     console.log('Run "npx store-automator" manually to configure MCP tokens.');
-    return { stitchApiKey: '', cloudflareToken: '', cloudflareAccountId: '', codemagicToken: '' };
+    return result;
   }
 
   const rl = createInterface({
@@ -30,30 +51,35 @@ export async function promptForTokens() {
   console.log('');
 
   try {
-    const stitchApiKey = await ask(
-      rl,
-      'Stitch MCP API Key (STITCH_API_KEY value): '
-    );
+    if (cliTokens.stitchApiKey === undefined) {
+      result.stitchApiKey = await ask(
+        rl,
+        'Stitch MCP API Key (STITCH_API_KEY value): '
+      );
+    }
 
-    const cloudflareToken = await ask(
-      rl,
-      'Cloudflare API Token: '
-    );
+    if (cliTokens.cloudflareToken === undefined) {
+      result.cloudflareToken = await ask(
+        rl,
+        'Cloudflare API Token: '
+      );
+    }
 
-    let cloudflareAccountId = '';
-    if (cloudflareToken) {
-      cloudflareAccountId = await ask(
+    if (result.cloudflareToken && cliTokens.cloudflareAccountId === undefined) {
+      result.cloudflareAccountId = await ask(
         rl,
         'Cloudflare Account ID: '
       );
     }
 
-    const codemagicToken = await ask(
-      rl,
-      'Codemagic API Token (CM_API_TOKEN for CI/CD builds): '
-    );
+    if (cliTokens.codemagicToken === undefined) {
+      result.codemagicToken = await ask(
+        rl,
+        'Codemagic API Token (CM_API_TOKEN for CI/CD builds): '
+      );
+    }
 
-    return { stitchApiKey, cloudflareToken, cloudflareAccountId, codemagicToken };
+    return result;
   } finally {
     rl.close();
   }

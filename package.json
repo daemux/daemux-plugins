@@ -11,7 +11,7 @@
   "scripts": {
     "build": "npm run build:sdk && npm run build:plugins",
     "build:sdk": "npm -w packages/plugin-sdk run build",
-    "build:plugins": "npm -w llm-providers/anthropic-provider -w channels/telegram-adapter -w features/human-behavior -w features/transcription -w mcp-servers/codemagic -w mcp-servers/fastlane-mcp run build",
+    "build:plugins": "npm -w llm-providers/anthropic-provider -w channels/telegram-adapter -w features/human-behavior -w features/transcription -w mcp-servers/codemagic run build",
     "clean": "npm -ws --if-present run clean",
     "typecheck": "npm -ws --if-present run typecheck",
     "publish": "./scripts/publish.sh"

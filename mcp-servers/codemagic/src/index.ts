@@ -24,17 +24,19 @@ if (!token) {
   process.exit(1);
 }
 
-const server = new McpServer({ name: 'codemagic', version: '0.1.0' });
+const defaultAppId = process.env.CODEMAGIC_APP_ID || undefined;
+
+const server = new McpServer({ name: 'codemagic', version: '0.2.0' });
 const legacy = new LegacyClient(token);
 const v3 = new V3Client(token);
 
-registerAppTools(server, legacy);
-registerBuildTools(server, legacy, v3);
-registerVariableGroupTools(server, v3);
+registerAppTools(server, legacy, defaultAppId);
+registerBuildTools(server, legacy, v3, defaultAppId);
+registerVariableGroupTools(server, v3, defaultAppId);
 registerVariableItemTools(server, v3);
 registerTeamTools(server, v3);
 registerArtifactTools(server, legacy);
-registerCacheTools(server, legacy);
+registerCacheTools(server, legacy, defaultAppId);
 registerCodeSigningTools(server, v3);
 
 const transport = new StdioServerTransport();
