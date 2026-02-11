@@ -5,6 +5,20 @@ default_platform(:ios)
 ROOT_DIR = ENV.fetch("CM_BUILD_DIR", File.expand_path("../..", __FILE__))
 APP_ROOT = ENV.fetch("APP_ROOT", "app")
 
+# Monkey-patch: Fastlane deliver crashes with "No data" when fetching
+# app_store_review_detail on the first version (fastlane/fastlane#20538).
+# Wrap the method to rescue the RuntimeError gracefully.
+# Require deliver explicitly so the constant is available at parse time.
+require "deliver"
+::Deliver::UploadMetadata.prepend(Module.new do
+  def review_attachment_file(version)
+    super
+  rescue RuntimeError => e
+    raise unless e.message.include?("No data")
+    Fastlane::UI.important("Skipping review attachment: #{e.message} (first version)")
+  end
+end)
+
 def metadata_changed?(path)
   !sh("git diff --name-only HEAD~1 -- #{path}").strip.empty?
 rescue StandardError
@@ -44,8 +58,6 @@ def metadata_deliver_options
     metadata_path: "#{ROOT_DIR}/fastlane/metadata",
     screenshots_path: "#{ROOT_DIR}/fastlane/screenshots/ios",
     sync_screenshots: true,
-    app_rating_config_path: "#{ROOT_DIR}/fastlane/app_rating_config.json",
-    price_tier: ENV.fetch("PRICE_TIER", "0").to_i,
     primary_category: ENV.fetch("PRIMARY_CATEGORY", "UTILITIES"),
     secondary_category: ENV.fetch("SECONDARY_CATEGORY", "PRODUCTIVITY")
   )
@@ -63,6 +75,7 @@ platform :ios do
     deliver(
       metadata_deliver_options.merge(submission_options).merge(
         ipa: Dir.glob("#{ROOT_DIR}/#{APP_ROOT}/build/ios/ipa/*.ipa").first,
+        app_rating_config_path: "#{ROOT_DIR}/fastlane/app_rating_config.json",
         skip_metadata: !metadata_changed?("fastlane/metadata/ios/"),
         skip_screenshots: !metadata_changed?("fastlane/screenshots/ios/"),
         run_precheck_before_submit: true,

@@ -73,75 +73,39 @@ workflows:
 
       - name: Ensure app record exists
         script: |
-          echo "Checking if $BUNDLE_ID exists in App Store Connect..."
-          EXISTING=$(app-store-connect apps list \
-            --bundle-id-identifier "$BUNDLE_ID" --json 2>&1 \
-            | python3 -c "
-          import sys, json
-          try:
-              apps = json.load(sys.stdin)
-              print('yes' if apps else 'no')
-          except:
-              print('no')
-          " 2>/dev/null)
+          echo "=== Checking if $BUNDLE_ID exists in App Store Connect ==="
+
+          # First try: list apps filtering by bundle ID
+          echo "--- Running: app-store-connect apps list --bundle-id-identifier $BUNDLE_ID ---"
+          APP_JSON=$(app-store-connect apps list \
+            --bundle-id-identifier "$BUNDLE_ID" \
+            --strict-match-identifier \
+            --json 2>/tmp/asc_apps_err.log || true)
+
+          echo "Apps list stderr:"
+          cat /tmp/asc_apps_err.log 2>/dev/null || true
+          echo "Apps list stdout (first 500 chars):"
+          echo "$APP_JSON" | head -c 500
+
+          EXISTING=$(echo "$APP_JSON" | python3 -c "import sys,json; data=json.load(sys.stdin); apps=data if isinstance(data,list) else []; print('yes' if len(apps)>0 else 'no')" 2>/dev/null || echo "no")
+
+          echo "App exists result: $EXISTING"
 
           if [ "$EXISTING" = "yes" ]; then
-            echo "App record exists for $BUNDLE_ID"
+            echo "App record found for $BUNDLE_ID"
           else
-            echo "App not found. Attempting to create via API..."
-
-            # Ensure bundle ID is registered in Developer Portal
-            echo "Registering bundle ID $BUNDLE_ID..."
-            app-store-connect bundle-ids create \
-              --identifier "$BUNDLE_ID" \
-              --name "${APP_NAME}_ios" \
-              --platform IOS 2>&1 || echo "Bundle ID may already exist (this is OK)"
-
-            # Get the bundle ID resource ID by listing all and filtering
-            echo "Looking up bundle ID resource..."
-            BUNDLE_ID_RES=$(app-store-connect bundle-ids list --json 2>/dev/null \
-              | python3 -c "
-          import sys, json
-          try:
-              ids = json.load(sys.stdin)
-              for b in ids:
-                  attrs = b.get('attributes', {})
-                  if attrs.get('identifier') == '$BUNDLE_ID':
-                      print(b['id'])
-                      break
-          except:
-              pass
-          " 2>/dev/null)
-
-            if [ -z "$BUNDLE_ID_RES" ]; then
-              echo "ERROR: Could not find or create bundle ID $BUNDLE_ID"
-              exit 1
-            fi
-
-            # Try to create the app record
-            if app-store-connect apps create \
-              --name "$APP_NAME" \
-              --primary-locale "en-US" \
-              --sku "$SKU" \
-              --bundle-id-id "$BUNDLE_ID_RES" 2>/tmp/app_create_err.log; then
-              echo "App record created successfully for $BUNDLE_ID"
-            else
-              cat /tmp/app_create_err.log
-              echo ""
-              echo "=========================================="
-              echo "BUILD FAILED - CANNOT CREATE APP RECORD"
-              echo "=========================================="
-              echo ""
-              echo "Create the app manually:"
-              echo "  1. Go to https://appstoreconnect.apple.com"
-              echo "  2. Click '+' > 'New App'"
-              echo "  3. Bundle ID: $BUNDLE_ID"
-              echo "  4. Name: $APP_NAME"
-              echo "  5. SKU: $SKU"
-              echo ""
-              echo "After creating the app, just push again."
-              exit 1
-            fi
+            echo ""
+            echo "=========================================="
+            echo "BUILD STOPPED - APP RECORD NOT DETECTED"
+            echo "=========================================="
+            echo ""
+            echo "The app-store-connect CLI could not find $BUNDLE_ID."
+            echo "If you already created the app in App Store Connect,"
+            echo "this may be an API propagation delay or permission issue."
+            echo ""
+            echo "Retrying with verbose output..."
+            app-store-connect apps list --json 2>&1 | python3 -c "import sys,json;data=json.load(sys.stdin);apps=data if isinstance(data,list) else [];print(f'Total apps: {len(apps)}');[print(f'  App: {a.get(\"attributes\",{}).get(\"name\",\"?\")} | Bundle: {a.get(\"attributes\",{}).get(\"bundleId\",\"?\")} | ID: {a.get(\"id\",\"?\")}') for a in apps[:10]]" 2>&1 || true
+            exit 1
           fi
 
       - name: Upload iOS metadata and screenshots
@@ -151,9 +115,24 @@ workflows:
 
       - name: Sync IAP and subscriptions
         script: |
-          if ./scripts/check_changed.sh fastlane/iap_config.json; then
+          FORCE_FLAG=""
+          if [ ! -f "$CM_BUILD_DIR/.codemagic/ios_iap_synced" ]; then
+            FORCE_FLAG="--force"
+            echo "First IAP sync detected - forcing upload"
+          fi
+          if ./scripts/check_changed.sh $FORCE_FLAG fastlane/iap_config.json; then
             cd $CM_BUILD_DIR/$APP_ROOT/ios
             bundle exec fastlane sync_iap
+            # Create marker after successful sync
+            if [ -n "$FORCE_FLAG" ]; then
+              mkdir -p "$CM_BUILD_DIR/.codemagic"
+              touch "$CM_BUILD_DIR/.codemagic/ios_iap_synced"
+              cd "$CM_BUILD_DIR"
+              git add .codemagic/ios_iap_synced
+              git commit -m "chore: mark iOS IAP sync complete [skip ci]" || true
+              git push origin HEAD || true
+              echo "iOS IAP sync marker committed"
+            fi
           else
             echo "IAP config unchanged - skipping"
           fi
@@ -263,6 +242,9 @@ workflows:
     instance_type: mac_mini_m4
     environment:
       flutter: stable
+      groups:
+        - google_play_credentials
+        - android_keystore
       vars:
         PACKAGE_NAME: "${PACKAGE_NAME}"
         APP_NAME: "${APP_NAME}"
@@ -296,8 +278,13 @@ workflows:
       - name: Ensure Android upload keystore
         script: |
           KEYSTORE_PATH="$CM_BUILD_DIR/$APP_ROOT/android/upload.keystore"
+          CREDS_PATH="$CM_BUILD_DIR/creds/android_upload.keystore"
+          GENERATED=false
           if [ -f "$KEYSTORE_PATH" ]; then
             echo "Using existing upload keystore from repo"
+          elif [ -f "$CREDS_PATH" ]; then
+            echo "Restoring upload keystore from creds/"
+            cp "$CREDS_PATH" "$KEYSTORE_PATH"
           else
             echo "Generating new upload keystore..."
             keytool -genkey -v \
@@ -310,8 +297,18 @@ workflows:
               -storepass "$KEYSTORE_PASSWORD" \
               -keypass "$KEYSTORE_PASSWORD" \
               -dname "CN=Upload Key, O=Developer, C=US"
+            GENERATED=true
+          fi
+          # Always ensure creds/ backup exists
+          mkdir -p "$CM_BUILD_DIR/creds"
+          if [ ! -f "$CREDS_PATH" ] || ! cmp -s "$KEYSTORE_PATH" "$CREDS_PATH"; then
+            cp "$KEYSTORE_PATH" "$CREDS_PATH"
+            echo "Keystore backed up to creds/android_upload.keystore"
+          fi
+          # Commit keystore files if newly generated
+          if [ "$GENERATED" = "true" ]; then
             cd "$CM_BUILD_DIR"
-            git add $APP_ROOT/android/upload.keystore
+            git add --force $APP_ROOT/android/upload.keystore creds/android_upload.keystore
             git commit -m "chore: add Android upload keystore [skip ci]"
             git push origin HEAD
             echo "Upload keystore generated and committed to repo"
@@ -331,35 +328,118 @@ workflows:
           READY=$(echo "$RESULT" | python3 -c "import sys,json; print(str(json.load(sys.stdin).get('ready',False)).lower())" 2>/dev/null || echo "false")
           if [ "$READY" != "true" ]; then
             echo "GOOGLE_PLAY_READY=false" >> $CM_ENV
-            python3 -c "
-            import os
-            content = (
-              '# Google Play Setup - Manual Steps Required\n'
-              '\n'
-              'Your Android AAB is available in the build artifacts above.\n'
-              '\n'
-              '## Steps to complete\n'
-              '\n'
-              '1. **Go to Google Play Console** - https://play.google.com/console\n'
-              '2. **Create your app** (if not already created) with the correct package name\n'
-              '3. **Upload the AAB** from build artifacts to an internal testing track\n'
-              '4. **Complete the Store Listing** - Add title, descriptions, screenshots, and app icon\n'
-              '5. **Complete the Content Rating** questionnaire\n'
-              '6. **Set up Pricing and Distribution**\n'
-              '7. **Complete the Data Safety** form\n'
-              '8. **Review and roll out** the internal testing release\n'
-              '\n'
-              '## After completing all steps\n'
-              'Just git push again - Codemagic will publish automatically on subsequent builds.\n'
-            )
-            path = os.path.join(os.environ['CM_BUILD_DIR'], 'HOW_TO_GOOGLE_PLAY.md')
-            with open(path, 'w') as f:
-              f.write(content)
-            "
+            printf '%s\n' \
+              "# Google Play Setup - Manual Steps Required" \
+              "" \
+              "Your Android AAB is available in the build artifacts above." \
+              "" \
+              "## Steps to complete" \
+              "" \
+              "1. **Go to Google Play Console** - https://play.google.com/console" \
+              "2. **Create your app** (if not already created) with the correct package name" \
+              "3. **Upload the AAB** from build artifacts to an internal testing track" \
+              "4. **Complete the Store Listing** - Add title, descriptions, screenshots, and app icon" \
+              "5. **Complete the Content Rating** questionnaire" \
+              "6. **Set up Pricing and Distribution**" \
+              "7. **Complete the Data Safety** form" \
+              "8. **Review and roll out** the internal testing release" \
+              "" \
+              "## After completing all steps" \
+              "Just git push again - Codemagic will publish automatically on subsequent builds." \
+              > "$CM_BUILD_DIR/HOW_TO_GOOGLE_PLAY.md"
             echo "Google Play not ready - see HOW_TO_GOOGLE_PLAY.md in artifacts"
           else
             echo "GOOGLE_PLAY_READY=true" >> $CM_ENV
+            # Detect first store sync: if marker file doesn't exist, force IAP/data safety upload
+            if [ ! -f "$CM_BUILD_DIR/.codemagic/android_store_synced" ]; then
+              echo "FIRST_STORE_SYNC=true" >> $CM_ENV
+              echo "First store sync detected - IAP and data safety will be force-uploaded"
+            else
+              echo "FIRST_STORE_SYNC=false" >> $CM_ENV
+              echo "Marker found - using change detection for IAP/data safety"
+            fi
             echo "Google Play ready for automated publishing"
+          fi
+
+      - name: Install Fastlane
+        script: |
+          cd $CM_BUILD_DIR/$APP_ROOT/android
+          gem install bundler
+          bundle install
+
+      - name: Upload Android metadata and screenshots
+        script: |
+          if [ "$GOOGLE_PLAY_READY" != "true" ]; then
+            echo "WARNING: Google Play not ready - skipping metadata upload."
+            echo "First AAB must be uploaded manually before metadata can sync."
+            exit 0
+          fi
+          export GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH="$CM_BUILD_DIR/$GOOGLE_SA_JSON_PATH"
+          cd $CM_BUILD_DIR/$APP_ROOT/android
+          if bundle exec fastlane upload_metadata_android; then
+            echo "Metadata uploaded successfully"
+          else
+            echo "WARNING: Metadata upload failed (app may still be in draft state)."
+            echo "Metadata will sync on next build after app leaves draft."
+            echo "Continuing build..."
+          fi
+
+      - name: Sync subscriptions and IAP
+        script: |
+          if [ "$GOOGLE_PLAY_READY" != "true" ]; then
+            echo "WARNING: Google Play not ready - skipping IAP sync."
+            exit 0
+          fi
+          FORCE_FLAG=""
+          if [ "${FIRST_STORE_SYNC:-false}" = "true" ]; then
+            FORCE_FLAG="--force"
+          fi
+          if ./scripts/check_changed.sh $FORCE_FLAG fastlane/iap_config.json; then
+            export GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH="$CM_BUILD_DIR/$GOOGLE_SA_JSON_PATH"
+            cd $CM_BUILD_DIR/$APP_ROOT/android
+            if bundle exec fastlane sync_google_iap 2>&1; then
+              echo "IAP sync completed successfully"
+            else
+              echo "WARNING: IAP sync failed (fastlane-plugin-iap may not be available yet)."
+              echo "IAP products can be configured manually in Google Play Console."
+              echo "Continuing build..."
+            fi
+          else
+            echo "IAP config unchanged - skipping"
+          fi
+
+      - name: Update data safety form
+        script: |
+          if [ "$GOOGLE_PLAY_READY" != "true" ]; then
+            echo "WARNING: Google Play not ready - skipping data safety update."
+            exit 0
+          fi
+          FORCE_FLAG=""
+          if [ "${FIRST_STORE_SYNC:-false}" = "true" ]; then
+            FORCE_FLAG="--force"
+          fi
+          if ./scripts/check_changed.sh $FORCE_FLAG fastlane/data_safety.csv; then
+            export GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH="$CM_BUILD_DIR/$GOOGLE_SA_JSON_PATH"
+            cd $CM_BUILD_DIR/$APP_ROOT/android
+            if bundle exec fastlane update_data_safety 2>&1; then
+              echo "Data safety form updated successfully"
+            else
+              echo "WARNING: Data safety update failed."
+              echo "Data safety can be configured manually in Google Play Console."
+              echo "Continuing build..."
+            fi
+          else
+            echo "Data safety unchanged - skipping"
+          fi
+          # After successful sync, create marker so future builds use change detection
+          if [ "${FIRST_STORE_SYNC:-false}" = "true" ]; then
+            mkdir -p "$CM_BUILD_DIR/.codemagic"
+            touch "$CM_BUILD_DIR/.codemagic/android_store_synced"
+            cd "$CM_BUILD_DIR"
+            git add .codemagic/android_store_synced
+            git commit -m "chore: mark Android store sync complete [skip ci]" || true
+            git push origin HEAD || true
+            echo "Store sync marker committed"
           fi
 
       - name: Manage Android version
@@ -378,14 +458,28 @@ workflows:
           if [ "$GOOGLE_PLAY_READY" != "true" ]; then
             LATEST_BUILD=0
           else
-            LATEST_BUILD=$(google-play get-latest-build-number \
+            export GOOGLE_PLAY_SERVICE_ACCOUNT_CREDENTIALS="$(cat $CM_BUILD_DIR/$GOOGLE_SA_JSON_PATH)"
+            LATEST_BUILD_OUTPUT=$(google-play get-latest-build-number \
               --package-name "$PACKAGE_NAME" \
-              --tracks=production,beta,alpha,internal 2>/dev/null || echo "0")
+              --tracks=production,beta,alpha,internal 2>/dev/null || true)
+            # Extract just the number from output
+            LATEST_BUILD=$(echo "$LATEST_BUILD_OUTPUT" | grep -oE '^[0-9]+$' | tail -1)
+            if [ -z "$LATEST_BUILD" ]; then
+              echo "WARNING: Could not get latest build number from Google Play."
+              echo "Raw output: $LATEST_BUILD_OUTPUT"
+              echo "Falling back to build number 1"
+              LATEST_BUILD=1
+            fi
+            echo "Latest build number from Google Play: $LATEST_BUILD"
           fi
           NEW_BUILD=$(($LATEST_BUILD + 1))
           if [ -z "$APP_VERSION" ]; then
             APP_VERSION="1.0.0"
           fi
+          # Normalize to semver (1.0 -> 1.0.0, 1 -> 1.0.0)
+          PARTS=$(echo "$APP_VERSION" | tr '.' '\n' | wc -l | tr -d ' ')
+          if [ "$PARTS" -eq 1 ]; then APP_VERSION="${APP_VERSION}.0.0"; fi
+          if [ "$PARTS" -eq 2 ]; then APP_VERSION="${APP_VERSION}.0"; fi
           sed -i '' "s/^version:.*/version: ${APP_VERSION}+${NEW_BUILD}/" $APP_ROOT/pubspec.yaml
           echo "ANDROID_VERSION_CODE=$NEW_BUILD" >> $CM_ENV
           echo "Android versionCode: $NEW_BUILD, versionName: $APP_VERSION"
@@ -396,56 +490,22 @@ workflows:
       - name: Build Android
         script: cd $CM_BUILD_DIR/$APP_ROOT && flutter build appbundle --release
 
-      - name: Install Fastlane
-        script: |
-          cd $CM_BUILD_DIR/$APP_ROOT/android
-          gem install bundler
-          bundle install
-
-      - name: Upload Android metadata and screenshots
-        script: |
-          if [ "$GOOGLE_PLAY_READY" != "true" ]; then
-            echo "Skipping metadata upload - Google Play not ready."
-            exit 0
-          fi
-          export GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH="$CM_BUILD_DIR/$GOOGLE_SA_JSON_PATH"
-          cd $CM_BUILD_DIR/$APP_ROOT/android
-          bundle exec fastlane upload_metadata_android
-
-      - name: Sync subscriptions and IAP
-        script: |
-          if [ "$GOOGLE_PLAY_READY" != "true" ]; then
-            echo "Skipping IAP sync - Google Play not ready."
-            exit 0
-          fi
-          if ./scripts/check_changed.sh fastlane/iap_config.json; then
-            export GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH="$CM_BUILD_DIR/$GOOGLE_SA_JSON_PATH"
-            cd $CM_BUILD_DIR/$APP_ROOT/android
-            bundle exec fastlane sync_google_iap
-          else
-            echo "IAP config unchanged - skipping"
-          fi
-
-      - name: Update data safety form
-        script: |
-          if [ "$GOOGLE_PLAY_READY" != "true" ]; then
-            echo "Skipping data safety update - Google Play not ready."
-            exit 0
-          fi
-          if ./scripts/check_changed.sh fastlane/data_safety.csv; then
-            export GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH="$CM_BUILD_DIR/$GOOGLE_SA_JSON_PATH"
-            cd $CM_BUILD_DIR/$APP_ROOT/android
-            bundle exec fastlane update_data_safety
-          else
-            echo "Data safety unchanged - skipping"
-          fi
-
       - name: Upload AAB to Google Play
         script: |
           if [ "$GOOGLE_PLAY_READY" != "true" ]; then
-            echo "Skipping Google Play upload - app not yet set up in Play Console."
-            echo "See HOW_TO_GOOGLE_PLAY.md in artifacts for manual setup steps."
-            exit 0
+            echo "============================================"
+            echo "FIRST RUN: AAB built but NOT uploaded."
+            echo "============================================"
+            echo ""
+            echo "Download the AAB from build artifacts and"
+            echo "upload it manually to Google Play Console."
+            echo "See HOW_TO_GOOGLE_PLAY.md in artifacts for"
+            echo "step-by-step instructions."
+            echo ""
+            echo "After completing manual setup, push again"
+            echo "for fully automated publishing."
+            echo "============================================"
+            exit 1
           fi
           export GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH="$CM_BUILD_DIR/$GOOGLE_SA_JSON_PATH"
           cd $CM_BUILD_DIR/$APP_ROOT/android

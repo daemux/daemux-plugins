@@ -5,26 +5,74 @@ default_platform(:android)
 ROOT_DIR = ENV.fetch("CM_BUILD_DIR", File.expand_path("../..", __FILE__))
 APP_ROOT = ENV.fetch("APP_ROOT", "app")
 
+AAB_PATH = "#{ROOT_DIR}/#{APP_ROOT}/build/app/outputs/bundle/release/app-release.aab"
+
 def metadata_changed?(path)
   !sh("git diff --name-only HEAD~1 -- #{path}").strip.empty?
 rescue StandardError
   true
 end
 
+# Shared upload options reused across Android lanes.
+def base_play_store_options
+  {
+    package_name: ENV["PACKAGE_NAME"],
+    track: ENV.fetch("TRACK", "internal"),
+    json_key: ENV["GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH"]
+  }
+end
+
+def rollout_options
+  {
+    rollout: ENV.fetch("ROLLOUT_FRACTION", "").empty? ? nil : ENV["ROLLOUT_FRACTION"],
+    in_app_update_priority: ENV.fetch("IN_APP_UPDATE_PRIORITY", "3").to_i
+  }
+end
+
 platform :android do
   lane :deploy_android do
-    upload_to_play_store(
-      aab: "#{ROOT_DIR}/#{APP_ROOT}/build/app/outputs/bundle/release/app-release.aab",
-      track: ENV.fetch("TRACK", "internal"),
-      json_key: ENV["GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH"],
+    status = ENV.fetch("RELEASE_STATUS", "draft")
+    opts = base_play_store_options.merge(
+      aab: AAB_PATH,
+      release_status: status,
       skip_upload_metadata: !metadata_changed?("fastlane/metadata/android/"),
       skip_upload_screenshots: !metadata_changed?("fastlane/screenshots/android/"),
       skip_upload_images: !metadata_changed?("fastlane/screenshots/android/"),
       skip_upload_changelogs: false,
-      metadata_path: "#{ROOT_DIR}/fastlane/metadata/android",
-      rollout: ENV.fetch("ROLLOUT_FRACTION", "").empty? ? nil : ENV["ROLLOUT_FRACTION"].to_f,
-      in_app_update_priority: ENV.fetch("IN_APP_UPDATE_PRIORITY", "3").to_i
+      metadata_path: "#{ROOT_DIR}/fastlane/metadata/android"
     )
+    opts.merge!(rollout_options) unless status == "draft"
+    upload_to_play_store(opts)
+  end
+
+  lane :upload_metadata_android do
+    upload_to_play_store(
+      base_play_store_options.merge(
+        skip_upload_aab: true,
+        skip_upload_apk: true,
+        skip_upload_metadata: false,
+        skip_upload_screenshots: false,
+        skip_upload_images: false,
+        skip_upload_changelogs: true,
+        release_status: "draft",
+        metadata_path: "#{ROOT_DIR}/fastlane/metadata/android"
+      )
+    )
+  end
+
+  lane :upload_binary_android do
+    status = ENV.fetch("RELEASE_STATUS", "draft")
+    opts = base_play_store_options.merge(
+      aab: AAB_PATH,
+      release_status: status,
+      skip_upload_metadata: true,
+      skip_upload_screenshots: true,
+      skip_upload_images: true,
+      skip_upload_changelogs: true
+    )
+    # Rollout percentage is only valid for non-draft releases
+    opts.merge!(rollout_options) unless status == "draft"
+    upload_to_play_store(opts)
   end
 
   lane :sync_google_iap do

@@ -1,1 +1,4 @@
-gem "fastlane-plugin-iap", git: "https://github.com/daemux/fastlane-plugin-iap"
+# fastlane-plugin-iap is not yet published.
+# IAP sync is handled gracefully in codemagic.yaml (non-blocking).
+# Uncomment when the plugin is available:
+# gem "fastlane-plugin-iap", git: "https://github.com/daemux/fastlane-plugin-iap"
