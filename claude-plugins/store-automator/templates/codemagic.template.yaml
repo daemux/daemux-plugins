@@ -19,14 +19,11 @@ workflows:
         PRICE_TIER: "${PRICE_TIER}"
         SUBMIT_FOR_REVIEW: "${SUBMIT_FOR_REVIEW}"
         AUTOMATIC_RELEASE: "${AUTOMATIC_RELEASE}"
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: "${BUNDLE_ID}"
+        APP_ROOT: "${APP_ROOT}"
     cache:
       cache_paths:
-        - $HOME/.codemagic_keys
         - $HOME/.gem
-        - ios/vendor/bundle
+        - ${APP_ROOT}/ios/vendor/bundle
     triggering:
       events:
         - push
@@ -34,15 +31,20 @@ workflows:
         - pattern: main
           include: true
     scripts:
+      - name: Link Fastlane directories
+        script: |
+          ln -sfn "$CM_BUILD_DIR/fastlane/ios" "$CM_BUILD_DIR/$APP_ROOT/ios/fastlane"
+          ln -sfn "$CM_BUILD_DIR/fastlane" "$CM_BUILD_DIR/$APP_ROOT/fastlane"
+
       - name: Ensure CERTIFICATE_PRIVATE_KEY
         script: |
-          KEY_FILE="$HOME/.codemagic_keys/ios_dist_private_key"
-          mkdir -p "$HOME/.codemagic_keys"
+          KEY_FILE="$CM_BUILD_DIR/creds/ios_dist_private_key"
           if [ -f "$KEY_FILE" ]; then
-            echo "Reusing cached CERTIFICATE_PRIVATE_KEY"
+            echo "Using CERTIFICATE_PRIVATE_KEY from repo creds/"
           else
-            echo "Generating new CERTIFICATE_PRIVATE_KEY"
-            ssh-keygen -t rsa -b 2048 -m PEM -f "$KEY_FILE" -q -N ""
+            echo "ERROR: creds/ios_dist_private_key not found in repo."
+            echo "Generate it with: ssh-keygen -t rsa -b 2048 -m PEM -f creds/ios_dist_private_key -q -N ''"
+            exit 1
           fi
           echo "CERTIFICATE_PRIVATE_KEY<<DELIMITER" >> $CM_ENV
           cat "$KEY_FILE" >> $CM_ENV
@@ -57,17 +59,133 @@ workflows:
           cat "$CM_BUILD_DIR/$P8_KEY_PATH" >> $CM_ENV
           echo "" >> $CM_ENV
           echo "KEYDELIMITER" >> $CM_ENV
+          # Write P8 key to temp file once for all Fastlane steps
+          P8_TMP="/tmp/fastlane_api_key.p8"
+          cat "$CM_BUILD_DIR/$P8_KEY_PATH" > "$P8_TMP"
+          echo "FASTLANE_API_KEY_PATH=$P8_TMP" >> $CM_ENV
+
+      - name: Install Fastlane
+        script: |
+          cd $CM_BUILD_DIR/$APP_ROOT/ios
+          gem install bundler
+          bundle install
+
+      - name: Check app record exists
+        script: |
+          echo "Checking if $BUNDLE_ID exists in App Store Connect..."
+          EXISTING=$(app-store-connect apps list \
+            --bundle-id-identifier "$BUNDLE_ID" --json 2>&1 \
+            | python3 -c "
+          import sys, json
+          try:
+              apps = json.load(sys.stdin)
+              print('yes' if apps else 'no')
+          except:
+              print('no')
+          " 2>/dev/null)
+
+          if [ "$EXISTING" = "yes" ]; then
+            echo "App record exists for $BUNDLE_ID"
+            echo "APP_RECORD_EXISTS=true" >> $CM_ENV
+          else
+            echo ""
+            echo "=========================================="
+            echo "WARNING: APP NOT FOUND IN APP STORE CONNECT"
+            echo "=========================================="
+            echo ""
+            echo "Apple does not allow programmatic app creation via API keys."
+            echo "The IPA will still be built and available in artifacts."
+            echo "To complete setup, create the app manually:"
+            echo "  1. Go to https://appstoreconnect.apple.com"
+            echo "  2. Click '+' > 'New App'"
+            echo "  3. Bundle ID: $BUNDLE_ID"
+            echo "  4. Name: $APP_NAME"
+            echo "  5. SKU: $SKU"
+            echo ""
+            echo "After creating the app, just push again."
+            echo "APP_RECORD_EXISTS=false" >> $CM_ENV
+          fi
+
+      - name: Upload iOS metadata and screenshots
+        script: |
+          if [ "$APP_RECORD_EXISTS" = "false" ]; then
+            echo "Skipping metadata upload - app record does not exist in App Store Connect."
+            exit 0
+          fi
+          cd $CM_BUILD_DIR/$APP_ROOT/ios
+          bundle exec fastlane upload_metadata_ios
+
+      - name: Sync IAP and subscriptions
+        script: |
+          if [ "$APP_RECORD_EXISTS" = "false" ]; then
+            echo "Skipping IAP sync - app record does not exist yet."
+            exit 0
+          fi
+          if ./scripts/check_changed.sh fastlane/iap_config.json; then
+            cd $CM_BUILD_DIR/$APP_ROOT/ios
+            bundle exec fastlane sync_iap
+          else
+            echo "IAP config unchanged - skipping"
+          fi
 
       - name: Set up iOS code signing
         script: |
-          app-store-connect fetch-signing-files "$BUNDLE_ID" \
-            --type IOS_APP_STORE --create
           keychain initialize
-          app-store-connect certificates list \
-            --type IOS_DISTRIBUTION \
-            --certificate-key=@env:CERTIFICATE_PRIVATE_KEY --save
+
+          # Attempt to fetch or create signing files.
+          if app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --certificate-key=@env:CERTIFICATE_PRIVATE_KEY \
+            --create 2>/tmp/signing_err.log; then
+            echo "Signing files fetched successfully"
+          else
+            cat /tmp/signing_err.log
+            echo ""
+            echo "Signing failed. Deleting ALL distribution certs..."
+
+            for CERT_TYPE in IOS_DISTRIBUTION DISTRIBUTION; do
+              CERT_IDS=$(app-store-connect certificates list \
+                --type "$CERT_TYPE" --json 2>/dev/null \
+                | python3 -c "
+          import sys, json
+          certs = json.load(sys.stdin)
+          for c in certs:
+              print(c.get('id', ''))
+          " 2>/dev/null || true)
+
+              for CID in $CERT_IDS; do
+                if [ -n "$CID" ]; then
+                  echo "Deleting $CERT_TYPE cert: $CID"
+                  app-store-connect certificates delete "$CID" || true
+                fi
+              done
+            done
+
+            echo "Waiting 15s for Apple API propagation..."
+            sleep 15
+
+            # Verify certs are gone
+            REMAINING=$(app-store-connect certificates list \
+              --type DISTRIBUTION --json 2>/dev/null \
+              | python3 -c "import sys,json; print(len(json.load(sys.stdin)))" 2>/dev/null || echo "?")
+            echo "Remaining DISTRIBUTION certs: $REMAINING"
+
+            echo "Retrying fetch-signing-files..."
+            app-store-connect fetch-signing-files "$BUNDLE_ID" \
+              --type IOS_APP_STORE \
+              --certificate-key=@env:CERTIFICATE_PRIVATE_KEY \
+              --create
+          fi
+
+          # Verify signing artifacts exist
+          P12_COUNT=$(ls /Users/builder/Library/MobileDevice/Certificates/*.p12 2>/dev/null | wc -l)
+          if [ "$P12_COUNT" -eq 0 ]; then
+            echo "ERROR: No .p12 certificates found after signing setup"
+            exit 1
+          fi
+
           keychain add-certificates
-          xcode-project use-profiles
+          xcode-project use-profiles --project $APP_ROOT/ios/Runner.xcodeproj
 
       - name: Manage iOS version
         script: |
@@ -84,50 +202,30 @@ workflows:
       - name: Set Flutter version
         script: |
           BUILD_NUMBER=$(($(app-store-connect get-latest-app-store-build-number "$BUNDLE_ID" 2>/dev/null || echo "0") + 1))
-          if [ -z "$APP_VERSION" ] || [ "$APP_VERSION" = "" ]; then
+          if [ -z "$APP_VERSION" ]; then
             APP_VERSION="1.0.0"
           fi
-          sed -i '' "s/^version:.*/version: ${APP_VERSION}+${BUILD_NUMBER}/" pubspec.yaml
+          sed -i '' "s/^version:.*/version: ${APP_VERSION}+${BUILD_NUMBER}/" $APP_ROOT/pubspec.yaml
           echo "Building: $APP_VERSION+$BUILD_NUMBER"
 
       - name: Flutter packages
-        script: flutter pub get
+        script: cd $CM_BUILD_DIR/$APP_ROOT && flutter pub get
 
       - name: Build iOS
-        script: flutter build ipa --release --export-options-plist=/tmp/export.plist
+        script: cd $CM_BUILD_DIR/$APP_ROOT && flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
 
-      - name: Install Fastlane
+      - name: Upload IPA to App Store
         script: |
-          cd ios
-          gem install bundler
-          bundle install
-
-      - name: Create app record (idempotent)
-        script: |
-          cd ios
-          bundle exec fastlane produce create \
-            -u "$APPLE_ID" \
-            -a "$BUNDLE_ID" \
-            --app_name "$APP_NAME" \
-            --sku "$SKU" \
-            || true
-
-      - name: Deploy to App Store
-        script: |
-          cd ios
-          bundle exec fastlane deploy_ios
-
-      - name: Sync IAP and subscriptions
-        script: |
-          if ./scripts/check_changed.sh fastlane/iap_config.json; then
-            cd ios
-            bundle exec fastlane sync_iap
-          else
-            echo "IAP config unchanged - skipping"
+          if [ "$APP_RECORD_EXISTS" = "false" ]; then
+            echo "Skipping binary upload - app record does not exist in App Store Connect."
+            echo "Create the app manually first (see instructions above), then push again."
+            exit 0
           fi
+          cd $CM_BUILD_DIR/$APP_ROOT/ios
+          bundle exec fastlane upload_binary_ios
 
     artifacts:
-      - build/ios/ipa/*.ipa
+      - ${APP_ROOT}/build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
 
   android-release:
@@ -148,11 +246,12 @@ workflows:
         APPLE_KEY_ID: "${APPLE_KEY_ID}"
         APPLE_ISSUER_ID: "${APPLE_ISSUER_ID}"
         P8_KEY_PATH: "${P8_KEY_PATH}"
+        APP_ROOT: "${APP_ROOT}"
     cache:
       cache_paths:
         - $HOME/.gem
         - $HOME/.gradle/caches
-        - android/vendor/bundle
+        - ${APP_ROOT}/android/vendor/bundle
     triggering:
       events:
         - push
@@ -160,16 +259,16 @@ workflows:
         - pattern: main
           include: true
     scripts:
+      - name: Link Fastlane directories
+        script: |
+          ln -sfn "$CM_BUILD_DIR/fastlane/android" "$CM_BUILD_DIR/$APP_ROOT/android/fastlane"
+          ln -sfn "$CM_BUILD_DIR/fastlane" "$CM_BUILD_DIR/$APP_ROOT/fastlane"
+
       - name: Ensure Android upload keystore
         script: |
-          KEYSTORE_PATH="$CM_BUILD_DIR/android/upload.keystore"
-          CREDS_PATH="$CM_BUILD_DIR/creds/android_upload.keystore"
-          GENERATED=false
+          KEYSTORE_PATH="$CM_BUILD_DIR/$APP_ROOT/android/upload.keystore"
           if [ -f "$KEYSTORE_PATH" ]; then
             echo "Using existing upload keystore from repo"
-          elif [ -f "$CREDS_PATH" ]; then
-            echo "Restoring upload keystore from creds/"
-            cp "$CREDS_PATH" "$KEYSTORE_PATH"
           else
             echo "Generating new upload keystore..."
             keytool -genkey -v \
@@ -182,18 +281,8 @@ workflows:
               -storepass "$KEYSTORE_PASSWORD" \
               -keypass "$KEYSTORE_PASSWORD" \
               -dname "CN=Upload Key, O=Developer, C=US"
-            GENERATED=true
-          fi
-          # Always ensure creds/ backup exists
-          mkdir -p "$CM_BUILD_DIR/creds"
-          if [ ! -f "$CREDS_PATH" ] || ! cmp -s "$KEYSTORE_PATH" "$CREDS_PATH"; then
-            cp "$KEYSTORE_PATH" "$CREDS_PATH"
-            echo "Keystore backed up to creds/android_upload.keystore"
-          fi
-          # Commit keystore files if newly generated
-          if [ "$GENERATED" = "true" ]; then
             cd "$CM_BUILD_DIR"
-            git add --force android/upload.keystore creds/android_upload.keystore
+            git add $APP_ROOT/android/upload.keystore
             git commit -m "chore: add Android upload keystore [skip ci]"
             git push origin HEAD
             echo "Upload keystore generated and committed to repo"
@@ -209,21 +298,35 @@ workflows:
           pip3 install PyJWT cryptography requests
           export SA_JSON="$CM_BUILD_DIR/$GOOGLE_SA_JSON_PATH"
           export PACKAGE_NAME="$PACKAGE_NAME"
-          RESULT=$(python3 scripts/check_google_play.py)
-          READY=$(echo "$RESULT" | python3 -c "import sys,json; print(str(json.load(sys.stdin)['ready']).lower())")
+          RESULT=$(python3 scripts/check_google_play.py 2>/dev/null || echo '{"ready":false}')
+          READY=$(echo "$RESULT" | python3 -c "import sys,json; print(str(json.load(sys.stdin).get('ready',False)).lower())" 2>/dev/null || echo "false")
           if [ "$READY" != "true" ]; then
             echo "GOOGLE_PLAY_READY=false" >> $CM_ENV
-            MISSING_STEPS=$(echo "$RESULT" | python3 -c "import sys,json; print('\n'.join(json.load(sys.stdin)['missing_steps']))")
-            cat > $CM_BUILD_DIR/HOW_TO_GOOGLE_PLAY.md << GUIDE
-          # Google Play Setup - Remaining Manual Steps
-
-          Your Android AAB is in the build artifacts. Complete these steps, then push again:
-
-          $MISSING_STEPS
-
-          ## After completing all steps:
-          Just \`git push\` again - Codemagic will publish automatically.
-          GUIDE
+            python3 -c "
+            import os
+            content = (
+              '# Google Play Setup - Manual Steps Required\n'
+              '\n'
+              'Your Android AAB is available in the build artifacts above.\n'
+              '\n'
+              '## Steps to complete\n'
+              '\n'
+              '1. **Go to Google Play Console** - https://play.google.com/console\n'
+              '2. **Create your app** (if not already created) with the correct package name\n'
+              '3. **Upload the AAB** from build artifacts to an internal testing track\n'
+              '4. **Complete the Store Listing** - Add title, descriptions, screenshots, and app icon\n'
+              '5. **Complete the Content Rating** questionnaire\n'
+              '6. **Set up Pricing and Distribution**\n'
+              '7. **Complete the Data Safety** form\n'
+              '8. **Review and roll out** the internal testing release\n'
+              '\n'
+              '## After completing all steps\n'
+              'Just git push again - Codemagic will publish automatically on subsequent builds.\n'
+            )
+            path = os.path.join(os.environ['CM_BUILD_DIR'], 'HOW_TO_GOOGLE_PLAY.md')
+            with open(path, 'w') as f:
+              f.write(content)
+            "
             echo "Google Play not ready - see HOW_TO_GOOGLE_PLAY.md in artifacts"
           else
             echo "GOOGLE_PLAY_READY=true" >> $CM_ENV
@@ -251,44 +354,44 @@ workflows:
               --tracks=production,beta,alpha,internal 2>/dev/null || echo "0")
           fi
           NEW_BUILD=$(($LATEST_BUILD + 1))
-          if [ -z "$APP_VERSION" ] || [ "$APP_VERSION" = "" ]; then
+          if [ -z "$APP_VERSION" ]; then
             APP_VERSION="1.0.0"
           fi
-          sed -i '' "s/^version:.*/version: ${APP_VERSION}+${NEW_BUILD}/" pubspec.yaml
+          sed -i '' "s/^version:.*/version: ${APP_VERSION}+${NEW_BUILD}/" $APP_ROOT/pubspec.yaml
           echo "ANDROID_VERSION_CODE=$NEW_BUILD" >> $CM_ENV
           echo "Android versionCode: $NEW_BUILD, versionName: $APP_VERSION"
 
       - name: Flutter packages
-        script: flutter pub get
+        script: cd $CM_BUILD_DIR/$APP_ROOT && flutter pub get
 
       - name: Build Android
-        script: flutter build appbundle --release
+        script: cd $CM_BUILD_DIR/$APP_ROOT && flutter build appbundle --release
 
       - name: Install Fastlane
         script: |
-          cd android
+          cd $CM_BUILD_DIR/$APP_ROOT/android
           gem install bundler
           bundle install
 
-      - name: Deploy to Google Play
+      - name: Upload Android metadata and screenshots
         script: |
           if [ "$GOOGLE_PLAY_READY" != "true" ]; then
-            echo "Skipping - Google Play setup incomplete"
+            echo "Skipping metadata upload - Google Play not ready."
             exit 0
           fi
           export GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH="$CM_BUILD_DIR/$GOOGLE_SA_JSON_PATH"
-          cd android
-          bundle exec fastlane deploy_android
+          cd $CM_BUILD_DIR/$APP_ROOT/android
+          bundle exec fastlane upload_metadata_android
 
       - name: Sync subscriptions and IAP
         script: |
           if [ "$GOOGLE_PLAY_READY" != "true" ]; then
-            echo "Skipping - Google Play setup incomplete"
+            echo "Skipping IAP sync - Google Play not ready."
             exit 0
           fi
           if ./scripts/check_changed.sh fastlane/iap_config.json; then
             export GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH="$CM_BUILD_DIR/$GOOGLE_SA_JSON_PATH"
-            cd android
+            cd $CM_BUILD_DIR/$APP_ROOT/android
             bundle exec fastlane sync_google_iap
           else
             echo "IAP config unchanged - skipping"
@@ -297,17 +400,28 @@ workflows:
       - name: Update data safety form
         script: |
           if [ "$GOOGLE_PLAY_READY" != "true" ]; then
-            echo "Skipping - Google Play setup incomplete"
+            echo "Skipping data safety update - Google Play not ready."
             exit 0
           fi
           if ./scripts/check_changed.sh fastlane/data_safety.csv; then
             export GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH="$CM_BUILD_DIR/$GOOGLE_SA_JSON_PATH"
-            cd android
+            cd $CM_BUILD_DIR/$APP_ROOT/android
             bundle exec fastlane update_data_safety
           else
             echo "Data safety unchanged - skipping"
           fi
 
+      - name: Upload AAB to Google Play
+        script: |
+          if [ "$GOOGLE_PLAY_READY" != "true" ]; then
+            echo "Skipping Google Play upload - app not yet set up in Play Console."
+            echo "See HOW_TO_GOOGLE_PLAY.md in artifacts for manual setup steps."
+            exit 0
+          fi
+          export GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH="$CM_BUILD_DIR/$GOOGLE_SA_JSON_PATH"
+          cd $CM_BUILD_DIR/$APP_ROOT/android
+          bundle exec fastlane upload_binary_android
+
     artifacts:
-      - build/app/outputs/**/*.aab
+      - ${APP_ROOT}/build/app/outputs/**/*.aab
       - $CM_BUILD_DIR/HOW_TO_GOOGLE_PLAY.md

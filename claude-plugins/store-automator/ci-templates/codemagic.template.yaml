@@ -22,7 +22,6 @@ workflows:
         APP_ROOT: "${APP_ROOT}"
     cache:
       cache_paths:
-        - $HOME/.codemagic_keys
         - $HOME/.gem
         - ${APP_ROOT}/ios/vendor/bundle
     triggering:
@@ -87,14 +86,16 @@ workflows:
 
           if [ "$EXISTING" = "yes" ]; then
             echo "App record exists for $BUNDLE_ID"
+            echo "APP_RECORD_EXISTS=true" >> $CM_ENV
           else
             echo ""
             echo "=========================================="
-            echo "BUILD FAILED - APP NOT FOUND"
+            echo "WARNING: APP NOT FOUND IN APP STORE CONNECT"
             echo "=========================================="
             echo ""
             echo "Apple does not allow programmatic app creation via API keys."
-            echo "To fix this, create the app manually:"
+            echo "The IPA will still be built and available in artifacts."
+            echo "To complete setup, create the app manually:"
             echo "  1. Go to https://appstoreconnect.apple.com"
             echo "  2. Click '+' > 'New App'"
             echo "  3. Bundle ID: $BUNDLE_ID"
@@ -102,16 +103,24 @@ workflows:
             echo "  5. SKU: $SKU"
             echo ""
             echo "After creating the app, just push again."
-            exit 1
+            echo "APP_RECORD_EXISTS=false" >> $CM_ENV
           fi
 
       - name: Upload iOS metadata and screenshots
         script: |
+          if [ "$APP_RECORD_EXISTS" = "false" ]; then
+            echo "Skipping metadata upload - app record does not exist in App Store Connect."
+            exit 0
+          fi
           cd $CM_BUILD_DIR/$APP_ROOT/ios
           bundle exec fastlane upload_metadata_ios
 
       - name: Sync IAP and subscriptions
         script: |
+          if [ "$APP_RECORD_EXISTS" = "false" ]; then
+            echo "Skipping IAP sync - app record does not exist yet."
+            exit 0
+          fi
           if ./scripts/check_changed.sh fastlane/iap_config.json; then
             cd $CM_BUILD_DIR/$APP_ROOT/ios
             bundle exec fastlane sync_iap
@@ -193,7 +202,7 @@ workflows:
       - name: Set Flutter version
         script: |
           BUILD_NUMBER=$(($(app-store-connect get-latest-app-store-build-number "$BUNDLE_ID" 2>/dev/null || echo "0") + 1))
-          if [ -z "$APP_VERSION" ] || [ "$APP_VERSION" = "" ]; then
+          if [ -z "$APP_VERSION" ]; then
             APP_VERSION="1.0.0"
           fi
           sed -i '' "s/^version:.*/version: ${APP_VERSION}+${BUILD_NUMBER}/" $APP_ROOT/pubspec.yaml
@@ -207,6 +216,11 @@ workflows:
 
       - name: Upload IPA to App Store
         script: |
+          if [ "$APP_RECORD_EXISTS" = "false" ]; then
+            echo "Skipping binary upload - app record does not exist in App Store Connect."
+            echo "Create the app manually first (see instructions above), then push again."
+            exit 0
+          fi
           cd $CM_BUILD_DIR/$APP_ROOT/ios
           bundle exec fastlane upload_binary_ios
 
@@ -332,11 +346,15 @@ workflows:
           VERSION_JSON=$(python3 scripts/manage_version_ios.py 2>/dev/null || echo '{"version":"1.0.0","version_id":"","state":"NEW"}')
           APP_VERSION=$(echo "$VERSION_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin)['version'])")
           echo "APP_VERSION=$APP_VERSION" >> $CM_ENV
-          LATEST_BUILD=$(google-play get-latest-build-number \
-            --package-name "$PACKAGE_NAME" \
-            --tracks=production,beta,alpha,internal 2>/dev/null || echo "0")
+          if [ "$GOOGLE_PLAY_READY" != "true" ]; then
+            LATEST_BUILD=0
+          else
+            LATEST_BUILD=$(google-play get-latest-build-number \
+              --package-name "$PACKAGE_NAME" \
+              --tracks=production,beta,alpha,internal 2>/dev/null || echo "0")
+          fi
           NEW_BUILD=$(($LATEST_BUILD + 1))
-          if [ -z "$APP_VERSION" ] || [ "$APP_VERSION" = "" ]; then
+          if [ -z "$APP_VERSION" ]; then
             APP_VERSION="1.0.0"
           fi
           sed -i '' "s/^version:.*/version: ${APP_VERSION}+${NEW_BUILD}/" $APP_ROOT/pubspec.yaml
@@ -355,14 +373,22 @@ workflows:
           gem install bundler
           bundle install
 
-      - name: Deploy to Google Play
+      - name: Upload Android metadata and screenshots
         script: |
+          if [ "$GOOGLE_PLAY_READY" != "true" ]; then
+            echo "Skipping metadata upload - Google Play not ready."
+            exit 0
+          fi
           export GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH="$CM_BUILD_DIR/$GOOGLE_SA_JSON_PATH"
           cd $CM_BUILD_DIR/$APP_ROOT/android
-          bundle exec fastlane deploy_android
+          bundle exec fastlane upload_metadata_android
 
       - name: Sync subscriptions and IAP
         script: |
+          if [ "$GOOGLE_PLAY_READY" != "true" ]; then
+            echo "Skipping IAP sync - Google Play not ready."
+            exit 0
+          fi
           if ./scripts/check_changed.sh fastlane/iap_config.json; then
             export GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH="$CM_BUILD_DIR/$GOOGLE_SA_JSON_PATH"
             cd $CM_BUILD_DIR/$APP_ROOT/android
@@ -373,6 +399,10 @@ workflows:
 
       - name: Update data safety form
         script: |
+          if [ "$GOOGLE_PLAY_READY" != "true" ]; then
+            echo "Skipping data safety update - Google Play not ready."
+            exit 0
+          fi
           if ./scripts/check_changed.sh fastlane/data_safety.csv; then
             export GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH="$CM_BUILD_DIR/$GOOGLE_SA_JSON_PATH"
             cd $CM_BUILD_DIR/$APP_ROOT/android
@@ -380,6 +410,17 @@ workflows:
           else
             echo "Data safety unchanged - skipping"
           fi
+
+      - name: Upload AAB to Google Play
+        script: |
+          if [ "$GOOGLE_PLAY_READY" != "true" ]; then
+            echo "Skipping Google Play upload - app not yet set up in Play Console."
+            echo "See HOW_TO_GOOGLE_PLAY.md in artifacts for manual setup steps."
+            exit 0
+          fi
+          export GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH="$CM_BUILD_DIR/$GOOGLE_SA_JSON_PATH"
+          cd $CM_BUILD_DIR/$APP_ROOT/android
+          bundle exec fastlane upload_binary_android
 
     artifacts:
       - ${APP_ROOT}/build/app/outputs/**/*.aab
