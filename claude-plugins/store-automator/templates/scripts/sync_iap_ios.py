@@ -21,14 +21,17 @@ import os
 import sys
 
 from asc_iap_api import (
+    create_group_localization,
     create_localization,
     create_subscription,
     create_subscription_group,
     get_app_id,
+    get_group_localizations,
     get_jwt_token,
     get_subscription_localizations,
     list_subscription_groups,
     list_subscriptions_in_group,
+    update_group_localization,
     update_localization,
 )
 from asc_subscription_setup import (
@@ -103,6 +106,27 @@ def sync_subscription_group(
 
     print(f"\nProcessing subscription group: {ref_name}")
     group_id = find_or_create_group(headers, app_id, ref_name, existing_groups)
+
+    # Sync group localizations
+    group_localizations = group_config.get("localizations", {})
+    if group_localizations:
+        existing_locs = get_group_localizations(headers, group_id)
+        existing_map = {loc["attributes"]["locale"]: loc for loc in existing_locs}
+
+        for locale, loc_data in group_localizations.items():
+            name = loc_data.get("name", "")
+            custom_name = loc_data.get("custom_name")
+
+            if locale in existing_map:
+                update_group_localization(
+                    headers, existing_map[locale]["id"], name, custom_name
+                )
+                print(f"    Updated group localization: {locale}")
+            else:
+                create_group_localization(
+                    headers, group_id, locale, name, custom_name
+                )
+                print(f"    Created group localization: {locale}")
 
     existing_subs = list_subscriptions_in_group(headers, group_id)
     sub_results = []

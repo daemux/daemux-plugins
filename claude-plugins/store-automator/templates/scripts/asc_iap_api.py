@@ -204,6 +204,72 @@ def update_localization(headers: dict, loc_id: str, loc_data: dict) -> None:
     print(f"      Updated localization (ID: {loc_id})")
 
 
+def get_group_localizations(headers: dict, group_id: str) -> list:
+    """Fetch existing localizations for a subscription group."""
+    resp = requests.get(
+        f"{BASE_URL}/subscriptionGroups/{group_id}/subscriptionGroupLocalizations",
+        headers=headers,
+        timeout=TIMEOUT,
+    )
+    resp.raise_for_status()
+    return resp.json().get("data", [])
+
+
+def create_group_localization(
+    headers: dict, group_id: str, locale: str, name: str, custom_app_name: str = None,
+) -> None:
+    """Create a new localization for a subscription group."""
+    resp = requests.post(
+        f"{BASE_URL}/subscriptionGroupLocalizations",
+        json={
+            "data": {
+                "type": "subscriptionGroupLocalizations",
+                "attributes": {
+                    "name": name,
+                    "customAppName": custom_app_name,
+                    "locale": locale,
+                },
+                "relationships": {
+                    "subscriptionGroup": {
+                        "data": {"type": "subscriptionGroups", "id": group_id}
+                    }
+                },
+            }
+        },
+        headers=headers,
+        timeout=TIMEOUT,
+    )
+    if not resp.ok:
+        print_api_errors(resp, f"create group localization '{locale}' for group {group_id}")
+        return
+    print(f"    Created group localization '{locale}'")
+
+
+def update_group_localization(
+    headers: dict, loc_id: str, name: str, custom_app_name: str = None,
+) -> None:
+    """Update an existing subscription group localization."""
+    resp = requests.patch(
+        f"{BASE_URL}/subscriptionGroupLocalizations/{loc_id}",
+        json={
+            "data": {
+                "type": "subscriptionGroupLocalizations",
+                "id": loc_id,
+                "attributes": {
+                    "name": name,
+                    "customAppName": custom_app_name,
+                },
+            }
+        },
+        headers=headers,
+        timeout=TIMEOUT,
+    )
+    if not resp.ok:
+        print_api_errors(resp, f"update group localization {loc_id}")
+        return
+    print(f"    Updated group localization (ID: {loc_id})")
+
+
 def print_api_errors(resp, action: str) -> None:
     """Print human-readable API error messages."""
     try:
