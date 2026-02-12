@@ -46,21 +46,29 @@ platform :android do
   end
 
   lane :upload_metadata_android do
-    # Metadata (title, descriptions, screenshots) is applied at the app-listing
-    # level and does not require a specific release.  We intentionally avoid
-    # base_play_store_options (which includes :track) so that supply does not
-    # attempt release management — this prevents the "more than one release
-    # found" error when the track contains multiple draft releases.
-    upload_to_play_store(
+    # supply always calls fetch_track_and_release! even for metadata-only
+    # uploads.  When the track contains multiple releases and no version_code
+    # is given it errors with "more than one release found".  We resolve this
+    # by fetching the latest version code from the track first.
+    track = ENV.fetch("TRACK", "internal")
+    codes = google_play_track_version_codes(
       package_name: ENV["PACKAGE_NAME"],
       json_key: ENV["GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH"],
-      skip_upload_aab: true,
-      skip_upload_apk: true,
-      skip_upload_metadata: false,
-      skip_upload_screenshots: false,
-      skip_upload_images: false,
-      skip_upload_changelogs: true,
-      metadata_path: "#{ROOT_DIR}/fastlane/metadata/android"
+      track: track
+    )
+    latest_code = codes.max
+
+    upload_to_play_store(
+      base_play_store_options.merge(
+        version_code: latest_code,
+        skip_upload_aab: true,
+        skip_upload_apk: true,
+        skip_upload_metadata: false,
+        skip_upload_screenshots: false,
+        skip_upload_images: false,
+        skip_upload_changelogs: true,
+        metadata_path: "#{ROOT_DIR}/fastlane/metadata/android"
+      )
     )
   end
 
