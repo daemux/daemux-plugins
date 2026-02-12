@@ -72,7 +72,7 @@ Metadata and screenshots were uploaded by CI but **could not be saved** because 
 1. Go to [Google Play Console](https://play.google.com/console) → Select your app
 2. **Dashboard** → Complete all required setup tasks shown in the checklist
 3. **Store listing** → Create your default store listing (title, description, screenshots)
-   - *Note: CI uploaded this data but it was discarded. After completing setup, re-run CI to auto-upload.*
+   - *Copy-paste the values from the **Store Listing** table below, then re-run CI after setup to auto-upload future changes.*
 4. **Content rating** → Complete the content rating questionnaire
 5. **App pricing** → Set pricing and distribution countries
 6. **First release** → Go to **Testing → Internal testing** → Click **Create new release**
@@ -84,8 +84,36 @@ Metadata and screenshots were uploaded by CI but **could not be saved** because 
 All subsequent CI runs will automatically upload metadata, screenshots, and new builds without manual intervention. Re-trigger the CI workflow after completing the steps above.
 SUMMARY
 
-      # --- Append app URLs table (read from metadata files) ---
+      # --- Append store listing table (read from metadata files) ---
       META_DIR="$PROJECT_ROOT/fastlane/metadata/en-US"
+      _app_name="" _short_desc="" _full_desc=""
+      [ -s "$META_DIR/title.txt" ] && _app_name=$(cat "$META_DIR/title.txt")
+      [ -s "$META_DIR/short_description.txt" ] && _short_desc=$(cat "$META_DIR/short_description.txt")
+      [ -s "$META_DIR/full_description.txt" ] && _full_desc=$(cat "$META_DIR/full_description.txt")
+
+      if [ -n "$_app_name" ] || [ -n "$_short_desc" ] || [ -n "$_full_desc" ]; then
+        {
+          echo ""
+          echo "### Store Listing (copy-paste into Google Play Console)"
+          echo ""
+          if [ -n "$_app_name" ] || [ -n "$_short_desc" ]; then
+            echo "| Field | Value |"
+            echo "|-------|-------|"
+            [ -n "$_app_name" ] && echo "| App Name (max 30 chars) | \`$_app_name\` |"
+            [ -n "$_short_desc" ] && echo "| Short description (max 80 chars) | \`$_short_desc\` |"
+          fi
+          if [ -n "$_full_desc" ]; then
+            echo ""
+            echo "**Full description** (max 4000 chars):"
+            echo ""
+            echo "~~~"
+            echo "$_full_desc"
+            echo "~~~"
+          fi
+        } >> "$GITHUB_STEP_SUMMARY"
+      fi
+
+      # --- Append app URLs table (read from metadata files) ---
       _privacy_url="" _support_url="" _marketing_url="" _support_email=""
       [ -s "$META_DIR/privacy_url.txt" ] && _privacy_url=$(cat "$META_DIR/privacy_url.txt")
       [ -s "$META_DIR/support_url.txt" ] && _support_url=$(cat "$META_DIR/support_url.txt")
