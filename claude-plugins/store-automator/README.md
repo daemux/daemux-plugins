@@ -22,7 +22,7 @@ Plus CI/CD templates for Codemagic, Fastlane, web pages, and scripts.
 
 ```bash
 cd your-flutter-project
-npm install @daemux/store-automator
+npm install @daemux/store-automator@latest
 ```
 
 The postinstall script will:
