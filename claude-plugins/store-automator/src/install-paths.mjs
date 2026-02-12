@@ -11,7 +11,7 @@ export function installGitHubActionsPath(projectDir, packageDir, cliTokens) {
   });
 
   const wrote = writeMatchConfig(projectDir, {
-    deployKeyPath: cliTokens.matchDeployKey,
+    deployKeyPath: cliTokens.matchDeployKeyPath,
     gitUrl: cliTokens.matchGitUrl,
   });
   if (wrote) console.log('Match credentials written to ci.config.yaml');

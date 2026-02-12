@@ -11,7 +11,7 @@ import { injectEnvVars, injectStatusLine } from './settings.mjs';
 import { promptAll } from './prompt.mjs';
 import { getMcpServers, writeMcpJson } from './mcp-setup.mjs';
 import { installClaudeMd, installCiTemplates, installFirebaseTemplates } from './templates.mjs';
-import { readCiConfig, writeCiFields, writeCiLanguages, isPlaceholder } from './ci-config.mjs';
+import { readCiConfig, writeCiFields, writeCiLanguages, writeMatchConfig, isPlaceholder } from './ci-config.mjs';
 import { installGitHubActionsPath } from './install-paths.mjs';
 
 function checkClaudeCli() {
@@ -152,16 +152,13 @@ function printNextSteps(prompted) {
   }
 }
 
-function isNonInteractive() {
-  return Boolean(process.env.npm_config_yes) || process.argv.includes('--postinstall');
-}
-
 export async function runInstall(scope, isPostinstall = false, cliTokens = {}) {
   checkClaudeCli();
 
   console.log('Installing/updating Daemux Store Automator...');
 
   const isGitHubActions = Boolean(cliTokens.githubActions);
+  const nonInteractive = Boolean(process.env.npm_config_yes) || process.argv.includes('--postinstall');
   const projectDir = process.cwd();
   const oldVersion = readMarketplaceVersion();
   const packageDir = getPackageDir();
@@ -184,17 +181,35 @@ export async function runInstall(scope, isPostinstall = false, cliTokens = {}) {
   // 4. Run interactive prompts (or use CLI flags / skip in non-interactive)
   let prompted;
   if (isGitHubActions) {
-    prompted = { bundleId: cliTokens.bundleId ?? '' };
-  } else if (isNonInteractive()) {
+    prompted = {
+      bundleId: cliTokens.bundleId ?? '',
+      matchDeployKeyPath: cliTokens.matchDeployKey,
+      matchGitUrl: cliTokens.matchGitUrl,
+    };
+  } else if (nonInteractive) {
     prompted = { ...cliTokens };
   } else {
-    prompted = await promptAll(cliTokens, currentConfig, projectDir);
+    const { createInterface } = await import('node:readline');
+    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    try {
+      prompted = await promptAll(rl, cliTokens, currentConfig, projectDir);
+    } finally {
+      rl.close();
+    }
   }
 
   // 5. Write all prompted values to ci.config.yaml
   const ciFields = mapPromptsToCiFields(prompted);
   const wrote = writeCiFields(projectDir, ciFields);
   if (wrote) console.log('Configuration written to ci.config.yaml');
+
+  if (prompted.matchDeployKeyPath || prompted.matchGitUrl) {
+    const wroteMatch = writeMatchConfig(projectDir, {
+      deployKeyPath: prompted.matchDeployKeyPath,
+      gitUrl: prompted.matchGitUrl,
+    });
+    if (wroteMatch) console.log('Match credentials written to ci.config.yaml');
+  }
 
   // 6. Handle languages separately
   if (prompted.languages) {
@@ -220,7 +235,7 @@ export async function runInstall(scope, isPostinstall = false, cliTokens = {}) {
 
   installClaudeMd(join(baseDir, 'CLAUDE.md'), packageDir, prompted.appName);
 
-  installGitHubActionsPath(projectDir, packageDir, cliTokens);
+  installGitHubActionsPath(projectDir, packageDir, prompted);
 
   const scopeLabel = scope === 'user' ? 'global' : 'project';
   console.log(`Configuring ${scopeLabel} settings...`);
@@ -229,14 +244,14 @@ export async function runInstall(scope, isPostinstall = false, cliTokens = {}) {
   injectStatusLine(settingsPath);
 
   // 8. Run post-install guides (interactive only)
-  if (!isGitHubActions && !isNonInteractive()) {
+  if (!isGitHubActions && !nonInteractive) {
     const { createInterface } = await import('node:readline');
-    const { runPostInstallGuides } = await import('./prompts/store-settings.mjs');
-    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    const guideRl = createInterface({ input: process.stdin, output: process.stdout });
     try {
-      await runPostInstallGuides(rl);
+      const { runPostInstallGuides } = await import('./prompts/store-settings.mjs');
+      await runPostInstallGuides(guideRl, currentConfig);
     } finally {
-      rl.close();
+      guideRl.close();
     }
   }
 

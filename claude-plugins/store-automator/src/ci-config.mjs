@@ -3,6 +3,35 @@ import { join } from 'node:path';
 
 const CI_CONFIG_FILE = 'ci.config.yaml';
 
+const KEY_TO_CAMEL = {
+  'app.name': 'appName',
+  'app.bundle_id': 'bundleId',
+  'app.package_name': 'packageName',
+  'app.sku': 'sku',
+  'app.apple_id': 'appleId',
+  'credentials.apple.key_id': 'keyId',
+  'credentials.apple.issuer_id': 'issuerId',
+  'credentials.android.keystore_password': 'keystorePassword',
+  'ios.primary_category': 'primaryCategory',
+  'ios.secondary_category': 'secondaryCategory',
+  'ios.price_tier': 'priceTier',
+  'ios.submit_for_review': 'submitForReview',
+  'ios.automatic_release': 'automaticRelease',
+  'android.track': 'track',
+  'android.rollout_fraction': 'rolloutFraction',
+  'android.in_app_update_priority': 'inAppUpdatePriority',
+  'web.domain': 'domain',
+  'web.cloudflare_project_name': 'cfProjectName',
+  'web.tagline': 'tagline',
+  'web.primary_color': 'primaryColor',
+  'web.secondary_color': 'secondaryColor',
+  'web.company_name': 'companyName',
+  'web.contact_email': 'contactEmail',
+  'web.support_email': 'supportEmail',
+  'web.jurisdiction': 'jurisdiction',
+  'metadata.languages': 'languages',
+};
+
 const FIELD_PATTERNS = {
   'app.name': { regex: /^(  name: ).*$/m, replacement: (v) => `  name: "${v}"` },
   'app.bundle_id': { regex: /^(  bundle_id: ).*$/m, replacement: (v) => `  bundle_id: "${v}"` },
@@ -80,26 +109,28 @@ function extractFieldValue(content, regex) {
   return raw;
 }
 
-export function isPlaceholder(value) {
-  if (value === undefined || value === null || value === '') return true;
-  const s = String(value);
-  if (s.startsWith('REPLACE_WITH_')) return true;
-  if (s.startsWith('yourapp')) return true;
-  if (s.startsWith('com.yourcompany.')) return true;
-  if (s === 'your@email.com') return true;
-  return false;
-}
+export { isPlaceholder } from './guide.mjs';
 
 export function readCiConfig(projectDir) {
   const configPath = join(projectDir, CI_CONFIG_FILE);
   if (!existsSync(configPath)) return {};
   const content = readFileSync(configPath, 'utf-8');
-  const config = {};
+  const raw = {};
   for (const [key, { regex }] of Object.entries(FIELD_PATTERNS)) {
     const val = extractFieldValue(content, regex);
-    if (val !== undefined) config[key] = val;
+    if (val !== undefined) raw[key] = val;
   }
-  config['metadata.languages'] = extractLanguages(content);
+  raw['metadata.languages'] = extractLanguages(content);
+
+  const config = {};
+  for (const [dotKey, value] of Object.entries(raw)) {
+    const camelKey = KEY_TO_CAMEL[dotKey];
+    if (camelKey) {
+      config[camelKey] = value;
+    } else {
+      config[dotKey] = value;
+    }
+  }
   return config;
 }
 
@@ -178,11 +209,13 @@ export function writeMatchConfig(projectDir, { deployKeyPath, gitUrl }) {
   const guRegex = /^(\s*git_url:\s*)"[^"]*"/m;
 
   if (deployKeyPath && dpRegex.test(content)) {
-    content = content.replace(dpRegex, `$1"${deployKeyPath}"`);
+    const safe = deployKeyPath.replace(/\$/g, '$$$$');
+    content = content.replace(dpRegex, `$1"${safe}"`);
     changed = true;
   }
   if (gitUrl && guRegex.test(content)) {
-    content = content.replace(guRegex, `$1"${gitUrl}"`);
+    const safe = gitUrl.replace(/\$/g, '$$$$');
+    content = content.replace(guRegex, `$1"${safe}"`);
     changed = true;
   }
   if (changed) writeFileSync(configPath, content, 'utf-8');

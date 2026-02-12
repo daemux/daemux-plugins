@@ -1,18 +1,20 @@
-import { runGuide, askQuestion, isPlaceholder } from '../guide.mjs';
+import {
+  runGuide, askQuestion, getDefault, getDefaultWithFallback, printSectionHeader,
+} from '../guide.mjs';
 
-function getDefault(key, cliFlags, currentConfig) {
-  if (cliFlags[key] !== undefined) return cliFlags[key];
-  const configVal = currentConfig[key];
-  if (!isPlaceholder(configVal)) return configVal;
-  return '';
-}
+const IOS_KEYS = ['primaryCategory', 'secondaryCategory', 'priceTier', 'submitForReview', 'automaticRelease'];
+const ANDROID_KEYS = ['track', 'rolloutFraction', 'inAppUpdatePriority'];
 
-function getDefaultWithFallback(key, cliFlags, currentConfig, fallback) {
-  const val = getDefault(key, cliFlags, currentConfig);
-  return val !== '' ? val : fallback;
+function allKeysFilled(keys, cliFlags, currentConfig) {
+  return keys.every((k) => {
+    const val = getDefault(k, cliFlags, currentConfig);
+    return val !== '' && val !== undefined;
+  });
 }
 
 async function promptIosSettings(rl, cliFlags, currentConfig) {
+  const iosFilled = allKeysFilled(IOS_KEYS, cliFlags, currentConfig);
+
   await runGuide(rl, {
     title: 'Create App in App Store Connect',
     steps: [
@@ -22,36 +24,31 @@ async function promptIosSettings(rl, cliFlags, currentConfig) {
       'Save the app',
     ],
     confirmQuestion: 'Have you created the app in App Store Connect?',
-  });
+  }, { skip: iosFilled });
 
+  const primaryCat = getDefault('primaryCategory', cliFlags, currentConfig);
   const primaryCategory = await askQuestion(
-    rl,
-    'iOS Primary Category (e.g. GAMES, UTILITIES)',
-    getDefault('primaryCategory', cliFlags, currentConfig)
+    rl, 'iOS Primary Category (e.g. GAMES, UTILITIES)', primaryCat, { skipIfFilled: !!primaryCat }
   );
 
+  const secCat = getDefault('secondaryCategory', cliFlags, currentConfig);
   const secondaryCategory = await askQuestion(
-    rl,
-    'iOS Secondary Category (optional)',
-    getDefault('secondaryCategory', cliFlags, currentConfig)
+    rl, 'iOS Secondary Category (optional)', secCat, { skipIfFilled: !!secCat }
   );
 
+  const priceVal = getDefaultWithFallback('priceTier', cliFlags, currentConfig, '0');
   const priceTier = await askQuestion(
-    rl,
-    'iOS Price Tier',
-    getDefaultWithFallback('priceTier', cliFlags, currentConfig, '0')
+    rl, 'iOS Price Tier', priceVal, { skipIfFilled: !!priceVal }
   );
 
+  const submitVal = getDefaultWithFallback('submitForReview', cliFlags, currentConfig, 'true');
   const submitForReview = await askQuestion(
-    rl,
-    'Auto-submit for review? (true/false)',
-    getDefaultWithFallback('submitForReview', cliFlags, currentConfig, 'true')
+    rl, 'Auto-submit for review? (true/false)', submitVal, { skipIfFilled: !!submitVal }
   );
 
+  const autoVal = getDefaultWithFallback('automaticRelease', cliFlags, currentConfig, 'true');
   const automaticRelease = await askQuestion(
-    rl,
-    'Automatic release after approval? (true/false)',
-    getDefaultWithFallback('automaticRelease', cliFlags, currentConfig, 'true')
+    rl, 'Automatic release after approval? (true/false)', autoVal, { skipIfFilled: !!autoVal }
   );
 
   return {
@@ -64,6 +61,8 @@ async function promptIosSettings(rl, cliFlags, currentConfig) {
 }
 
 async function promptAndroidSettings(rl, cliFlags, currentConfig) {
+  const androidFilled = allKeysFilled(ANDROID_KEYS, cliFlags, currentConfig);
+
   await runGuide(rl, {
     title: 'Create App in Google Play Console',
     steps: [
@@ -73,24 +72,21 @@ async function promptAndroidSettings(rl, cliFlags, currentConfig) {
       'Complete the declarations and create',
     ],
     confirmQuestion: 'Have you created the app in Google Play Console?',
-  });
+  }, { skip: androidFilled });
 
+  const trackVal = getDefaultWithFallback('track', cliFlags, currentConfig, 'internal');
   const track = await askQuestion(
-    rl,
-    'Android release track (internal/alpha/beta/production)',
-    getDefaultWithFallback('track', cliFlags, currentConfig, 'internal')
+    rl, 'Android release track (internal/alpha/beta/production)', trackVal, { skipIfFilled: !!trackVal }
   );
 
+  const rolloutVal = getDefaultWithFallback('rolloutFraction', cliFlags, currentConfig, '1.0');
   const rolloutFraction = await askQuestion(
-    rl,
-    'Rollout fraction (0.0 - 1.0)',
-    getDefaultWithFallback('rolloutFraction', cliFlags, currentConfig, '1.0')
+    rl, 'Rollout fraction (0.0 - 1.0)', rolloutVal, { skipIfFilled: !!rolloutVal }
   );
 
+  const priorityVal = getDefaultWithFallback('inAppUpdatePriority', cliFlags, currentConfig, '3');
   const inAppUpdatePriority = await askQuestion(
-    rl,
-    'In-app update priority (0-5)',
-    getDefaultWithFallback('inAppUpdatePriority', cliFlags, currentConfig, '3')
+    rl, 'In-app update priority (0-5)', priorityVal, { skipIfFilled: !!priorityVal }
   );
 
   return {
@@ -101,19 +97,23 @@ async function promptAndroidSettings(rl, cliFlags, currentConfig) {
 }
 
 async function promptMetadataSettings(rl, cliFlags, currentConfig) {
+  const langVal = getDefaultWithFallback('languages', cliFlags, currentConfig, 'en-US');
   const languages = await askQuestion(
-    rl,
-    'Metadata languages (comma-separated, e.g. en-US,de-DE)',
-    getDefaultWithFallback('languages', cliFlags, currentConfig, 'en-US')
+    rl, 'Metadata languages (comma-separated, e.g. en-US,de-DE)', langVal, { skipIfFilled: !!langVal }
   );
 
   return { languages: languages.split(',').map((l) => l.trim()).filter(Boolean) };
 }
 
 export async function promptStoreSettings(rl, cliFlags, currentConfig) {
-  console.log('');
-  console.log('\x1b[1m\x1b[36m=== Store Settings ===\x1b[0m');
-  console.log('');
+  const iosFilled = allKeysFilled(IOS_KEYS, cliFlags, currentConfig);
+  const androidFilled = allKeysFilled(ANDROID_KEYS, cliFlags, currentConfig);
+  const langVal = getDefaultWithFallback('languages', cliFlags, currentConfig, 'en-US');
+  const allFilled = iosFilled && androidFilled && !!langVal;
+
+  if (!allFilled) {
+    printSectionHeader('Store Settings');
+  }
 
   const ios = await promptIosSettings(rl, cliFlags, currentConfig);
   const android = await promptAndroidSettings(rl, cliFlags, currentConfig);
@@ -122,10 +122,17 @@ export async function promptStoreSettings(rl, cliFlags, currentConfig) {
   return { ...ios, ...android, ...metadata };
 }
 
+const WEB_KEYS = [
+  'domain', 'cfProjectName', 'tagline', 'primaryColor', 'secondaryColor',
+  'companyName', 'contactEmail', 'supportEmail', 'jurisdiction',
+];
+
 export async function promptWebSettings(rl, cliFlags, currentConfig) {
-  console.log('');
-  console.log('\x1b[1m\x1b[36m=== Web Settings ===\x1b[0m');
-  console.log('');
+  const webFilled = WEB_KEYS.every((k) => !!getDefault(k, cliFlags, currentConfig));
+
+  if (!webFilled) {
+    printSectionHeader('Web Settings');
+  }
 
   const fields = [
     { key: 'domain', label: 'Domain (e.g. example.com)' },
@@ -141,16 +148,17 @@ export async function promptWebSettings(rl, cliFlags, currentConfig) {
 
   const result = {};
   for (const field of fields) {
-    result[field.key] = await askQuestion(
-      rl,
-      field.label,
-      getDefault(field.key, cliFlags, currentConfig)
-    );
+    const val = getDefault(field.key, cliFlags, currentConfig);
+    result[field.key] = await askQuestion(rl, field.label, val, { skipIfFilled: !!val });
   }
   return result;
 }
 
-export async function runPostInstallGuides(rl) {
+export async function runPostInstallGuides(rl, currentConfig = {}) {
+  const hasRepo = !!currentConfig._githubRepoConfigured;
+  const hasSecrets = !!currentConfig._githubSecretsConfigured;
+  const hasFirebase = !!currentConfig._firebaseConfigured;
+
   await runGuide(rl, {
     title: 'Create Private GitHub Repository',
     steps: [
@@ -159,7 +167,7 @@ export async function runPostInstallGuides(rl) {
       'Push your project to the repository',
     ],
     confirmQuestion: 'Have you created the GitHub repository?',
-  });
+  }, { skip: hasRepo });
 
   await runGuide(rl, {
     title: 'Set GitHub Actions Secrets',
@@ -170,7 +178,7 @@ export async function runPostInstallGuides(rl) {
       'Upload creds/ files as secrets if using CI',
     ],
     confirmQuestion: 'Have you configured GitHub Actions secrets?',
-  });
+  }, { skip: hasSecrets });
 
   await runGuide(rl, {
     title: 'Create Firebase Project (optional)',
@@ -181,5 +189,5 @@ export async function runPostInstallGuides(rl) {
       'Download google-services.json and GoogleService-Info.plist',
     ],
     confirmQuestion: 'Have you set up Firebase? (skip if not needed)',
-  });
+  }, { skip: hasFirebase });
 }

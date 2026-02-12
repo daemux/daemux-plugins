@@ -1,4 +1,3 @@
-import { createInterface } from 'node:readline';
 import { existsSync } from 'node:fs';
 
 const BOLD = '\x1b[1m';
@@ -7,14 +6,18 @@ const YELLOW = '\x1b[33m';
 const GREEN = '\x1b[32m';
 const RESET = '\x1b[0m';
 
-function isNonInteractive() {
+export function isNonInteractive() {
   return Boolean(process.env.npm_config_yes) || process.argv.includes('--postinstall');
 }
 
-export function printGuide(title, steps) {
+export function printSectionHeader(title) {
   console.log('');
   console.log(`${BOLD}${CYAN}=== ${title} ===${RESET}`);
   console.log('');
+}
+
+export function printGuide(title, steps) {
+  printSectionHeader(title);
   for (let i = 0; i < steps.length; i++) {
     console.log(`  ${i + 1}. ${steps[i]}`);
   }
@@ -43,7 +46,9 @@ export function verifyFileExists(filePath, description) {
   return false;
 }
 
-export async function runGuide(rl, guide) {
+export async function runGuide(rl, guide, { skip = false } = {}) {
+  if (skip || isNonInteractive()) return 'skip';
+
   printGuide(guide.title, guide.steps);
 
   if (guide.verifyPath) {
@@ -61,8 +66,9 @@ export async function runGuide(rl, guide) {
   return 'yes';
 }
 
-export function askQuestion(rl, question, defaultValue) {
+export function askQuestion(rl, question, defaultValue, { skipIfFilled = false } = {}) {
   if (isNonInteractive()) return Promise.resolve(defaultValue || '');
+  if (skipIfFilled && defaultValue) return Promise.resolve(defaultValue);
 
   const suffix = defaultValue ? ` [${defaultValue}]` : '';
   return new Promise((resolve) => {
@@ -72,11 +78,24 @@ export function askQuestion(rl, question, defaultValue) {
   });
 }
 
+export function getDefault(key, cliFlags, currentConfig) {
+  if (cliFlags[key] !== undefined) return cliFlags[key];
+  const configVal = currentConfig[key];
+  if (!isPlaceholder(configVal)) return configVal;
+  return '';
+}
+
+export function getDefaultWithFallback(key, cliFlags, currentConfig, fallback) {
+  const val = getDefault(key, cliFlags, currentConfig);
+  return val !== '' ? val : fallback;
+}
+
 export function isPlaceholder(value) {
   if (value === undefined || value === null || value === '') return true;
   const s = String(value);
   if (s.startsWith('REPLACE_WITH_')) return true;
   if (s.startsWith('yourapp')) return true;
   if (s.startsWith('com.yourcompany.')) return true;
+  if (s === 'your@email.com') return true;
   return false;
 }

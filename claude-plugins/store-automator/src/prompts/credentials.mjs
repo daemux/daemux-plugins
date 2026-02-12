@@ -1,14 +1,12 @@
 import { join } from 'node:path';
-import { runGuide, askQuestion, isPlaceholder } from '../guide.mjs';
-
-function getDefault(key, cliFlags, currentConfig) {
-  if (cliFlags[key] !== undefined) return cliFlags[key];
-  const configVal = currentConfig[key];
-  if (!isPlaceholder(configVal)) return configVal;
-  return '';
-}
+import { existsSync } from 'node:fs';
+import { runGuide, askQuestion, getDefault, printSectionHeader } from '../guide.mjs';
 
 async function promptAppStoreApiKey(rl, cliFlags, currentConfig, projectDir) {
+  const keyId = getDefault('keyId', cliFlags, currentConfig);
+  const issuerId = getDefault('issuerId', cliFlags, currentConfig);
+  const allFilled = !!(keyId && issuerId);
+
   await runGuide(rl, {
     title: 'Create App Store Connect API Key',
     steps: [
@@ -21,24 +19,18 @@ async function promptAppStoreApiKey(rl, cliFlags, currentConfig, projectDir) {
     verifyPath: join(projectDir, 'creds', 'AuthKey.p8'),
     verifyDescription: 'App Store Connect API Key (.p8)',
     confirmQuestion: 'Have you created and saved the API key?',
-  });
+  }, { skip: allFilled });
 
-  const keyId = await askQuestion(
-    rl,
-    'App Store Connect Key ID',
-    getDefault('keyId', cliFlags, currentConfig)
-  );
-
-  const issuerId = await askQuestion(
-    rl,
-    'App Store Connect Issuer ID',
-    getDefault('issuerId', cliFlags, currentConfig)
-  );
-
-  return { keyId, issuerId };
+  return {
+    keyId: await askQuestion(rl, 'App Store Connect Key ID', keyId, { skipIfFilled: !!keyId }),
+    issuerId: await askQuestion(rl, 'App Store Connect Issuer ID', issuerId, { skipIfFilled: !!issuerId }),
+  };
 }
 
 async function promptPlayServiceAccount(rl, projectDir) {
+  const jsonPath = join(projectDir, 'creds', 'play-service-account.json');
+  const fileExists = existsSync(jsonPath);
+
   await runGuide(rl, {
     title: 'Create Google Play Service Account',
     steps: [
@@ -48,13 +40,15 @@ async function promptPlayServiceAccount(rl, projectDir) {
       'Download the JSON key file',
       'Save to creds/play-service-account.json in your project',
     ],
-    verifyPath: join(projectDir, 'creds', 'play-service-account.json'),
+    verifyPath: jsonPath,
     verifyDescription: 'Google Play Service Account JSON',
     confirmQuestion: 'Have you set up the service account?',
-  });
+  }, { skip: fileExists });
 }
 
 async function promptAndroidKeystore(rl, cliFlags, currentConfig) {
+  const keystorePassword = getDefault('keystorePassword', cliFlags, currentConfig);
+
   await runGuide(rl, {
     title: 'Set up Android Keystore',
     steps: [
@@ -64,18 +58,18 @@ async function promptAndroidKeystore(rl, cliFlags, currentConfig) {
       'Keep the keystore file safe — you cannot replace it once uploaded to Google Play',
     ],
     confirmQuestion: 'Have you created or located your Android keystore?',
-  });
+  }, { skip: !!keystorePassword });
 
-  const keystorePassword = await askQuestion(
-    rl,
-    'Keystore password',
-    getDefault('keystorePassword', cliFlags, currentConfig)
+  return await askQuestion(
+    rl, 'Keystore password', keystorePassword, { skipIfFilled: !!keystorePassword }
   );
-
-  return keystorePassword;
 }
 
 async function promptMatchSigning(rl, cliFlags, currentConfig) {
+  const matchDeployKeyPath = getDefault('matchDeployKeyPath', cliFlags, currentConfig) || 'creds/match_deploy_key';
+  const matchGitUrl = getDefault('matchGitUrl', cliFlags, currentConfig);
+  const allFilled = !!(matchDeployKeyPath && matchGitUrl);
+
   await runGuide(rl, {
     title: 'Set up Match Code Signing',
     steps: [
@@ -84,39 +78,37 @@ async function promptMatchSigning(rl, cliFlags, currentConfig) {
       'Add the public key as a deploy key to the certificates repo (with write access)',
     ],
     confirmQuestion: 'Have you set up the certificates repository and deploy key?',
-  });
+  }, { skip: allFilled });
 
-  const matchDeployKeyPath = await askQuestion(
-    rl,
-    'Path to Match deploy key',
-    getDefault('matchDeployKeyPath', cliFlags, currentConfig) || 'creds/match_deploy_key'
-  );
-
-  const matchGitUrl = await askQuestion(
-    rl,
-    'Match certificates Git URL (SSH)',
-    getDefault('matchGitUrl', cliFlags, currentConfig)
-  );
-
-  return { matchDeployKeyPath, matchGitUrl };
+  return {
+    matchDeployKeyPath: await askQuestion(
+      rl, 'Path to Match deploy key', matchDeployKeyPath, { skipIfFilled: !!matchDeployKeyPath }
+    ),
+    matchGitUrl: await askQuestion(
+      rl, 'Match certificates Git URL (SSH)', matchGitUrl, { skipIfFilled: !!matchGitUrl }
+    ),
+  };
 }
 
 export async function promptCredentials(rl, cliFlags, currentConfig, projectDir) {
-  console.log('');
-  console.log('\x1b[1m\x1b[36m=== Credentials Setup ===\x1b[0m');
-  console.log('');
+  const keyId = getDefault('keyId', cliFlags, currentConfig);
+  const issuerId = getDefault('issuerId', cliFlags, currentConfig);
+  const keystorePassword = getDefault('keystorePassword', cliFlags, currentConfig);
+  const matchDeployKeyPath = getDefault('matchDeployKeyPath', cliFlags, currentConfig) || 'creds/match_deploy_key';
+  const matchGitUrl = getDefault('matchGitUrl', cliFlags, currentConfig);
+  const jsonPath = join(projectDir, 'creds', 'play-service-account.json');
+  const jsonExists = existsSync(jsonPath);
 
-  const { keyId, issuerId } = await promptAppStoreApiKey(
-    rl, cliFlags, currentConfig, projectDir
-  );
+  const allFilled = !!(keyId && issuerId && keystorePassword && matchDeployKeyPath && matchGitUrl && jsonExists);
 
+  if (!allFilled) {
+    printSectionHeader('Credentials Setup');
+  }
+
+  const apiKey = await promptAppStoreApiKey(rl, cliFlags, currentConfig, projectDir);
   await promptPlayServiceAccount(rl, projectDir);
+  const ksPassword = await promptAndroidKeystore(rl, cliFlags, currentConfig);
+  const match = await promptMatchSigning(rl, cliFlags, currentConfig);
 
-  const keystorePassword = await promptAndroidKeystore(rl, cliFlags, currentConfig);
-
-  const { matchDeployKeyPath, matchGitUrl } = await promptMatchSigning(
-    rl, cliFlags, currentConfig
-  );
-
-  return { keyId, issuerId, keystorePassword, matchDeployKeyPath, matchGitUrl };
+  return { ...apiKey, keystorePassword: ksPassword, ...match };
 }
