@@ -53,6 +53,25 @@ if [ -f "$PBXPROJ" ]; then
   echo "Xcode project patched for CI signing"
 fi
 
+# --- Set encryption compliance (avoids "Missing Compliance" in App Store Connect) ---
+INFO_PLIST="$APP_ROOT/ios/Runner/Info.plist"
+if [ -f "$INFO_PLIST" ]; then
+  /usr/libexec/PlistBuddy -c "Delete :ITSAppUsesNonExemptEncryption" "$INFO_PLIST" 2>/dev/null || true
+  /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "$INFO_PLIST"
+  echo "Set ITSAppUsesNonExemptEncryption=false in Info.plist"
+fi
+
+# --- Warn if iOS icon is still Flutter default ---
+ICON_1024="$APP_ROOT/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png"
+if [ -f "$ICON_1024" ]; then
+  ICON_SIZE=$(wc -c < "$ICON_1024" | tr -d ' ')
+  if [ "$ICON_SIZE" -lt 15000 ]; then
+    echo "⚠️  WARNING: iOS app icon appears to be the Flutter default (size: ${ICON_SIZE} bytes)."
+    echo "⚠️  Replace icons in ios/Runner/Assets.xcassets/AppIcon.appiconset/ with your actual app icon."
+    echo "⚠️  Use flutter_launcher_icons package or manually replace all icon sizes."
+  fi
+fi
+
 # --- Build IPA ---
 echo "Building IPA..."
 echo "  APP_ROOT: $APP_ROOT"

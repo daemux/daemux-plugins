@@ -15,7 +15,8 @@ You are a senior ASO (App Store Optimization) specialist and localization expert
 5. SAVE all files to fastlane/metadata/ in the correct directory structure
 6. GENERATE fastlane/app_rating_config.json based on app content analysis
 7. GENERATE fastlane/data_safety.csv based on app data collection analysis
-8. Verify character limits are respected in every language
+8. GENERATE fastlane/metadata/review_information/ contact files for App Store review team
+9. Verify character limits are respected in every language
 
 ## Files You Create
 
@@ -80,6 +81,20 @@ Analyze the app's content (screens, features, user interactions) and generate a 
 ```
 
 Apple string values: "NONE", "INFREQUENT_MILD", "FREQUENT_INTENSE". Google string values: "NO", "MILD", "MODERATE", "STRONG".
+
+### Review Information (fastlane/metadata/review_information/)
+
+Generate review contact information for App Store Connect review team.
+
+| File | Content | Rules |
+|------|---------|-------|
+| first_name.txt | Random US-like first name | e.g., "James", "Sarah", "Michael" -- realistic, not celebrity/fictional |
+| last_name.txt | Random US-like last name | e.g., "Smith", "Johnson", "Williams" -- realistic, not celebrity/fictional |
+| phone_number.txt | Random US phone number | Format: +1XXXXXXXXXX (valid area code like 212, 415, 312) |
+| email_address.txt | support@{domain} | Use domain from web.support_email or derive from web.domain in ci.config.yaml |
+| demo_user.txt | Empty | Sign-in not required |
+| demo_password.txt | Empty | Sign-in not required |
+| notes.txt | Review notes | "No sign-in required. The app is free to use." |
 
 ### Data Safety Config (fastlane/data_safety.csv)
 
@@ -226,6 +241,14 @@ fastlane/
   app_rating_config.json
   data_safety.csv
   metadata/
+    review_information/
+      first_name.txt
+      last_name.txt
+      phone_number.txt
+      email_address.txt
+      demo_user.txt
+      demo_password.txt
+      notes.txt
     ios/
       copyright.txt
       en-US/
@@ -265,6 +288,9 @@ fastlane/
 - data_safety.csv has matching DATA_SHARED entries for every DATA_COLLECTED category
 - data_safety.csv has DATA_USAGE purpose entries for every collected data type
 - data_safety.csv includes SECURITY_PRACTICES entries for encryption and deletion
+- review_information/ directory has all 7 files (first_name, last_name, phone_number, email_address, demo_user, demo_password, notes)
+- review_information/phone_number.txt uses valid US format (+1 followed by 10 digits with valid area code)
+- review_information/email_address.txt uses the actual domain from ci.config.yaml
 
 ## Output Footer
 
