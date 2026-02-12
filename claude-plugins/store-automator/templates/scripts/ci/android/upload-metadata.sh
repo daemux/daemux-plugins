@@ -84,6 +84,28 @@ Metadata and screenshots were uploaded by CI but **could not be saved** because 
 ### After first release:
 All subsequent CI runs will automatically upload metadata, screenshots, and new builds without manual intervention. Re-trigger the CI workflow after completing the steps above.
 SUMMARY
+
+      # --- Append app URLs table (read from metadata files) ---
+      META_DIR="$PROJECT_ROOT/fastlane/metadata/en-US"
+      _privacy_url="" _support_url="" _marketing_url="" _support_email=""
+      [ -s "$META_DIR/privacy_url.txt" ] && _privacy_url=$(cat "$META_DIR/privacy_url.txt")
+      [ -s "$META_DIR/support_url.txt" ] && _support_url=$(cat "$META_DIR/support_url.txt")
+      [ -s "$META_DIR/marketing_url.txt" ] && _marketing_url=$(cat "$META_DIR/marketing_url.txt")
+      _support_email=$(yq '.web.support_email // ""' "$PROJECT_ROOT/ci.config.yaml" 2>/dev/null || true)
+
+      if [ -n "$_privacy_url" ] || [ -n "$_support_url" ] || [ -n "$_marketing_url" ] || [ -n "$_support_email" ]; then
+        {
+          echo ""
+          echo "### App URLs (copy these during setup)"
+          echo ""
+          echo "| Field | Value |"
+          echo "|-------|-------|"
+          [ -n "$_privacy_url" ] && echo "| Privacy Policy URL | \`$_privacy_url\` |"
+          [ -n "$_support_url" ] && echo "| Support URL | \`$_support_url\` |"
+          [ -n "$_marketing_url" ] && echo "| Marketing URL | \`$_marketing_url\` |"
+          [ -n "$_support_email" ] && echo "| Support Email | \`$_support_email\` |"
+        } >> "$GITHUB_STEP_SUMMARY"
+      fi
     fi
     ci_skip "App is in draft status — manual first release required on Google Play Console"
   fi
