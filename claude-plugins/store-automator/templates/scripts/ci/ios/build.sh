@@ -20,6 +20,39 @@ if ! command -v flutter &>/dev/null; then
   exit 1
 fi
 
+# --- Patch Xcode project for manual signing in CI ---
+# flutter build ipa runs xcodebuild archive before applying ExportOptions.plist.
+# The archive step uses the project's build settings, so we must set manual signing
+# with the correct team ID and provisioning profile from setup-signing.sh.
+PBXPROJ="$APP_ROOT/ios/Runner.xcodeproj/project.pbxproj"
+PROFILE_NAME="match AppStore $BUNDLE_ID"
+
+if [ -f "$PBXPROJ" ]; then
+  echo "Patching Xcode project for CI signing..."
+
+  # Ensure all configurations use manual signing
+  sed -i '' 's/CODE_SIGN_STYLE = Automatic/CODE_SIGN_STYLE = Manual/g' "$PBXPROJ"
+
+  # Set the team ID discovered by setup-signing.sh
+  if [ -n "${TEAM_ID:-}" ]; then
+    sed -i '' "s/DEVELOPMENT_TEAM = \"[^\"]*\"/DEVELOPMENT_TEAM = \"$TEAM_ID\"/g" "$PBXPROJ"
+    sed -i '' "s/DEVELOPMENT_TEAM = ;/DEVELOPMENT_TEAM = \"$TEAM_ID\";/g" "$PBXPROJ"
+    echo "  DEVELOPMENT_TEAM = $TEAM_ID"
+  fi
+
+  # Set the provisioning profile specifier for the Runner target
+  if [ -n "$PROFILE_NAME" ]; then
+    sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER = \"[^\"]*\"/PROVISIONING_PROFILE_SPECIFIER = \"$PROFILE_NAME\"/g" "$PBXPROJ"
+    sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER = ;/PROVISIONING_PROFILE_SPECIFIER = \"$PROFILE_NAME\";/g" "$PBXPROJ"
+    echo "  PROVISIONING_PROFILE_SPECIFIER = $PROFILE_NAME"
+  fi
+
+  # Set the code sign identity for distribution
+  sed -i '' 's/"CODE_SIGN_IDENTITY\[sdk=iphoneos\*\]" = "iPhone Developer"/"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution"/g' "$PBXPROJ"
+
+  echo "Xcode project patched for CI signing"
+fi
+
 # --- Build IPA ---
 echo "Building IPA..."
 echo "  APP_ROOT: $APP_ROOT"

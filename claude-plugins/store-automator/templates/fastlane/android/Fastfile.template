@@ -46,6 +46,10 @@ platform :android do
   end
 
   lane :upload_metadata_android do
+    # Metadata (title, descriptions, screenshots) is applied at the app-listing
+    # level and does not require a specific release.  Omitting release_status
+    # avoids the "more than one release found" error when the track contains
+    # multiple draft releases.
     upload_to_play_store(
       base_play_store_options.merge(
         skip_upload_aab: true,
@@ -54,7 +58,6 @@ platform :android do
         skip_upload_screenshots: false,
         skip_upload_images: false,
         skip_upload_changelogs: true,
-        release_status: "draft",
         metadata_path: "#{ROOT_DIR}/fastlane/metadata/android"
       )
     )
