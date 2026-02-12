@@ -48,6 +48,8 @@ setup_ssh_agent() {
 }
 
 # --- Step 3: Set up App Store Connect API key ---
+API_KEY_JSON="/tmp/fastlane_api_key.json"
+
 setup_api_key() {
   local p8_full_path="$PROJECT_ROOT/$P8_KEY_PATH"
 
@@ -62,6 +64,17 @@ setup_api_key() {
   cp "$p8_full_path" /tmp/AuthKey.p8
   chmod 600 /tmp/AuthKey.p8
   export FASTLANE_API_KEY_PATH="/tmp/AuthKey.p8"
+
+  # Create API key JSON for match --api_key_path
+  cat > "$API_KEY_JSON" <<APIKEY
+{
+  "key_id": "$APPLE_KEY_ID",
+  "issuer_id": "$APPLE_ISSUER_ID",
+  "key_filepath": "/tmp/AuthKey.p8",
+  "in_house": false
+}
+APIKEY
+  chmod 600 "$API_KEY_JSON"
 
   echo "App Store Connect API key configured (Key ID: $APPLE_KEY_ID)"
 }
@@ -109,6 +122,7 @@ run_match() {
     --app_identifier "$BUNDLE_ID" \
     --keychain_name "$KEYCHAIN_DB" \
     --keychain_password "$KEYCHAIN_PASSWORD" \
+    --api_key_path "$API_KEY_JSON" \
     --readonly "$MATCH_READONLY"
 
   echo "Match completed successfully"
