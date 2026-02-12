@@ -93,16 +93,19 @@ def create_subscription_availability(
 
 def get_subscription_prices(headers: dict, sub_id: str) -> list:
     """List existing prices for a subscription."""
-    resp = requests.get(
-        f"{BASE_URL}/subscriptions/{sub_id}/prices",
-        params={"include": "subscriptionPricePoint"},
-        headers=headers,
-        timeout=TIMEOUT,
-    )
-    if not resp.ok:
-        print_api_errors(resp, f"get prices for subscription {sub_id}")
-        return []
-    return resp.json().get("data", [])
+    url: str | None = f"{BASE_URL}/subscriptions/{sub_id}/prices"
+    params: dict | None = {"include": "subscriptionPricePoint", "limit": 200}
+    all_prices: list = []
+    while url:
+        resp = requests.get(url, headers=headers, params=params, timeout=TIMEOUT)
+        if not resp.ok:
+            print_api_errors(resp, f"get prices for subscription {sub_id}")
+            return all_prices
+        data = resp.json()
+        all_prices.extend(data.get("data", []))
+        url = data.get("links", {}).get("next")
+        params = None
+    return all_prices
 
 
 def get_price_points_for_territory(
@@ -153,13 +156,31 @@ def find_price_point_by_amount(
     return None
 
 
+def get_price_point_equalizations(headers: dict, price_point_id: str) -> list:
+    """Get equalized price points for all territories from a base price point."""
+    url: str | None = f"{BASE_URL}/subscriptionPricePoints/{price_point_id}/equalizations"
+    params: dict | None = {"include": "territory", "limit": 200}
+    all_points: list = []
+    while url:
+        resp = requests.get(url, headers=headers, params=params, timeout=TIMEOUT)
+        if not resp.ok:
+            print_api_errors(resp, "get price point equalizations")
+            return all_points
+        data = resp.json()
+        all_points.extend(data.get("data", []))
+        url = data.get("links", {}).get("next")
+        params = None
+    return all_points
+
+
 def create_subscription_price(
     headers: dict,
     sub_id: str,
     price_point_id: str,
+    territory_id: str,
     start_date: str | None = None,
 ) -> dict | None:
-    """Create a price entry for a subscription using a price point ID."""
+    """Create a price entry for a subscription using a price point ID and territory."""
     resp = requests.post(
         f"{BASE_URL}/subscriptionPrices",
         json={"data": {
@@ -170,6 +191,9 @@ def create_subscription_price(
                 "subscriptionPricePoint": {
                     "data": {"type": "subscriptionPricePoints", "id": price_point_id},
                 },
+                "territory": {
+                    "data": {"type": "territories", "id": territory_id},
+                },
             },
         }},
         headers=headers,
@@ -178,7 +202,6 @@ def create_subscription_price(
     if not resp.ok:
         print_api_errors(resp, f"create price for subscription {sub_id}")
         return None
-    print(f"    Set price for subscription {sub_id} (price point: {price_point_id})")
     return resp.json().get("data")
 
 

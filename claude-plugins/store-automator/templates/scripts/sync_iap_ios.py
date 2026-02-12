@@ -19,6 +19,7 @@ import hashlib
 import json
 import os
 import sys
+import time
 
 from asc_iap_api import (
     create_group_localization,
@@ -38,6 +39,7 @@ from asc_subscription_setup import (
     create_subscription_availability,
     create_subscription_price,
     find_price_point_by_amount,
+    get_price_point_equalizations,
     get_price_points_for_territory,
     get_review_screenshot,
     get_subscription_availability,
@@ -173,40 +175,99 @@ def _sync_availability(headers: dict, sub_id: str, sub_config: dict) -> None:
 
 
 def _sync_pricing(headers: dict, sub_id: str, sub_config: dict) -> None:
-    """Set subscription prices per territory from config."""
+    """Set subscription prices for all territories using Apple's equalization.
+
+    Finds the base price point (USD/USA), then uses the equalizations
+    endpoint to get Apple-calculated prices for all other territories.
+    """
     prices = sub_config.get("prices", {})
     if not prices:
         print("      WARNING: No prices configured, skipping pricing", file=sys.stderr)
         return
 
+    # Build set of territories that already have prices
     existing_prices = get_subscription_prices(headers, sub_id)
-    if existing_prices:
-        print("      Pricing already configured")
+    priced_territories: set[str] = set()
+    for ep in existing_prices:
+        pp_rel = ep.get("relationships", {}).get("subscriptionPricePoint", {})
+        pp_id = pp_rel.get("data", {}).get("id", "")
+        if "_" in pp_id:
+            priced_territories.add(pp_id.rsplit("_", 1)[-1])
+
+    # Use first configured currency as base (typically USD -> USA)
+    base_currency = next(iter(prices))
+    base_amount = prices[base_currency]
+    base_territory = CURRENCY_TO_TERRITORY.get(base_currency)
+    if not base_territory:
+        print(f"      WARNING: Unknown base currency '{base_currency}'", file=sys.stderr)
         return
 
-    for currency, amount in prices.items():
-        territory = CURRENCY_TO_TERRITORY.get(currency)
-        if not territory:
-            print(f"      WARNING: Unknown currency '{currency}', skipping", file=sys.stderr)
-            continue
-        price_points = get_price_points_for_territory(headers, sub_id, territory)
-        point = find_price_point_by_amount(price_points, amount)
-        if not point:
-            sample = [
-                pp.get("attributes", {}).get("customerPrice", "?")
-                for pp in price_points[:5]
-            ]
-            print(
-                f"      WARNING: No price point matching {amount} for {territory}"
-                f" (API returned {len(price_points)} points, first prices: {sample})",
-                file=sys.stderr,
-            )
-            continue
-        result = create_subscription_price(headers, sub_id, point["id"])
+    # Find the base price point
+    price_points = get_price_points_for_territory(headers, sub_id, base_territory)
+    base_point = find_price_point_by_amount(price_points, base_amount)
+    if not base_point:
+        sample = [pp.get("attributes", {}).get("customerPrice", "?") for pp in price_points[:5]]
+        print(
+            f"      WARNING: No price point matching {base_amount} for {base_territory}"
+            f" (API returned {len(price_points)} points, first prices: {sample})",
+            file=sys.stderr,
+        )
+        return
+
+    created, skipped, failed = _apply_equalized_prices(
+        headers, sub_id, base_point, base_territory, base_amount, base_currency, priced_territories,
+    )
+    print(f"      Pricing: {created} set, {skipped} existed, {failed} failed")
+
+
+def _apply_equalized_prices(
+    headers: dict, sub_id: str, base_point: dict,
+    base_territory: str, base_amount: str, base_currency: str,
+    priced_territories: set[str],
+) -> tuple[int, int, int]:
+    """Set base price then apply Apple-equalized prices for all territories."""
+    created = 0
+    skipped = 0
+    failed = 0
+
+    # Set base territory price if not already set
+    if base_territory not in priced_territories:
+        result = create_subscription_price(headers, sub_id, base_point["id"], base_territory)
         if result:
-            print(f"      Set price {amount} for territory {territory}")
+            created += 1
+            print(f"      Set base price {base_amount} {base_currency} for {base_territory}")
         else:
-            print(f"      WARNING: Failed to set price for {territory}", file=sys.stderr)
+            failed += 1
+            print(f"      WARNING: Failed to set base price for {base_territory}", file=sys.stderr)
+            return created, skipped, failed
+    else:
+        skipped += 1
+
+    # Get equalized prices for all other territories
+    equalized = get_price_point_equalizations(headers, base_point["id"])
+    if not equalized:
+        print("      WARNING: No equalizations returned", file=sys.stderr)
+        return created, skipped, failed
+
+    # Set price for each equalized territory
+    for eq_point in equalized:
+        territory_id = eq_point.get("relationships", {}).get(
+            "territory", {}
+        ).get("data", {}).get("id")
+        if not territory_id:
+            failed += 1
+            continue
+        if territory_id in priced_territories:
+            skipped += 1
+            continue
+        result = create_subscription_price(headers, sub_id, eq_point["id"], territory_id)
+        if result:
+            created += 1
+        else:
+            failed += 1
+        time.sleep(0.05)
+
+    return created, skipped, failed
 
 
 def _sync_review_screenshot(
