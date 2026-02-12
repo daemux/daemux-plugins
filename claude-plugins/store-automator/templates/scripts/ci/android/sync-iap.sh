@@ -21,11 +21,14 @@ if [ ! -f "$IAP_CONFIG" ]; then
   ci_skip "No Android IAP config file found"
 fi
 
-# --- Hash-based change detection ---
+# --- Hash-based change detection (config + Python scripts) ---
 STATE_DIR="$PROJECT_ROOT/.ci-state"
 mkdir -p "$STATE_DIR"
 
-HASH=$(shasum -a 256 "$IAP_CONFIG" | cut -d' ' -f1)
+HASH=$(cat "$IAP_CONFIG" \
+  "$PROJECT_ROOT/scripts/sync_iap_android.py" \
+  "$PROJECT_ROOT/scripts/gplay_iap_api.py" \
+  | shasum -a 256 | cut -d' ' -f1)
 STATE_FILE="$STATE_DIR/android-iap-hash"
 
 if [ -f "$STATE_FILE" ]; then

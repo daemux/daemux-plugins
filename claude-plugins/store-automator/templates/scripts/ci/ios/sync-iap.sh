@@ -16,8 +16,12 @@ if [ ! -f "$IAP_CONFIG" ]; then
   ci_skip "No iOS IAP config file found"
 fi
 
-# --- Hash-based change detection ---
-CURRENT_HASH=$(shasum -a 256 "$IAP_CONFIG" | cut -d' ' -f1)
+# --- Hash-based change detection (config + Python scripts) ---
+CURRENT_HASH=$(cat "$IAP_CONFIG" \
+  "$PROJECT_ROOT/scripts/sync_iap_ios.py" \
+  "$PROJECT_ROOT/scripts/asc_subscription_setup.py" \
+  "$PROJECT_ROOT/scripts/asc_iap_api.py" \
+  | shasum -a 256 | cut -d' ' -f1)
 
 STATE_DIR="$PROJECT_ROOT/.ci-state"
 mkdir -p "$STATE_DIR"
