@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
+# Requires link-fastlane.sh and install-fastlane.sh to have run first (workflow steps).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../common/read-config.sh"
+source "$SCRIPT_DIR/../common/ci-notify.sh"
 
 # --- Check Google Play readiness ---
 if [ "${GOOGLE_PLAY_READY:-false}" != "true" ]; then
@@ -13,8 +15,7 @@ fi
 # --- Check if data safety CSV exists ---
 DATA_SAFETY_CSV="$PROJECT_ROOT/fastlane/data_safety.csv"
 if [ ! -f "$DATA_SAFETY_CSV" ]; then
-  echo "No data_safety.csv found at $DATA_SAFETY_CSV. Skipping."
-  exit 0
+  ci_skip "No data safety CSV found"
 fi
 
 # --- Hash-based change detection ---
@@ -27,21 +28,11 @@ STATE_FILE="$STATE_DIR/android-data-safety-hash"
 if [ -f "$STATE_FILE" ]; then
   STORED_HASH=$(cat "$STATE_FILE")
   if [ "$HASH" = "$STORED_HASH" ]; then
-    echo "No changes in data_safety.csv (hash: ${HASH:0:12}...). Skipping."
-    exit 0
+    ci_skip "Data safety CSV unchanged since last upload"
   fi
 fi
 
 echo "Changes detected in data safety config (hash: ${HASH:0:12}...)"
-
-# --- Link fastlane directories ---
-"$SCRIPT_DIR/../common/link-fastlane.sh" android
-
-# --- Ensure fastlane is installed ---
-cd "$APP_ROOT/android"
-if ! bundle exec fastlane --version >/dev/null 2>&1; then
-  "$SCRIPT_DIR/../common/install-fastlane.sh" android
-fi
 
 # --- Resolve service account path ---
 SA_FULL_PATH="$PROJECT_ROOT/$GOOGLE_SA_JSON_PATH"
@@ -62,16 +53,11 @@ SAFETY_EXIT=$?
 set -e
 
 if [ $SAFETY_EXIT -eq 0 ]; then
-  echo "Android data safety update complete"
   echo "$HASH" > "$STATE_FILE"
-  echo "Updated state hash: ${HASH:0:12}..."
+  ci_done "Data safety section updated"
 elif [ $SAFETY_EXIT -eq 2 ]; then
   # API limitation is non-fatal; hash is NOT saved so the step retries next run
-  echo ""
-  echo "WARNING: Data safety update skipped due to API limitation."
-  echo "         The form must be updated manually via Google Play Console."
-  echo "         This step will retry on the next run."
-  echo ""
+  ci_skip "API limitation — update manually via Google Play Console (will retry next run)"
 else
   echo "ERROR: Data safety update failed (exit code: $SAFETY_EXIT)" >&2
   exit $SAFETY_EXIT

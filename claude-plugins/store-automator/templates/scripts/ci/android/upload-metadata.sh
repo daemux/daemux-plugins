@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
+# Requires link-fastlane.sh and install-fastlane.sh to have run first (workflow steps).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../common/read-config.sh"
+source "$SCRIPT_DIR/../common/ci-notify.sh"
 
 # --- Check Google Play readiness ---
 if [ "${GOOGLE_PLAY_READY:-false}" != "true" ]; then
@@ -22,21 +24,11 @@ STATE_FILE="$STATE_DIR/android-metadata-hash"
 if [ -f "$STATE_FILE" ]; then
   STORED_HASH=$(cat "$STATE_FILE")
   if [ "$HASH" = "$STORED_HASH" ]; then
-    echo "No changes in Android metadata or screenshots (hash: ${HASH:0:12}...). Skipping."
-    exit 0
+    ci_skip "Android metadata unchanged since last upload"
   fi
 fi
 
 echo "Changes detected in Android metadata (hash: ${HASH:0:12}...)"
-
-# --- Link fastlane directories ---
-"$SCRIPT_DIR/../common/link-fastlane.sh" android
-
-# --- Ensure fastlane is installed ---
-cd "$APP_ROOT/android"
-if ! bundle exec fastlane --version >/dev/null 2>&1; then
-  "$SCRIPT_DIR/../common/install-fastlane.sh" android
-fi
 
 # --- Resolve service account path ---
 SA_FULL_PATH="$PROJECT_ROOT/$GOOGLE_SA_JSON_PATH"
@@ -62,18 +54,12 @@ if [ $FASTLANE_EXIT -ne 0 ]; then
   # published.  This resolves after the first manual release via the Play
   # Console, so we warn instead of failing the workflow.
   if echo "$FASTLANE_OUTPUT" | grep -qi "draft app"; then
-    echo ""
-    echo "WARNING: Metadata upload failed because the app is still in draft"
-    echo "         state on Google Play.  Complete the first release manually"
-    echo "         via the Play Console, then re-run this workflow."
-    echo ""
-    exit 0
+    ci_skip "App is in draft status — manual first release required on Google Play Console"
   fi
   exit $FASTLANE_EXIT
 fi
 
-echo "Android metadata uploaded successfully"
-
 # --- Update hash on success ---
 echo "$HASH" > "$STATE_FILE"
-echo "Updated state hash: ${HASH:0:12}..."
+
+ci_done "Android metadata uploaded to Google Play"

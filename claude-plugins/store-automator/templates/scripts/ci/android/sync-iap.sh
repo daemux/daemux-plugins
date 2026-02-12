@@ -3,6 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../common/read-config.sh"
+source "$SCRIPT_DIR/../common/ci-notify.sh"
 
 # --- Check Google Play readiness ---
 if [ "${GOOGLE_PLAY_READY:-false}" != "true" ]; then
@@ -13,16 +14,13 @@ fi
 # --- Check if IAP config exists ---
 IAP_CONFIG="$PROJECT_ROOT/fastlane/iap_config.json"
 if [ ! -f "$IAP_CONFIG" ]; then
-  echo "No iap_config.json found at $IAP_CONFIG. Skipping IAP sync."
-  exit 0
+  ci_skip "No Android IAP config file found"
 fi
 
 # --- Check if IAP plugin is available ---
 cd "$APP_ROOT/android"
 if ! bundle exec gem list fastlane-plugin-iap --installed > /dev/null 2>&1; then
-  echo "WARNING: fastlane-plugin-iap not installed. Skipping IAP sync."
-  echo "To enable: add it to app/android/Pluginfile and run 'bundle install'."
-  exit 0
+  ci_skip "fastlane-plugin-iap not installed"
 fi
 
 # --- Hash-based change detection ---
@@ -35,8 +33,7 @@ STATE_FILE="$STATE_DIR/android-iap-hash"
 if [ -f "$STATE_FILE" ]; then
   STORED_HASH=$(cat "$STATE_FILE")
   if [ "$HASH" = "$STORED_HASH" ]; then
-    echo "No changes in iap_config.json (hash: ${HASH:0:12}...). Skipping."
-    exit 0
+    ci_skip "Android IAP config unchanged since last sync"
   fi
 fi
 
@@ -56,8 +53,7 @@ PACKAGE_NAME="$PACKAGE_NAME" \
 GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH="$SA_FULL_PATH" \
 bundle exec fastlane sync_google_iap
 
-echo "Android IAP sync complete"
-
 # --- Update hash on success ---
 echo "$HASH" > "$STATE_FILE"
-echo "Updated state hash: ${HASH:0:12}..."
+
+ci_done "Android IAP synced to Google Play"

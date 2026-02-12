@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
+# Requires link-fastlane.sh and install-fastlane.sh to have run first (workflow steps).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMMON_DIR="$SCRIPT_DIR/../common"
 source "$COMMON_DIR/read-config.sh"
+source "$COMMON_DIR/ci-notify.sh"
 
 echo "=== iOS Metadata & Screenshots Upload ==="
 
@@ -12,8 +14,7 @@ METADATA_DIR="$PROJECT_ROOT/fastlane/metadata"
 SCREENSHOTS_DIR="$PROJECT_ROOT/fastlane/screenshots/ios"
 
 if [ ! -d "$METADATA_DIR" ] && [ ! -d "$SCREENSHOTS_DIR" ]; then
-  echo "No metadata or screenshots directories found. Skipping upload."
-  exit 0
+  ci_skip "No iOS metadata directories found"
 fi
 
 HASH_DIRS=()
@@ -37,8 +38,7 @@ STATE_FILE="$STATE_DIR/ios-metadata-hash"
 if [ -f "$STATE_FILE" ]; then
   STORED_HASH=$(cat "$STATE_FILE")
   if [ "$HASH" = "$STORED_HASH" ]; then
-    echo "Metadata and screenshots unchanged (hash: ${HASH:0:12}...). Skipping upload."
-    exit 0
+    ci_skip "iOS metadata unchanged since last upload"
   fi
   echo "Changes detected (old: ${STORED_HASH:0:12}..., new: ${HASH:0:12}...)"
 else
@@ -65,10 +65,6 @@ export FASTLANE_ENABLE_BETA_DELIVER_SYNC_SCREENSHOTS=1
 
 echo "ASC API key configured (Key ID: $APPLE_KEY_ID)"
 
-# --- Link and install Fastlane ---
-"$COMMON_DIR/link-fastlane.sh" ios
-"$COMMON_DIR/install-fastlane.sh" ios
-
 # --- Run upload ---
 echo "Uploading iOS metadata and screenshots..."
 cd "$APP_ROOT/ios"
@@ -77,6 +73,4 @@ bundle exec fastlane upload_metadata_ios
 
 # --- Update hash on success ---
 echo "$HASH" > "$STATE_FILE"
-echo "iOS metadata uploaded successfully. Hash cached: ${HASH:0:12}..."
-
-echo "=== iOS Metadata & Screenshots Upload Complete ==="
+ci_done "iOS metadata uploaded to App Store Connect"
