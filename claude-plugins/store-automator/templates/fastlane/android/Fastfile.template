@@ -3,9 +3,10 @@ default_platform(:android)
 # Resolve paths absolutely to avoid symlink-relative breakage.
 # CM_BUILD_DIR is set by Codemagic CI; locally we derive from __FILE__.
 ROOT_DIR = ENV.fetch("CM_BUILD_DIR", File.expand_path("../..", __FILE__))
-APP_ROOT = ENV.fetch("APP_ROOT", "app")
+APP_DIR  = ENV.fetch("APP_ROOT", "#{ROOT_DIR}/app")
+APP_DIR  = "#{ROOT_DIR}/#{APP_DIR}" unless APP_DIR.start_with?("/")
 
-AAB_PATH = "#{ROOT_DIR}/#{APP_ROOT}/build/app/outputs/bundle/release/app-release.aab"
+AAB_PATH = "#{APP_DIR}/build/app/outputs/bundle/release/app-release.aab"
 
 def metadata_changed?(path)
   !sh("git diff --name-only HEAD~1 -- #{path}").strip.empty?
