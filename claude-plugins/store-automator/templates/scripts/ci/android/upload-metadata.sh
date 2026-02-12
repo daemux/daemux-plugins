@@ -75,11 +75,10 @@ Metadata and screenshots were uploaded by CI but **could not be saved** because 
    - *Note: CI uploaded this data but it was discarded. After completing setup, re-run CI to auto-upload.*
 4. **Content rating** → Complete the content rating questionnaire
 5. **App pricing** → Set pricing and distribution countries
-6. **Release** → Go to **Testing → Internal testing** (or **Production**)
-   - Click **Create new release**
+6. **First release** → Go to **Testing → Internal testing** → Click **Create new release**
    - The AAB was already uploaded by CI — select it
    - Add release notes
-   - Click **Review release** → **Start rollout**
+   - Click **Review release** → **Start rollout to internal testing**
 
 ### After first release:
 All subsequent CI runs will automatically upload metadata, screenshots, and new builds without manual intervention. Re-trigger the CI workflow after completing the steps above.
