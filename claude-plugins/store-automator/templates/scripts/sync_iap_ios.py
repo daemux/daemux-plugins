@@ -122,10 +122,14 @@ def sync_subscription_group(
 def _sync_availability(headers: dict, sub_id: str, sub_config: dict) -> None:
     """Ensure subscription territory availability is configured with all territories.
 
-    If no territories are specified in config, fetches all App Store territories
-    so the subscription is available everywhere (empty list = removed from sale).
-    Also re-creates availability if existing territory count is suspiciously low.
+    If availability already exists, it is left as-is (idempotent skip).
+    Otherwise fetches all App Store territories and creates availability.
     """
+    existing = get_subscription_availability(headers, sub_id)
+    if existing:
+        print("      Availability already configured")
+        return
+
     avail_config = sub_config.get("availability", {})
     available_in_new = avail_config.get("available_in_new_territories", True)
     territory_ids = avail_config.get("territories", [])
@@ -136,14 +140,6 @@ def _sync_availability(headers: dict, sub_id: str, sub_config: dict) -> None:
         if not territory_ids:
             print("      WARNING: Could not fetch territories", file=sys.stderr)
             return
-
-    existing = get_subscription_availability(headers, sub_id)
-    if existing:
-        included = existing.get("_included_territories", [])
-        if len(included) >= 100:
-            print(f"      Availability OK ({len(included)} territories)")
-            return
-        print(f"      Availability has only {len(included)} territories, recreating with {len(territory_ids)}")
 
     result = create_subscription_availability(
         headers, sub_id, territory_ids, available_in_new=available_in_new,

@@ -26,12 +26,12 @@ from asc_iap_api import BASE_URL, TIMEOUT, print_api_errors
 def get_subscription_availability(headers: dict, sub_id: str) -> dict | None:
     """Fetch current availability settings for a subscription.
 
-    Includes availableTerritories relationship so callers can check territory count.
+    Returns the availability resource or None if not yet configured.
+    Does not include territory details to avoid ASC API limit errors.
     """
     resp = requests.get(
         f"{BASE_URL}/subscriptions/{sub_id}/subscriptionAvailability",
         headers=headers,
-        params={"include": "availableTerritories", "limit[availableTerritories]": 200},
         timeout=TIMEOUT,
     )
     if not resp.ok:
@@ -39,11 +39,7 @@ def get_subscription_availability(headers: dict, sub_id: str) -> dict | None:
             return None
         print_api_errors(resp, f"get availability for subscription {sub_id}")
         return None
-    body = resp.json()
-    result = body.get("data")
-    if result:
-        result["_included_territories"] = body.get("included", [])
-    return result
+    return resp.json().get("data")
 
 
 def list_all_territory_ids(headers: dict) -> list[str]:
