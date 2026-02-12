@@ -198,7 +198,7 @@ workflows:
 
       - name: Manage iOS version
         script: |
-          pip3 install PyJWT cryptography requests
+          pip3 install --break-system-packages PyJWT cryptography requests
           VERSION_JSON=$(python3 scripts/manage_version_ios.py 2>/dev/null || echo '{"version":"1.0.0","version_id":"","state":"NEW"}')
           APP_VERSION=$(echo "$VERSION_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin)['version'])")
           APP_VERSION_ID=$(echo "$VERSION_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin).get('version_id',''))")
@@ -321,7 +321,7 @@ workflows:
       - name: Check Google Play readiness
         script: |
           echo "Checking Google Play setup status..."
-          pip3 install PyJWT cryptography requests
+          pip3 install --break-system-packages PyJWT cryptography requests
           export SA_JSON="$CM_BUILD_DIR/$GOOGLE_SA_JSON_PATH"
           export PACKAGE_NAME="$PACKAGE_NAME"
           RESULT=$(python3 scripts/check_google_play.py 2>/dev/null || echo '{"ready":false}')
@@ -445,7 +445,7 @@ workflows:
       - name: Manage Android version
         script: |
           # Read iOS version for consistency (if iOS workflow ran)
-          pip3 install PyJWT cryptography requests
+          pip3 install --break-system-packages PyJWT cryptography requests
           echo "APP_STORE_CONNECT_KEY_IDENTIFIER=$APPLE_KEY_ID" >> $CM_ENV
           echo "APP_STORE_CONNECT_ISSUER_ID=$APPLE_ISSUER_ID" >> $CM_ENV
           echo "APP_STORE_CONNECT_PRIVATE_KEY<<KEYDELIMITER" >> $CM_ENV

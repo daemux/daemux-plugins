@@ -25,7 +25,7 @@ if [ -z "${APP_STORE_CONNECT_KEY_IDENTIFIER:-}" ]; then
 fi
 
 # --- Ensure PyJWT is installed ---
-pip3 install PyJWT >/dev/null 2>&1 || true
+pip3 install --break-system-packages PyJWT >/dev/null 2>&1 || true
 
 # --- Fetch latest build number from ASC ---
 echo "Fetching latest build number from App Store Connect..."

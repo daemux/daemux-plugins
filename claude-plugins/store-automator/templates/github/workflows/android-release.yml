@@ -1,35 +1,95 @@
 name: Android Release
-
+# POST-MIGRATION CLEANUP (after GitHub Actions workflows are verified in production):
+#   - Remove .github/workflows/codemagic-trigger.yml
+#   - Remove any Codemagic-specific configuration files
+#   - Update README/docs to reference GitHub Actions instead of Codemagic
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
-    inputs:
-      skip_build:
-        description: 'Skip build (metadata only)'
-        required: false
-        default: 'false'
-        type: boolean
 
-env:
-  FLUTTER_VERSION: '3.x'
+# Prevent concurrent Android builds
+concurrency:
+  group: android-release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  android-release:
+  metadata:
+    name: Upload Android Metadata
     runs-on: macos-latest
-    timeout-minutes: 60
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Restore CI state cache
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+
+      - name: Cache .ci-state
         uses: actions/cache@v4
         with:
           path: .ci-state
-          key: ci-state-android-${{ github.ref_name }}
-          restore-keys: ci-state-android-
+          key: ci-state-android-metadata-${{ hashFiles('fastlane/metadata/**', 'fastlane/screenshots/android/**') }}
+          restore-keys: ci-state-android-metadata-
+
+      - name: Install yq
+        run: brew install yq
+
+      - name: Link Fastlane
+        run: scripts/ci/common/link-fastlane.sh android
+
+      - name: Install Fastlane
+        run: scripts/ci/common/install-fastlane.sh android
+
+      - name: Check Google Play Readiness
+        run: scripts/ci/android/check-readiness.sh
+
+      - name: Upload Metadata & Screenshots
+        run: scripts/ci/android/upload-metadata.sh
+
+      - name: Sync IAP
+        run: scripts/ci/android/sync-iap.sh
+
+      - name: Install Python dependencies
+        run: pip3 install --break-system-packages google-api-python-client google-auth
+
+      - name: Update Data Safety
+        run: scripts/ci/android/update-data-safety.sh
+
+      - name: Save .ci-state
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .ci-state
+          key: ci-state-android-metadata-${{ hashFiles('fastlane/metadata/**', 'fastlane/screenshots/android/**') }}
+
+  build:
+    name: Build & Upload Android
+    needs: [metadata]
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+
+      - name: Install yq
+        run: brew install yq
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -37,36 +97,45 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Upload metadata
-        run: scripts/ci/android/upload-metadata.sh
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ hashFiles('app/android/**/*.gradle*', 'app/android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: gradle-
 
-      - name: Setup keystore
-        if: inputs.skip_build != 'true'
-        run: source scripts/ci/android/setup-keystore.sh
+      - name: Link Fastlane
+        run: scripts/ci/common/link-fastlane.sh android
 
-      - name: Check Google Play readiness
-        if: inputs.skip_build != 'true'
+      - name: Install Fastlane
+        run: scripts/ci/common/install-fastlane.sh android
+
+      - name: Setup Keystore
+        run: scripts/ci/android/setup-keystore.sh
+
+      - name: Install Python dependencies
+        run: pip3 install --break-system-packages PyJWT google-api-python-client google-auth
+
+      - name: Check Google Play Readiness
         run: scripts/ci/android/check-readiness.sh
 
-      - name: Manage Android version
-        if: inputs.skip_build != 'true'
-        run: source scripts/ci/android/manage-version.sh
+      - name: Manage Version
+        run: scripts/ci/android/manage-version.sh
 
-      - name: Flutter pub get
-        if: inputs.skip_build != 'true'
+      - name: Flutter Packages
         run: scripts/ci/common/flutter-setup.sh
 
-      - name: Build Android
-        if: inputs.skip_build != 'true'
+      - name: Build AAB
         run: scripts/ci/android/build.sh
 
-      - name: Upload binary
-        if: inputs.skip_build != 'true'
-        run: scripts/ci/android/upload-binary.sh
-
-      - name: Save CI state cache
+      - name: Upload Artifacts
         if: always()
-        uses: actions/cache/save@v4
+        uses: actions/upload-artifact@v4
         with:
-          path: .ci-state
-          key: ci-state-android-${{ github.ref_name }}-${{ github.run_id }}
+          name: android-aab
+          path: app/build/app/outputs/bundle/release/*.aab
+
+      - name: Upload to Google Play
+        run: scripts/ci/android/upload-binary.sh
