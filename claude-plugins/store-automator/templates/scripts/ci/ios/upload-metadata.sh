@@ -74,19 +74,10 @@ echo "ASC API key configured (Key ID: $APPLE_KEY_ID)"
 echo "Uploading iOS metadata and screenshots..."
 cd "$APP_ROOT/ios"
 
-set +e
 bundle exec fastlane upload_metadata_ios
-UPLOAD_EXIT=$?
-set -e
 
-# --- Handle result ---
-if [ $UPLOAD_EXIT -eq 0 ]; then
-  echo "$HASH" > "$STATE_FILE"
-  echo "iOS metadata uploaded successfully. Hash cached: ${HASH:0:12}..."
-else
-  echo "ERROR: iOS metadata upload failed (exit code: $UPLOAD_EXIT)" >&2
-  echo "Hash NOT cached — next run will retry."
-  exit $UPLOAD_EXIT
-fi
+# --- Update hash on success ---
+echo "$HASH" > "$STATE_FILE"
+echo "iOS metadata uploaded successfully. Hash cached: ${HASH:0:12}..."
 
 echo "=== iOS Metadata & Screenshots Upload Complete ==="

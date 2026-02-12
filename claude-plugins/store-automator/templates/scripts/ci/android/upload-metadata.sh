@@ -6,9 +6,9 @@ source "$SCRIPT_DIR/../common/read-config.sh"
 
 # --- Check Google Play readiness ---
 if [ "${GOOGLE_PLAY_READY:-false}" != "true" ]; then
-  echo "Google Play not ready. Skipping metadata upload."
-  echo "Run check-readiness.sh for details."
-  exit 0
+  echo "ERROR: Google Play not ready. Cannot upload metadata." >&2
+  echo "Run check-readiness.sh for details." >&2
+  exit 1
 fi
 
 # --- Hash-based change detection ---

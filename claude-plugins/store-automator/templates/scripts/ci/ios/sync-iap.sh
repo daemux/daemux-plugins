@@ -22,10 +22,9 @@ fi
 cd "$APP_ROOT/ios"
 
 if ! bundle exec gem list fastlane-plugin-iap --installed >/dev/null 2>&1; then
-  echo "WARNING: fastlane-plugin-iap not installed (plugin not yet published)."
-  echo "Skipping IAP sync. This is expected until the IAP plugin is released."
-  echo "To install when available: add 'fastlane-plugin-iap' to $APP_ROOT/ios/Gemfile"
-  exit 0
+  echo "ERROR: fastlane-plugin-iap not installed but iap_config.json exists." >&2
+  echo "Install the plugin: add 'fastlane-plugin-iap' to $APP_ROOT/ios/Gemfile and run 'bundle install'." >&2
+  exit 1
 fi
 
 echo "fastlane-plugin-iap is installed. Proceeding with sync."
@@ -71,21 +70,12 @@ echo "Syncing IAPs to App Store Connect..."
 
 cd "$APP_ROOT/ios"
 
-set +e
 FASTLANE_API_KEY_PATH="$P8_FULL_PATH" \
 BUNDLE_ID="$BUNDLE_ID" \
 bundle exec fastlane sync_iap
-SYNC_EXIT=$?
-set -e
 
 # ── Step 8: Update hash on success ──
-if [ $SYNC_EXIT -eq 0 ]; then
-  echo "$CURRENT_HASH" > "$STATE_FILE"
-  echo "IAP sync successful. Hash cached: ${CURRENT_HASH:0:12}..."
-else
-  echo "ERROR: IAP sync failed (exit code: $SYNC_EXIT)" >&2
-  echo "Hash NOT cached — next run will retry."
-  exit $SYNC_EXIT
-fi
+echo "$CURRENT_HASH" > "$STATE_FILE"
+echo "IAP sync successful. Hash cached: ${CURRENT_HASH:0:12}..."
 
 echo "=== iOS IAP Sync Complete ==="

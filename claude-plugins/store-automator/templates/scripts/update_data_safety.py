@@ -33,7 +33,7 @@ def ensure_dependencies():
     """Install required Python packages if not already present."""
     import subprocess
     subprocess.run(
-        ["pip3", "install", "google-api-python-client", "google-auth"],
+        ["pip3", "install", "--break-system-packages", "google-api-python-client", "google-auth"],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )

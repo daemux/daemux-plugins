@@ -32,7 +32,7 @@ except ImportError:
     print("Installing dependencies...", file=sys.stderr)
     import subprocess
     subprocess.check_call([
-        sys.executable, "-m", "pip", "install",
+        sys.executable, "-m", "pip", "install", "--break-system-packages",
         "PyJWT", "cryptography", "requests"
     ], stdout=subprocess.DEVNULL)
     import jwt

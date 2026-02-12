@@ -6,8 +6,8 @@ source "$SCRIPT_DIR/../common/read-config.sh"
 
 # --- Check Google Play readiness ---
 if [ "${GOOGLE_PLAY_READY:-false}" != "true" ]; then
-  echo "Google Play not ready. Skipping IAP sync."
-  exit 0
+  echo "ERROR: Google Play not ready. Cannot sync IAPs." >&2
+  exit 1
 fi
 
 # --- Check if IAP config exists ---
@@ -20,9 +20,9 @@ fi
 # --- Check if IAP plugin is available ---
 cd "$APP_ROOT/android"
 if ! bundle exec gem list fastlane-plugin-iap --installed 2>/dev/null; then
-  echo "fastlane-plugin-iap not installed (may be commented out in Pluginfile). Skipping."
-  echo "To enable IAP sync, uncomment the plugin in app/android/Pluginfile and run 'bundle install'."
-  exit 0
+  echo "ERROR: fastlane-plugin-iap not installed but iap_config.json exists." >&2
+  echo "Install the plugin: add it to app/android/Pluginfile and run 'bundle install'." >&2
+  exit 1
 fi
 
 # --- Hash-based change detection ---

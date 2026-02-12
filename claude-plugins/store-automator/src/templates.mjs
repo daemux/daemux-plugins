@@ -134,12 +134,12 @@ export function installGitHubActionsTemplates(projectDir, packageDir) {
   }
 }
 
-export function installMatchfile(projectDir, packageDir, flutterRoot, { matchGitUrl, bundleId }) {
+export function installMatchfile(projectDir, packageDir, { matchGitUrl, bundleId }) {
   console.log('Installing Matchfile...');
   const src = join(packageDir, 'templates', 'Matchfile.template');
   if (!existsSync(src)) return;
 
-  const destDir = join(projectDir, flutterRoot, 'ios', 'fastlane');
+  const destDir = join(projectDir, 'fastlane', 'ios');
   ensureDir(destDir);
   const dest = join(destDir, 'Matchfile');
 

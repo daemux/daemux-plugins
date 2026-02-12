@@ -2,7 +2,7 @@ import { execSync, execFileSync } from 'node:child_process';
 import { installGitHubActionsTemplates, installMatchfile } from './templates.mjs';
 import { findAppByRepo, addApp, normalizeRepoUrl } from './codemagic-api.mjs';
 import {
-  writeCiAppId, writeCiTeamId, writeMatchConfig, readFlutterRoot,
+  writeCiAppId, writeCiTeamId, writeMatchConfig,
 } from './ci-config.mjs';
 import { updateMcpAppId, updateMcpTeamId } from './mcp-setup.mjs';
 
@@ -68,8 +68,7 @@ export function installGitHubActionsPath(projectDir, packageDir, cliTokens) {
   console.log('Configuring GitHub Actions mode...');
   installGitHubActionsTemplates(projectDir, packageDir);
 
-  const flutterRoot = readFlutterRoot(projectDir);
-  installMatchfile(projectDir, packageDir, flutterRoot, {
+  installMatchfile(projectDir, packageDir, {
     matchGitUrl: cliTokens.matchGitUrl,
     bundleId: cliTokens.bundleId,
   });

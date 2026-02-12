@@ -15,26 +15,25 @@ set_play_ready() {
   fi
 }
 
-# Log a warning, mark not-ready, and exit successfully.
-skip_not_ready() {
-  echo "$1" >&2
-  echo "Google Play readiness check skipped."
+# Log an error, mark not-ready, and hard-fail.
+fail_not_ready() {
+  echo "ERROR: $1" >&2
   set_play_ready "false"
-  exit 0
+  exit 1
 }
 
 # --- Validate required config ---
 if [ -z "${GOOGLE_SA_JSON_PATH:-}" ]; then
-  skip_not_ready "WARNING: GOOGLE_SA_JSON_PATH not set in ci.config.yaml"
+  fail_not_ready "GOOGLE_SA_JSON_PATH not set in ci.config.yaml"
 fi
 
 SA_FULL_PATH="$PROJECT_ROOT/$GOOGLE_SA_JSON_PATH"
 if [ ! -f "$SA_FULL_PATH" ]; then
-  skip_not_ready "WARNING: Service account JSON not found at $SA_FULL_PATH"
+  fail_not_ready "Service account JSON not found at $SA_FULL_PATH"
 fi
 
 if [ -z "${PACKAGE_NAME:-}" ]; then
-  skip_not_ready "ERROR: PACKAGE_NAME not set in ci.config.yaml"
+  fail_not_ready "PACKAGE_NAME not set in ci.config.yaml"
 fi
 
 # --- Set env vars for the Python script ---
@@ -43,10 +42,10 @@ export PACKAGE_NAME
 
 # --- Run the existing Python script ---
 echo "Checking Google Play readiness for $PACKAGE_NAME..."
-READINESS_JSON=$(python3 "$PROJECT_ROOT/scripts/check_google_play.py") || true
+READINESS_JSON=$(python3 "$PROJECT_ROOT/scripts/check_google_play.py")
 
 if [ -z "$READINESS_JSON" ]; then
-  skip_not_ready "WARNING: check_google_play.py returned empty output"
+  fail_not_ready "check_google_play.py returned empty output"
 fi
 
 echo "Readiness info: $READINESS_JSON"
@@ -55,16 +54,13 @@ echo "Readiness info: $READINESS_JSON"
 # Expected format: {"ready": true/false, "missing_steps": [...]}
 PARSED=$(echo "$READINESS_JSON" | python3 -c "
 import sys, json
-try:
-    data = json.load(sys.stdin)
-    ready = str(data.get('ready', False)).lower()
-    steps = data.get('missing_steps', [])
-    print(ready)
-    for s in steps:
-        print(f'  - {s}')
-except (json.JSONDecodeError, KeyError):
-    print('false')
-" 2>/dev/null || echo "false")
+data = json.load(sys.stdin)
+ready = str(data.get('ready', False)).lower()
+steps = data.get('missing_steps', [])
+print(ready)
+for s in steps:
+    print(f'  - {s}')
+")
 
 # First line is the ready status; remaining lines are missing steps.
 READY=$(echo "$PARSED" | head -n 1)
@@ -90,10 +86,8 @@ if [ "$READY" != "true" ]; then
   echo "  4. Upload at least one AAB manually for the first release"
   echo "  5. Grant the service account access to the app"
   echo ""
-  echo "Build will continue but upload steps will be skipped."
+  echo "Google Play is NOT ready. CI cannot proceed."
+  exit 1
 else
   echo "Google Play is ready for automated publishing"
 fi
-
-# Always exit 0 -- readiness is informational, not a build failure
-exit 0

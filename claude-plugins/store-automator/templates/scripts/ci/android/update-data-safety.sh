@@ -6,8 +6,8 @@ source "$SCRIPT_DIR/../common/read-config.sh"
 
 # --- Check Google Play readiness ---
 if [ "${GOOGLE_PLAY_READY:-false}" != "true" ]; then
-  echo "Google Play not ready. Skipping data safety update."
-  exit 0
+  echo "ERROR: Google Play not ready. Cannot update data safety." >&2
+  exit 1
 fi
 
 # --- Check if data safety CSV exists ---
