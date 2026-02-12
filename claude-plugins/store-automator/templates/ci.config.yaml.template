@@ -45,7 +45,7 @@ metadata:
 
 # === WEB PAGES ===
 web:
-  domain: "yourapp-pages.workers.dev"  # *.workers.dev domain is sufficient, no custom DNS needed
+  domain: "yourapp-pages.account-subdomain.workers.dev"  # *.workers.dev domain is sufficient, no custom DNS needed
   cloudflare_project_name: "yourapp-pages"
   tagline: "Your app tagline here"
   primary_color: "#2563EB"

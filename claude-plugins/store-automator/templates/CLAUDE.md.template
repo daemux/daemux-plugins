@@ -260,7 +260,7 @@ Implement Flutter app matching designs. Set up Firebase. Fill ci.config.yaml. Ad
 appstore-meta-creator generates texts. Fill fastlane/iap_config.json if needed.
 
 ### Phase 4: Web Pages + Deployment
-app-designer designs marketing page in Stitch MCP. Develop web pages. Deploy via Cloudflare Pages (*.workers.dev domain sufficient).
+app-designer designs marketing page in Stitch MCP. Develop web pages. Deploy via Cloudflare Pages (*.account-subdomain.workers.dev domain sufficient).
 
 ### Phase 5: Finalize and CI/CD
 Create .gitignore (.claude/.tasks/, Flutter ignores; do NOT ignore *.g.dart). Push to private repo. GitHub Actions auto-triggers on push.

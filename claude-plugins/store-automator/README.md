@@ -168,7 +168,7 @@ npx @daemux/store-automator \
   --track=internal \
   --rollout-fraction=1.0 \
   --in-app-update-priority=3 \
-  --domain=amazingapp-pages.workers.dev \
+  --domain=amazingapp-pages.account-subdomain.workers.dev \
   --cf-project-name=amazingapp-pages \
   --tagline="The best utility app ever" \
   --primary-color="#2563EB" \
