@@ -1,0 +1,105 @@
+# Google Play Data Safety CSV
+#
+# This file declares your app's data collection and sharing practices for
+# the Google Play Data Safety section. It is read by scripts/update_data_safety.py
+# and uploaded via the Google Play Developer API.
+#
+# FORMAT:
+#   question_id,response
+#
+# Each row maps a question identifier to a response value.
+# Responses are typically "true" or "false". Leave the response empty
+# for optional fields that do not apply (e.g., a URL field).
+#
+# SECTIONS:
+#   DATA_COLLECTED_*           -- Which data types the app collects
+#   DATA_SHARED_*              -- Which data types are shared with third parties
+#   DATA_USAGE_*               -- Purpose of collection for each data type
+#   SECURITY_PRACTICES_*       -- Encryption, deletion, and other security measures
+#
+# DATA TYPE CATEGORIES (append to DATA_COLLECTED_ or DATA_SHARED_):
+#   PERSONAL_INFO              -- Name, email, address, phone, etc.
+#   PERSONAL_INFO_NAME
+#   PERSONAL_INFO_EMAIL
+#   PERSONAL_INFO_ADDRESS
+#   PERSONAL_INFO_PHONE
+#   FINANCIAL_INFO             -- Payment info, purchase history, etc.
+#   FINANCIAL_INFO_PURCHASE_HISTORY
+#   FINANCIAL_INFO_CREDIT_INFO
+#   LOCATION                   -- Approximate or precise location
+#   LOCATION_APPROXIMATE
+#   LOCATION_PRECISE
+#   WEB_BROWSING               -- Web browsing history
+#   MESSAGES                   -- Emails, SMS, other messages
+#   MESSAGES_EMAILS
+#   MESSAGES_SMS
+#   MESSAGES_OTHER_MESSAGES
+#   PHOTOS_AND_VIDEOS          -- Photos or videos
+#   AUDIO                      -- Voice/sound recordings
+#   FILES_AND_DOCS             -- Files and documents
+#   CALENDAR                   -- Calendar events
+#   CONTACTS                   -- Contact list
+#   APP_ACTIVITY               -- App interactions, search history, etc.
+#   APP_ACTIVITY_APP_INTERACTIONS
+#   APP_ACTIVITY_IN_APP_SEARCH_HISTORY
+#   APP_ACTIVITY_INSTALLED_APPS
+#   APP_ACTIVITY_OTHER_USER_GENERATED_CONTENT
+#   APP_ACTIVITY_OTHER_ACTIONS
+#   APP_INFO_AND_PERFORMANCE   -- Crash logs, diagnostics, other performance data
+#   APP_INFO_AND_PERFORMANCE_CRASH_LOGS
+#   APP_INFO_AND_PERFORMANCE_DIAGNOSTICS
+#   APP_INFO_AND_PERFORMANCE_OTHER
+#   DEVICE_OR_OTHER_IDS        -- Device or other identifiers
+#   HEALTH_AND_FITNESS         -- Health and fitness data
+#
+# COLLECTION PURPOSE SUFFIXES (append to DATA_USAGE_{TYPE}_COLLECTION_PURPOSE_):
+#   APP_FUNCTIONALITY
+#   ANALYTICS
+#   DEVELOPER_COMMUNICATIONS
+#   ADVERTISING
+#   FRAUD_PREVENTION
+#   PERSONALIZATION
+#   ACCOUNT_MANAGEMENT
+#
+# SECURITY PRACTICES:
+#   SECURITY_PRACTICES_DATA_ENCRYPTED_IN_TRANSIT  -- All data encrypted in transit
+#   SECURITY_PRACTICES_DATA_DELETION_REQUEST      -- Users can request data deletion
+#   SECURITY_PRACTICES_DATA_DELETION_REQUEST_URL  -- URL for deletion requests (optional)
+#
+# EXAMPLE: A chat app with Firebase Auth, messaging, purchases, analytics, and crashlytics
+#
+question_id,response
+DATA_COLLECTED,true
+DATA_COLLECTED_PERSONAL_INFO,true
+DATA_COLLECTED_PERSONAL_INFO_NAME,true
+DATA_COLLECTED_PERSONAL_INFO_EMAIL,true
+DATA_COLLECTED_FINANCIAL_INFO,true
+DATA_COLLECTED_FINANCIAL_INFO_PURCHASE_HISTORY,true
+DATA_COLLECTED_MESSAGES,true
+DATA_COLLECTED_MESSAGES_OTHER_MESSAGES,true
+DATA_COLLECTED_APP_ACTIVITY,true
+DATA_COLLECTED_APP_ACTIVITY_APP_INTERACTIONS,true
+DATA_COLLECTED_APP_INFO_AND_PERFORMANCE,true
+DATA_COLLECTED_APP_INFO_AND_PERFORMANCE_CRASH_LOGS,true
+DATA_COLLECTED_APP_INFO_AND_PERFORMANCE_DIAGNOSTICS,true
+DATA_COLLECTED_DEVICE_OR_OTHER_IDS,true
+DATA_SHARED,false
+DATA_SHARED_PERSONAL_INFO,false
+DATA_SHARED_FINANCIAL_INFO,false
+DATA_SHARED_MESSAGES,false
+DATA_SHARED_APP_ACTIVITY,false
+DATA_SHARED_APP_INFO_AND_PERFORMANCE,false
+DATA_SHARED_DEVICE_OR_OTHER_IDS,false
+DATA_USAGE_PERSONAL_INFO_NAME_COLLECTION_PURPOSE_APP_FUNCTIONALITY,true
+DATA_USAGE_PERSONAL_INFO_NAME_COLLECTION_PURPOSE_ANALYTICS,false
+DATA_USAGE_PERSONAL_INFO_EMAIL_COLLECTION_PURPOSE_APP_FUNCTIONALITY,true
+DATA_USAGE_PERSONAL_INFO_EMAIL_COLLECTION_PURPOSE_ACCOUNT_MANAGEMENT,true
+DATA_USAGE_FINANCIAL_INFO_PURCHASE_HISTORY_COLLECTION_PURPOSE_APP_FUNCTIONALITY,true
+DATA_USAGE_MESSAGES_OTHER_MESSAGES_COLLECTION_PURPOSE_APP_FUNCTIONALITY,true
+DATA_USAGE_APP_ACTIVITY_APP_INTERACTIONS_COLLECTION_PURPOSE_ANALYTICS,true
+DATA_USAGE_APP_INFO_CRASH_LOGS_COLLECTION_PURPOSE_APP_FUNCTIONALITY,true
+DATA_USAGE_APP_INFO_DIAGNOSTICS_COLLECTION_PURPOSE_APP_FUNCTIONALITY,true
+DATA_USAGE_DEVICE_OR_OTHER_IDS_COLLECTION_PURPOSE_ANALYTICS,true
+SECURITY_PRACTICES_DATA_ENCRYPTED_IN_TRANSIT,true
+SECURITY_PRACTICES_DATA_DELETION_REQUEST,true
+SECURITY_PRACTICES_DATA_DELETION_REQUEST_URL,

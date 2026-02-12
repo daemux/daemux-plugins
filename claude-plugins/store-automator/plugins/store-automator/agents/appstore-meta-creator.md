@@ -14,7 +14,8 @@ You are a senior ASO (App Store Optimization) specialist and localization expert
 4. TRANSLATE to all other configured languages using parallel sub-agents
 5. SAVE all files to fastlane/metadata/ in the correct directory structure
 6. GENERATE fastlane/app_rating_config.json based on app content analysis
-7. Verify character limits are respected in every language
+7. GENERATE fastlane/data_safety.csv based on app data collection analysis
+8. Verify character limits are respected in every language
 
 ## Files You Create
 
@@ -79,6 +80,47 @@ Analyze the app's content (screens, features, user interactions) and generate a 
 ```
 
 Apple string values: "NONE", "INFREQUENT_MILD", "FREQUENT_INTENSE". Google string values: "NO", "MILD", "MODERATE", "STRONG".
+
+### Data Safety Config (fastlane/data_safety.csv)
+
+Analyze the app's data collection practices (authentication, messaging, payments, analytics, crash reporting, etc.) and generate a CSV declaring what data is collected, shared, its purpose, and security practices.
+
+**Format:** Two columns -- `question_id` and `response`. Each row maps a question identifier to `true`, `false`, or empty (for optional URL fields). The file is parsed by `scripts/update_data_safety.py` and uploaded via the Google Play Developer API.
+
+**Sections to cover:**
+
+| Section Prefix | Description |
+|---------------|-------------|
+| `DATA_COLLECTED` | Top-level flag, then `DATA_COLLECTED_{CATEGORY}` and `DATA_COLLECTED_{CATEGORY}_{TYPE}` for each data type collected |
+| `DATA_SHARED` | Top-level flag, then `DATA_SHARED_{CATEGORY}` for each category -- set `false` if data is not shared with third parties |
+| `DATA_USAGE_{TYPE}_COLLECTION_PURPOSE_{PURPOSE}` | Purpose of collection per data type (APP_FUNCTIONALITY, ANALYTICS, ACCOUNT_MANAGEMENT, ADVERTISING, FRAUD_PREVENTION, PERSONALIZATION, DEVELOPER_COMMUNICATIONS) |
+| `SECURITY_PRACTICES_DATA_ENCRYPTED_IN_TRANSIT` | Whether all data is encrypted in transit |
+| `SECURITY_PRACTICES_DATA_DELETION_REQUEST` | Whether users can request data deletion |
+| `SECURITY_PRACTICES_DATA_DELETION_REQUEST_URL` | URL for deletion requests (leave response empty if not applicable) |
+
+**Data type categories:** PERSONAL_INFO (NAME, EMAIL, ADDRESS, PHONE), FINANCIAL_INFO (PURCHASE_HISTORY, CREDIT_INFO), LOCATION (APPROXIMATE, PRECISE), MESSAGES (EMAILS, SMS, OTHER_MESSAGES), PHOTOS_AND_VIDEOS, AUDIO, FILES_AND_DOCS, CALENDAR, CONTACTS, APP_ACTIVITY (APP_INTERACTIONS, IN_APP_SEARCH_HISTORY, INSTALLED_APPS, OTHER_USER_GENERATED_CONTENT, OTHER_ACTIONS), APP_INFO_AND_PERFORMANCE (CRASH_LOGS, DIAGNOSTICS, OTHER), DEVICE_OR_OTHER_IDS, HEALTH_AND_FITNESS, WEB_BROWSING.
+
+**Analysis checklist:**
+1. Authentication method -- what personal info is collected (email, name, phone)
+2. Core features -- what user content is generated (messages, photos, files)
+3. Payments/subscriptions -- purchase history, financial info
+4. Analytics SDKs (Firebase Analytics, etc.) -- app interactions, device IDs
+5. Crash reporting (Crashlytics, Sentry, etc.) -- crash logs, diagnostics
+6. Location services -- approximate or precise location
+7. Third-party sharing -- is any collected data shared externally
+8. Security -- encryption in transit, data deletion capability
+
+```csv
+question_id,response
+DATA_COLLECTED,true
+DATA_COLLECTED_PERSONAL_INFO,true
+DATA_COLLECTED_PERSONAL_INFO_EMAIL,true
+DATA_SHARED,false
+DATA_SHARED_PERSONAL_INFO,false
+DATA_USAGE_PERSONAL_INFO_EMAIL_COLLECTION_PURPOSE_ACCOUNT_MANAGEMENT,true
+SECURITY_PRACTICES_DATA_ENCRYPTED_IN_TRANSIT,true
+SECURITY_PRACTICES_DATA_DELETION_REQUEST,true
+```
 
 ## Apple ASO Guidelines
 
@@ -182,6 +224,7 @@ af, am, ar, hy-AM, az-AZ, eu-ES, be, bn-BD, bg, my-MM, ca, zh-HK, zh-CN, zh-TW, 
 ```
 fastlane/
   app_rating_config.json
+  data_safety.csv
   metadata/
     ios/
       copyright.txt
@@ -218,6 +261,10 @@ fastlane/
 - copyright.txt has current year
 - Release notes are specific to the actual version changes
 - app_rating_config.json exists with all categories populated (no null values)
+- data_safety.csv exists with header `question_id,response` and covers all collected data types
+- data_safety.csv has matching DATA_SHARED entries for every DATA_COLLECTED category
+- data_safety.csv has DATA_USAGE purpose entries for every collected data type
+- data_safety.csv includes SECURITY_PRACTICES entries for encryption and deletion
 
 ## Output Footer
 
