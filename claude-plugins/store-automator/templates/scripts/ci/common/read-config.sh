@@ -53,6 +53,9 @@ export PRICE_TIER=$(yq '.ios.price_tier // ""' "$CONFIG")
 export SUBMIT_FOR_REVIEW=$(yq '.ios.submit_for_review // "false"' "$CONFIG")
 export AUTOMATIC_RELEASE=$(yq '.ios.automatic_release // "false"' "$CONFIG")
 
+# App Info settings
+export CONTENT_RIGHTS_THIRD_PARTY=$(yq '.ios.content_rights_third_party // "false"' "$CONFIG")
+
 # Android Play Store settings
 export TRACK=$(yq '.android.track // "internal"' "$CONFIG")
 export ROLLOUT_FRACTION=$(yq '.android.rollout_fraction // ""' "$CONFIG")

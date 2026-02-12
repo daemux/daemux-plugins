@@ -52,6 +52,9 @@ jobs:
         id: sync-iap
         run: scripts/ci/ios/sync-iap.sh
 
+      - name: Setup App Info
+        run: scripts/ci/ios/setup-app-info.sh
+
       - name: Save .ci-state
         if: success()
         uses: actions/cache/save@v4

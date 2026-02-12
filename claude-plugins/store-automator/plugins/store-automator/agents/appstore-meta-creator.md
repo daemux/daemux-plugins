@@ -43,11 +43,11 @@ You are a senior ASO (App Store Optimization) specialist and localization expert
 | full_description.txt | 4000 chars | Keyword-rich naturally, first 250 chars most important, no keyword stuffing |
 | changelogs/default.txt | 500 chars | What is new in this version |
 
-### Shared (fastlane/metadata/ios/)
+### Shared (fastlane/metadata/)
 
 | File | Content |
 |------|---------|
-| copyright.txt | "Copyright {YEAR} {COMPANY_NAME}" |
+| copyright.txt | "Copyright {YEAR} {COMPANY_NAME}" — placed at metadata root, NOT inside locale dirs |
 
 ### Age Rating Config (fastlane/app_rating_config.json)
 
@@ -241,6 +241,7 @@ fastlane/
   app_rating_config.json
   data_safety.csv
   metadata/
+    copyright.txt
     review_information/
       first_name.txt
       last_name.txt
@@ -250,7 +251,6 @@ fastlane/
       demo_password.txt
       notes.txt
     ios/
-      copyright.txt
       en-US/
         name.txt
         subtitle.txt

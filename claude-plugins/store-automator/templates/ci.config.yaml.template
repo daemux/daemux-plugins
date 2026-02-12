@@ -31,6 +31,7 @@ ios:
   price_tier: 0
   submit_for_review: true
   automatic_release: true
+  content_rights_third_party: false  # true if app uses third-party content requiring rights
 
 # === ANDROID SETTINGS ===
 android:
