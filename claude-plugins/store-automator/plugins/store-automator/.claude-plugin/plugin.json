@@ -1,6 +1,6 @@
 {
   "name": "store-automator",
-  "version": "0.10.2",
+  "version": "0.10.3",
   "description": "App Store & Google Play automation agents for Flutter app publishing",
   "author": {
     "name": "Daemux"
