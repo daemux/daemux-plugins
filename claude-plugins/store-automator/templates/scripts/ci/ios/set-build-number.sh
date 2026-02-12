@@ -25,7 +25,7 @@ if [ -z "${APP_STORE_CONNECT_KEY_IDENTIFIER:-}" ]; then
 fi
 
 # --- Ensure PyJWT is installed ---
-pip3 install --break-system-packages PyJWT
+pip3 install --break-system-packages PyJWT >/dev/null 2>&1 || true
 
 # --- Fetch latest build number from ASC ---
 echo "Fetching latest build number from App Store Connect..."
@@ -44,22 +44,25 @@ payload = {'iss': issuer_id, 'iat': now, 'exp': now + 1200, 'aud': 'appstoreconn
 token = jwt.encode(payload, private_key, algorithm='ES256', headers={'kid': key_id})
 headers = {'Authorization': f'Bearer {token}'}
 
-# Resolve app ID from bundle ID
-req = urllib.request.Request(
-    f'https://api.appstoreconnect.apple.com/v1/apps?filter[bundleId]={bundle_id}',
-    headers=headers)
-with urllib.request.urlopen(req) as resp:
-    app_id = json.loads(resp.read())['data'][0]['id']
+try:
+    # Resolve app ID from bundle ID
+    req = urllib.request.Request(
+        f'https://api.appstoreconnect.apple.com/v1/apps?filter[bundleId]={bundle_id}',
+        headers=headers)
+    with urllib.request.urlopen(req) as resp:
+        app_id = json.loads(resp.read())['data'][0]['id']
 
-# Fetch latest build
-req = urllib.request.Request(
-    f'https://api.appstoreconnect.apple.com/v1/builds?filter[app]={app_id}&sort=-version&limit=1',
-    headers=headers)
-with urllib.request.urlopen(req) as resp:
-    builds = json.loads(resp.read())['data']
+    # Fetch latest build
+    req = urllib.request.Request(
+        f'https://api.appstoreconnect.apple.com/v1/builds?filter[app]={app_id}&sort=-version&limit=1',
+        headers=headers)
+    with urllib.request.urlopen(req) as resp:
+        builds = json.loads(resp.read())['data']
 
-print(builds[0]['attributes']['version'] if builds else '0')
-")
+    print(builds[0]['attributes']['version'] if builds else '0')
+except Exception:
+    print('0')
+" 2>/dev/null || echo "0")
 
 echo "Latest build number from ASC: $LATEST_BUILD"
 

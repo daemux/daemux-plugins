@@ -42,19 +42,13 @@ if [ -f "$PBXPROJ" ]; then
 
   # Set the provisioning profile specifier for the Runner target
   if [ -n "$PROFILE_NAME" ]; then
-    PKEY="PROVISIONING_PROFILE_SPECIFIER"
-    sed -i '' \
-      "s/$PKEY = \"[^\"]*\"/$PKEY = \"$PROFILE_NAME\"/g" "$PBXPROJ"
-    sed -i '' \
-      "s/$PKEY = ;/$PKEY = \"$PROFILE_NAME\";/g" "$PBXPROJ"
-    echo "  $PKEY = $PROFILE_NAME"
+    sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER = \"[^\"]*\"/PROVISIONING_PROFILE_SPECIFIER = \"$PROFILE_NAME\"/g" "$PBXPROJ"
+    sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER = ;/PROVISIONING_PROFILE_SPECIFIER = \"$PROFILE_NAME\";/g" "$PBXPROJ"
+    echo "  PROVISIONING_PROFILE_SPECIFIER = $PROFILE_NAME"
   fi
 
   # Set the code sign identity for distribution
-  sed -i '' \
-    's/"CODE_SIGN_IDENTITY\[sdk=iphoneos\*\]" = "iPhone Developer"/'\
-'"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution"/g' \
-    "$PBXPROJ"
+  sed -i '' 's/"CODE_SIGN_IDENTITY\[sdk=iphoneos\*\]" = "iPhone Developer"/"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution"/g' "$PBXPROJ"
 
   echo "Xcode project patched for CI signing"
 fi
