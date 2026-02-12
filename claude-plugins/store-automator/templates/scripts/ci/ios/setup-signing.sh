@@ -66,14 +66,15 @@ setup_api_key() {
   export FASTLANE_API_KEY_PATH="/tmp/AuthKey.p8"
 
   # Create API key JSON for match --api_key_path
-  cat > "$API_KEY_JSON" <<APIKEY
-{
-  "key_id": "$APPLE_KEY_ID",
-  "issuer_id": "$APPLE_ISSUER_ID",
-  "key_filepath": "/tmp/AuthKey.p8",
-  "in_house": false
-}
-APIKEY
+  # Use ruby to properly escape the P8 key content for JSON
+  ruby -rjson -e '
+    puts JSON.pretty_generate({
+      key_id: ENV["APP_STORE_CONNECT_API_KEY_KEY_ID"],
+      issuer_id: ENV["APP_STORE_CONNECT_API_KEY_ISSUER_ID"],
+      key: File.read("/tmp/AuthKey.p8"),
+      in_house: false
+    })
+  ' > "$API_KEY_JSON"
   chmod 600 "$API_KEY_JSON"
 
   echo "App Store Connect API key configured (Key ID: $APPLE_KEY_ID)"
