@@ -1,6 +1,6 @@
 {
   "name": "@daemux/store-automator",
-  "version": "0.10.31",
+  "version": "0.10.33",
   "description": "Full App Store & Google Play automation for Flutter apps with Claude Code agents",
   "type": "module",
   "bin": {
@@ -28,15 +28,21 @@
     "ci-cd",
     "daemux"
   ],
-  "author": { "name": "Daemux" },
+  "author": {
+    "name": "Daemux"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/daemux/daemux-plugins.git",
     "directory": "claude-plugins/store-automator"
   },
-  "publishConfig": { "access": "public" },
-  "engines": { "node": ">=18" },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
     "update-notifier": "^7.3.1"
   }

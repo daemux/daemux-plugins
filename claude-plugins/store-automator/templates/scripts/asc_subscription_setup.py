@@ -66,27 +66,17 @@ def create_subscription_availability(
     available_in_new: bool = True,
 ) -> dict | None:
     """Create availability with specified territories for a subscription."""
-    territory_data = [
-        {"type": "territories", "id": tid} for tid in territory_ids
-    ]
+    territory_data = [{"type": "territories", "id": tid} for tid in territory_ids]
     resp = requests.post(
         f"{BASE_URL}/subscriptionAvailabilities",
-        json={
-            "data": {
-                "type": "subscriptionAvailabilities",
-                "attributes": {
-                    "availableInNewTerritories": available_in_new,
-                },
-                "relationships": {
-                    "subscription": {
-                        "data": {"type": "subscriptions", "id": sub_id},
-                    },
-                    "availableTerritories": {
-                        "data": territory_data,
-                    },
-                },
-            }
-        },
+        json={"data": {
+            "type": "subscriptionAvailabilities",
+            "attributes": {"availableInNewTerritories": available_in_new},
+            "relationships": {
+                "subscription": {"data": {"type": "subscriptions", "id": sub_id}},
+                "availableTerritories": {"data": territory_data},
+            },
+        }},
         headers=headers,
         timeout=TIMEOUT,
     )
@@ -172,26 +162,16 @@ def create_subscription_price(
     """Create a price entry for a subscription using a price point ID."""
     resp = requests.post(
         f"{BASE_URL}/subscriptionPrices",
-        json={
-            "data": {
-                "type": "subscriptionPrices",
-                "attributes": {
-                    "startDate": start_date,
-                    "preserveCurrentPrice": False,
+        json={"data": {
+            "type": "subscriptionPrices",
+            "attributes": {"startDate": start_date, "preserveCurrentPrice": False},
+            "relationships": {
+                "subscription": {"data": {"type": "subscriptions", "id": sub_id}},
+                "subscriptionPricePoint": {
+                    "data": {"type": "subscriptionPricePoints", "id": price_point_id},
                 },
-                "relationships": {
-                    "subscription": {
-                        "data": {"type": "subscriptions", "id": sub_id},
-                    },
-                    "subscriptionPricePoint": {
-                        "data": {
-                            "type": "subscriptionPricePoints",
-                            "id": price_point_id,
-                        },
-                    },
-                },
-            }
-        },
+            },
+        }},
         headers=headers,
         timeout=TIMEOUT,
     )
@@ -221,72 +201,49 @@ def get_review_screenshot(headers: dict, sub_id: str) -> dict | None:
     return resp.json().get("data")
 
 
-def reserve_review_screenshot(
-    headers: dict, sub_id: str, file_name: str, file_size: int,
+def upload_review_screenshot(
+    headers: dict, sub_id: str,
+    file_name: str, file_data: bytes, md5_checksum: str,
 ) -> dict | None:
-    """Reserve a review screenshot upload slot for a subscription."""
+    """Reserve, upload chunks, and commit a review screenshot in one operation."""
+    resource_type = "subscriptionAppStoreReviewScreenshots"
     resp = requests.post(
-        f"{BASE_URL}/subscriptionAppStoreReviewScreenshots",
-        json={
-            "data": {
-                "type": "subscriptionAppStoreReviewScreenshots",
-                "attributes": {
-                    "fileName": file_name,
-                    "fileSize": file_size,
-                },
-                "relationships": {
-                    "subscription": {
-                        "data": {"type": "subscriptions", "id": sub_id},
-                    },
-                },
-            }
-        },
+        f"{BASE_URL}/{resource_type}",
+        json={"data": {
+            "type": resource_type,
+            "attributes": {"fileName": file_name, "fileSize": len(file_data)},
+            "relationships": {
+                "subscription": {"data": {"type": "subscriptions", "id": sub_id}},
+            },
+        }},
         headers=headers,
         timeout=TIMEOUT,
     )
     if not resp.ok:
         print_api_errors(resp, f"reserve screenshot for subscription {sub_id}")
         return None
-    return resp.json().get("data")
-
-
-def upload_screenshot_chunks(
-    upload_operations: list, file_data: bytes,
-) -> bool:
-    """Upload binary chunks to pre-signed URLs (no Authorization header)."""
-    for op in upload_operations:
-        url = op["url"]
-        offset = op["offset"]
-        length = op["length"]
-        chunk = file_data[offset : offset + length]
+    reservation = resp.json().get("data")
+    if not reservation:
+        print(f"ERROR: Empty reservation response for subscription {sub_id}", file=sys.stderr)
+        return None
+    screenshot_id = reservation["id"]
+    for op in reservation["attributes"].get("uploadOperations", []):
+        chunk = file_data[op["offset"] : op["offset"] + op["length"]]
         op_headers = {h["name"]: h["value"] for h in op.get("requestHeaders", [])}
-        resp = requests.put(url, headers=op_headers, data=chunk, timeout=TIMEOUT)
-        if not resp.ok:
+        chunk_resp = requests.put(op["url"], headers=op_headers, data=chunk, timeout=TIMEOUT)
+        if not chunk_resp.ok:
             print(
-                f"ERROR (upload chunk at offset {offset}): "
-                f"HTTP {resp.status_code} - {resp.text[:200]}",
+                f"ERROR (upload chunk at offset {op['offset']}): "
+                f"HTTP {chunk_resp.status_code} - {chunk_resp.text[:200]}",
                 file=sys.stderr,
             )
-            return False
-    return True
-
-
-def commit_review_screenshot(
-    headers: dict, screenshot_id: str, md5_checksum: str,
-) -> dict | None:
-    """Commit an uploaded review screenshot by confirming its checksum."""
+            return None
     resp = requests.patch(
-        f"{BASE_URL}/subscriptionAppStoreReviewScreenshots/{screenshot_id}",
-        json={
-            "data": {
-                "type": "subscriptionAppStoreReviewScreenshots",
-                "id": screenshot_id,
-                "attributes": {
-                    "sourceFileChecksum": md5_checksum,
-                    "uploaded": True,
-                },
-            }
-        },
+        f"{BASE_URL}/{resource_type}/{screenshot_id}",
+        json={"data": {
+            "type": resource_type, "id": screenshot_id,
+            "attributes": {"sourceFileChecksum": md5_checksum, "uploaded": True},
+        }},
         headers=headers,
         timeout=TIMEOUT,
     )

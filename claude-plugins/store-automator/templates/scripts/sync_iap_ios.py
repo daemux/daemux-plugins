@@ -35,7 +35,6 @@ from asc_iap_api import (
     update_localization,
 )
 from asc_subscription_setup import (
-    commit_review_screenshot,
     create_subscription_availability,
     create_subscription_price,
     find_price_point_by_amount,
@@ -44,8 +43,7 @@ from asc_subscription_setup import (
     get_subscription_availability,
     get_subscription_prices,
     list_all_territory_ids,
-    reserve_review_screenshot,
-    upload_screenshot_chunks,
+    upload_review_screenshot,
 )
 
 CURRENCY_TO_TERRITORY = {
@@ -225,27 +223,12 @@ def _sync_review_screenshot(
         return
 
     full_path = os.path.join(project_root, screenshot_path)
-
-    # Fallback: if configured path doesn't exist, pick first iPhone screenshot
     if not os.path.isfile(full_path):
-        fallback = None
-        ios_dir = os.path.join(project_root, "fastlane", "screenshots", "ios", "en-US")
-        if os.path.isdir(ios_dir):
-            for f in sorted(os.listdir(ios_dir)):
-                if f.lower().endswith(".png") and "iphone" in f.lower():
-                    fallback = os.path.join(ios_dir, f)
-                    break
-            if not fallback:
-                for f in sorted(os.listdir(ios_dir)):
-                    if f.lower().endswith(".png"):
-                        fallback = os.path.join(ios_dir, f)
-                        break
-        if fallback:
-            full_path = fallback
-            print(f"      Using fallback screenshot: {os.path.basename(full_path)}")
-        else:
-            print(f"      WARNING: Screenshot not found: {full_path}", file=sys.stderr)
+        full_path = _find_fallback_screenshot(project_root)
+        if not full_path:
+            print(f"      WARNING: Screenshot not found: {screenshot_path}", file=sys.stderr)
             return
+        print(f"      Using fallback screenshot: {os.path.basename(full_path)}")
 
     existing = get_review_screenshot(headers, sub_id)
     if existing:
@@ -257,56 +240,26 @@ def _sync_review_screenshot(
 
     file_name = os.path.basename(full_path)
     md5_checksum = hashlib.md5(file_data).hexdigest()
-
-    reservation = reserve_review_screenshot(headers, sub_id, file_name, len(file_data))
-    if not reservation:
-        print("      WARNING: Failed to reserve screenshot upload", file=sys.stderr)
-        return
-
-    screenshot_id = reservation["id"]
-    upload_ops = reservation["attributes"].get("uploadOperations", [])
-
-    success = upload_screenshot_chunks(upload_ops, file_data)
-    if not success:
-        print("      WARNING: Screenshot chunk upload failed, skipping commit", file=sys.stderr)
-        return
-    result = commit_review_screenshot(headers, screenshot_id, md5_checksum)
+    result = upload_review_screenshot(headers, sub_id, file_name, file_data, md5_checksum)
     if result:
         print(f"      Review screenshot uploaded: {file_name}")
     else:
-        print("      WARNING: Failed to commit screenshot upload", file=sys.stderr)
+        print("      WARNING: Failed to upload screenshot", file=sys.stderr)
 
 
-def validate_env() -> tuple:
-    """Validate required environment variables. Returns (key_id, issuer_id, private_key, bundle_id, project_root)."""
-    required_vars = [
-        "APP_STORE_CONNECT_KEY_IDENTIFIER",
-        "APP_STORE_CONNECT_ISSUER_ID",
-        "APP_STORE_CONNECT_PRIVATE_KEY",
-        "BUNDLE_ID",
-        "PROJECT_ROOT",
-    ]
-    values = {var: os.environ.get(var, "") for var in required_vars}
-    missing = [var for var, val in values.items() if not val]
-    if missing:
-        print(f"ERROR: Missing required environment variables: {', '.join(missing)}", file=sys.stderr)
-        sys.exit(1)
-    return tuple(values.values())
-
-
-def load_iap_config(config_path: str) -> dict:
-    """Load and validate the IAP config file."""
-    if not os.path.isfile(config_path):
-        print(f"ERROR: IAP config file not found: {config_path}", file=sys.stderr)
-        sys.exit(1)
-
-    with open(config_path, "r", encoding="utf-8") as f:
-        config = json.load(f)
-
-    if not config.get("subscription_groups"):
-        print("WARNING: No subscription_groups found in config", file=sys.stderr)
-
-    return config
+def _find_fallback_screenshot(project_root: str) -> str | None:
+    """Find the first iPhone PNG screenshot in fastlane/screenshots/ios/en-US/."""
+    ios_dir = os.path.join(project_root, "fastlane", "screenshots", "ios", "en-US")
+    if not os.path.isdir(ios_dir):
+        return None
+    files = sorted(os.listdir(ios_dir))
+    for f in files:
+        if f.lower().endswith(".png") and "iphone" in f.lower():
+            return os.path.join(ios_dir, f)
+    for f in files:
+        if f.lower().endswith(".png"):
+            return os.path.join(ios_dir, f)
+    return None
 
 
 def main() -> None:
@@ -314,8 +267,27 @@ def main() -> None:
         print(f"Usage: {sys.argv[0]} <path/to/iap_config.json>", file=sys.stderr)
         sys.exit(1)
 
+    # Validate required environment variables
+    required_vars = [
+        "APP_STORE_CONNECT_KEY_IDENTIFIER", "APP_STORE_CONNECT_ISSUER_ID",
+        "APP_STORE_CONNECT_PRIVATE_KEY", "BUNDLE_ID", "PROJECT_ROOT",
+    ]
+    env = {var: os.environ.get(var, "") for var in required_vars}
+    missing = [var for var, val in env.items() if not val]
+    if missing:
+        print(f"ERROR: Missing env vars: {', '.join(missing)}", file=sys.stderr)
+        sys.exit(1)
+    key_id, issuer_id, private_key, bundle_id, project_root = env.values()
+
+    # Load IAP config
     config_path = sys.argv[1]
-    key_id, issuer_id, private_key, bundle_id, project_root = validate_env()
+    if not os.path.isfile(config_path):
+        print(f"ERROR: IAP config file not found: {config_path}", file=sys.stderr)
+        sys.exit(1)
+    with open(config_path, "r", encoding="utf-8") as f:
+        config = json.load(f)
+    if not config.get("subscription_groups"):
+        print("WARNING: No subscription_groups found in config", file=sys.stderr)
 
     token = get_jwt_token(key_id, issuer_id, private_key)
     headers = {
@@ -323,13 +295,11 @@ def main() -> None:
         "Content-Type": "application/json",
     }
 
-    config = load_iap_config(config_path)
     app_id = get_app_id(headers, bundle_id)
     print(f"App ID: {app_id} (Bundle: {bundle_id})")
 
     existing_groups = list_subscription_groups(headers, app_id)
     results = []
-
     for group_config in config.get("subscription_groups", []):
         result = sync_subscription_group(
             headers, app_id, group_config, existing_groups, project_root,
