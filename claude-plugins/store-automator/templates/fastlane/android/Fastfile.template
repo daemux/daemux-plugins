@@ -65,25 +65,27 @@ platform :android do
   end
 
   lane :upload_metadata_android do
-    # Metadata (title, descriptions) and images/screenshots are app-level
-    # properties, NOT release-level.  Passing track/release_status causes
-    # supply to create or update a release during the edit commit.  For draft
-    # apps (never published) Google rejects any non-draft release, the commit
-    # fails, and ALL metadata changes are discarded.
-    #
-    # By omitting track, version_code, and release_status we upload only
-    # store-listing data.  The edit commits without touching any release.
+    # Fetch the latest version code from the track so supply can resolve
+    # the correct release when multiple exist on the same track.
+    codes = google_play_track_version_codes(
+      **base_play_store_options,
+      track: ENV.fetch("GOOGLE_PLAY_TRACK", "internal")
+    )
+    version_code = codes.first || ENV.fetch("VERSION_CODE", "1")
+    status = ENV.fetch("RELEASE_STATUS", "draft")
+
     link_screenshots_into_metadata
+
     upload_to_play_store(
-      package_name: ENV["PACKAGE_NAME"],
-      json_key: ENV["GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH"],
+      **base_play_store_options,
+      track: ENV.fetch("GOOGLE_PLAY_TRACK", "internal"),
+      version_code: version_code,
+      release_status: status,
+      changes_not_sent_for_review: true,
       skip_upload_aab: true,
       skip_upload_apk: true,
-      skip_upload_metadata: false,
-      skip_upload_screenshots: false,
-      skip_upload_images: false,
-      skip_upload_changelogs: true,
-      metadata_path: METADATA_DIR
+      metadata_path: METADATA_DIR,
+      skip_upload_changelogs: true
     )
   end
 
