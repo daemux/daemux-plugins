@@ -1,6 +1,6 @@
 {
   "name": "@daemux/store-automator",
-  "version": "0.10.42",
+  "version": "0.10.43",
   "description": "Full App Store & Google Play automation for Flutter apps with Claude Code agents",
   "type": "module",
   "bin": {
