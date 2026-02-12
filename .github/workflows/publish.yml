@@ -2,8 +2,14 @@ name: Publish to npm
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [main]
+    paths:
+      - 'packages/**'
+      - 'llm-providers/**'
+      - 'channels/**'
+      - 'features/**'
+      - 'scripts/auto-version.mjs'
+  workflow_dispatch:
 
 jobs:
   publish:
@@ -28,9 +34,25 @@ jobs:
 
       - run: bun install
 
+      - name: Configure npm auth
+        run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Auto-version all packages
+        id: versions
+        run: |
+          SDK_VERSION=$(node scripts/auto-version.mjs packages/plugin-sdk)
+          echo "sdk_version=$SDK_VERSION" >> $GITHUB_OUTPUT
+          echo "plugin-sdk: $SDK_VERSION"
+          for pkg in llm-providers/anthropic-provider channels/telegram-adapter features/human-behavior features/transcription; do
+            VERSION=$(node scripts/auto-version.mjs "$pkg")
+            echo "$pkg: $VERSION"
+          done
+
       - name: Resolve workspace dependencies
         run: |
-          SDK_VERSION=$(node -p "require('./packages/plugin-sdk/package.json').version")
+          SDK_VERSION="${{ steps.versions.outputs.sdk_version }}"
           grep -rl '"workspace:\*"' --include='package.json' | while read f; do
             sed -i "s/\"workspace:\\*\"/\"^${SDK_VERSION}\"/" "$f"
           done
@@ -38,14 +60,14 @@ jobs:
       - run: npm run build
 
       - name: Publish plugin-sdk
-        run: npm -w packages/plugin-sdk publish --access public 2>&1 || echo "::warning::Failed to publish plugin-sdk (may already exist)"
+        run: npm -w packages/plugin-sdk publish --access public
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish all packages
         run: |
           for pkg in llm-providers/anthropic-provider channels/telegram-adapter features/human-behavior features/transcription; do
-            npm -w "$pkg" publish --access public 2>&1 || echo "::warning::Failed to publish $pkg (may already exist)"
+            npm -w "$pkg" publish --access public
           done
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
