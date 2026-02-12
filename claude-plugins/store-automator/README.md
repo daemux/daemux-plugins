@@ -113,7 +113,7 @@ npx store-automator
 
 | Flag | Description |
 |------|-------------|
-| `--domain=DOMAIN` | Web domain (e.g., myapp-pages.pages.dev) |
+| `--domain=DOMAIN` | Web domain (e.g., myapp-pages.workers.dev) |
 | `--cf-project-name=NAME` | Cloudflare Pages project name |
 | `--tagline=TEXT` | App tagline |
 | `--primary-color=HEX` | Primary color (e.g., #2563EB) |
@@ -168,7 +168,7 @@ npx @daemux/store-automator \
   --track=internal \
   --rollout-fraction=1.0 \
   --in-app-update-priority=3 \
-  --domain=amazingapp-pages.pages.dev \
+  --domain=amazingapp-pages.workers.dev \
   --cf-project-name=amazingapp-pages \
   --tagline="The best utility app ever" \
   --primary-color="#2563EB" \

@@ -235,7 +235,7 @@ async function main() {
     console.log(result.success ? "\nDeployment successful!" : "\nDeployment created:");
     console.log(`  URL: ${url}`);
     if (result.success) {
-      console.log(`  Production: https://${projectName}.pages.dev`);
+      console.log(`  Production: https://${projectName}.workers.dev`);
     }
   } else {
     console.log("\nDeployment response:", JSON.stringify(result, null, 2));

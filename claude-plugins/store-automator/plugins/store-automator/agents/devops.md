@@ -220,10 +220,10 @@ Set via environment variables or `.mcp.json`:
 After deployment:
 1. Check the output URL is accessible
 2. Verify each page loads correctly:
-   - `https://<project>.pages.dev/marketing.html`
-   - `https://<project>.pages.dev/privacy.html`
-   - `https://<project>.pages.dev/terms.html`
-   - `https://<project>.pages.dev/support.html`
+   - `https://<project>.workers.dev/marketing.html`
+   - `https://<project>.workers.dev/privacy.html`
+   - `https://<project>.workers.dev/terms.html`
+   - `https://<project>.workers.dev/support.html`
 3. Confirm template variables were replaced (no `${VAR}` in output)
 4. Update store metadata URLs if this is the first deployment:
    - `fastlane/metadata/ios/{locale}/privacy_url.txt`
@@ -237,7 +237,7 @@ OPERATION: Deploy Cloudflare Pages
 PROJECT: [cloudflare-project-name]
 RESULT: Success | Failed
 URL: [deployment-url]
-PRODUCTION: https://[project].pages.dev
+PRODUCTION: https://[project].workers.dev
 
 Pages deployed:
 - [page]: [status]

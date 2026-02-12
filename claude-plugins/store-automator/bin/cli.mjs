@@ -111,7 +111,7 @@ Android Store Settings:
   --in-app-update-priority=N     In-app update priority (0-5)
 
 Web Settings:
-  --domain=DOMAIN                Web domain (e.g., myapp-pages.pages.dev)
+  --domain=DOMAIN                Web domain (e.g., myapp-pages.workers.dev)
   --cf-project-name=NAME         Cloudflare Pages project name
   --tagline=TEXT                  App tagline
   --primary-color=HEX            Primary color (e.g., #2563EB)
