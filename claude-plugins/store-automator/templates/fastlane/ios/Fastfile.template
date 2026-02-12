@@ -80,7 +80,8 @@ platform :ios do
         skip_metadata: !metadata_changed?("fastlane/metadata/ios/"),
         skip_screenshots: !metadata_changed?("fastlane/screenshots/ios/"),
         run_precheck_before_submit: true,
-        precheck_include_in_app_purchases: false
+        precheck_include_in_app_purchases: false,
+        wait_processing_timeout_duration: 1800
       )
     )
   end
@@ -99,12 +100,13 @@ platform :ios do
 
   lane :upload_binary_ios do
     deliver(
-      base_deliver_options.merge(submission_options).merge(
+      base_deliver_options.merge(
         ipa: Dir.glob("#{APP_DIR}/build/ios/ipa/*.ipa").first,
         skip_metadata: true,
         skip_screenshots: true,
-        run_precheck_before_submit: true,
-        precheck_include_in_app_purchases: false
+        run_precheck_before_submit: false,
+        submit_for_review: false,
+        wait_processing_timeout_duration: 1800
       )
     )
   end
