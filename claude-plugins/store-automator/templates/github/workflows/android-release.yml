@@ -14,7 +14,7 @@ env:
 
 jobs:
   android-release:
-    runs-on: macos-latest-xlarge
+    runs-on: macos-latest
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
