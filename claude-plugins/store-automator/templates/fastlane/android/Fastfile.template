@@ -7,6 +7,23 @@ APP_DIR  = ENV.fetch("APP_ROOT", "#{ROOT_DIR}/app")
 APP_DIR  = "#{ROOT_DIR}/#{APP_DIR}" unless APP_DIR.start_with?("/")
 
 AAB_PATH = "#{APP_DIR}/build/app/outputs/bundle/release/app-release.aab"
+METADATA_DIR  = "#{ROOT_DIR}/fastlane/metadata/android"
+SCREENSHOT_DIR = "#{ROOT_DIR}/fastlane/screenshots/android"
+
+# Fastlane supply expects screenshots at {metadata_path}/{locale}/images/.
+# Our screenshots live in a separate directory (fastlane/screenshots/android/{locale}/).
+# Bridge the gap by symlinking each locale's screenshot folder into the metadata tree.
+def link_screenshots_into_metadata
+  return unless File.directory?(SCREENSHOT_DIR)
+  Dir.glob("#{SCREENSHOT_DIR}/*/").each do |locale_dir|
+    locale = File.basename(locale_dir)
+    images_link = "#{METADATA_DIR}/#{locale}/images"
+    next if File.exist?(images_link)
+    FileUtils.mkdir_p("#{METADATA_DIR}/#{locale}")
+    FileUtils.ln_s(locale_dir.chomp("/"), images_link)
+    Fastlane::UI.message("Linked screenshots: #{images_link} -> #{locale_dir.chomp('/')}")
+  end
+end
 
 def metadata_changed?(path)
   !sh("git diff --name-only HEAD~1 -- #{path}").strip.empty?
@@ -32,6 +49,7 @@ end
 
 platform :android do
   lane :deploy_android do
+    link_screenshots_into_metadata
     status = ENV.fetch("RELEASE_STATUS", "draft")
     opts = base_play_store_options.merge(
       aab: AAB_PATH,
@@ -40,7 +58,7 @@ platform :android do
       skip_upload_screenshots: !metadata_changed?("fastlane/screenshots/android/"),
       skip_upload_images: !metadata_changed?("fastlane/screenshots/android/"),
       skip_upload_changelogs: false,
-      metadata_path: "#{ROOT_DIR}/fastlane/metadata/android"
+      metadata_path: METADATA_DIR
     )
     opts.merge!(rollout_options) unless status == "draft"
     upload_to_play_store(opts)
@@ -63,6 +81,7 @@ platform :android do
     # this keeps working after the first production release.
     status = ENV.fetch("RELEASE_STATUS", "draft")
 
+    link_screenshots_into_metadata
     upload_to_play_store(
       base_play_store_options.merge(
         version_code: latest_code,
@@ -73,7 +92,7 @@ platform :android do
         skip_upload_screenshots: false,
         skip_upload_images: false,
         skip_upload_changelogs: true,
-        metadata_path: "#{ROOT_DIR}/fastlane/metadata/android"
+        metadata_path: METADATA_DIR
       )
     )
   end
