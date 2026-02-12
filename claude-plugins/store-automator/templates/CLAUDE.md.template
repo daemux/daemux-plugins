@@ -14,7 +14,7 @@ This is a Flutter app with Firebase backend, automated for App Store and Google 
 - If unsure which agent to use, use the Task tool with a general-purpose, explore or any other built-in agent
 
 ### DevOps Agent Required
-ALL deployment and infrastructure operations SHOULD use the devops agent (codemagic, firebase, cloudflare, database/migrate, database/optimize).
+ALL deployment and infrastructure operations SHOULD use the devops agent (codemagic, firebase, cloudflare, database/deploy, database/optimize).
 Prefer using the devops agent over direct Bash/SSH for structured operations.
 
 ### Code Quality (enforced by agents)
@@ -127,7 +127,7 @@ appstore-meta-creator → appstore-reviewer
 
 #### Database Flow
 ```
-devops(database,migrate) → simplifier → reviewer → product-manager(POST) → [devops(firebase)]
+architect → developer(backend) → simplifier → reviewer → product-manager(POST) → [devops(firebase)]
 ```
 
 #### Infra Flow
@@ -140,6 +140,39 @@ devops (standalone)
 architect → product-manager(PRE) → app-designer → developer(flutter) → simplifier → reviewer → tester(flutter) → tester(mobile-ui) → appstore-meta-creator → appstore-reviewer → product-manager(POST) → devops(codemagic)
 ```
 
+#### Team Size Annotations
+
+Flows above use single agents by default. For tasks touching 3+ files, apply team sizes:
+
+| Files Touched | Team Size |
+|--------------|-----------|
+| 1-2 files | Single agent (no team) |
+| 3-4 files | 2 teammates |
+| 5-7 files | 3 teammates |
+| 8+ files | 4 teammates |
+
+**Team-annotated flows** (apply when task scope exceeds 2 files):
+
+##### Standard Flow (with teams)
+```
+architect{T:2} → product-manager(PRE) → developer{T:2-4} → simplifier → reviewer{T:2} → tester{T:2} → product-manager(POST) → [devops]
+```
+
+##### Flutter Flow (with teams)
+```
+architect{T:2} → product-manager(PRE) → [app-designer{T:2-3}] → developer(flutter){T:2-4} → simplifier → reviewer{T:2-3} → tester(flutter){T:2} → tester(mobile-ui){T:2} → product-manager(POST) → [devops(codemagic)]
+```
+
+##### Backend Flow (with teams)
+```
+architect{T:2} → product-manager(PRE) → developer(backend){T:2-4} → simplifier → reviewer{T:2} → tester(backend){T:2} → product-manager(POST) → [devops(firebase)]
+```
+
+##### Full Publishing Flow (with teams)
+```
+architect{T:2} → product-manager(PRE) → app-designer{T:2-3} → developer(flutter){T:2-4} → simplifier → reviewer{T:2-3} → tester(flutter){T:2} → tester(mobile-ui){T:2} → appstore-meta-creator{T:2-5} → appstore-reviewer → product-manager(POST) → devops(codemagic)
+```
+
 ### Agents Reference
 
 | Agent | When to use |
@@ -150,7 +183,7 @@ architect → product-manager(PRE) → app-designer → developer(flutter) → s
 | simplifier | AFTER developer - simplifies Dart/Flutter code |
 | reviewer | After ANY code changes - Dart/Flutter quality review |
 | tester | After review passes (type: flutter/mobile-ui/web/backend/integration) |
-| devops | Operations (mode: codemagic/firebase/cloudflare/database+migrate/database+optimize) |
+| devops | Operations (mode: codemagic/firebase/cloudflare/database+deploy/database+optimize) |
 | app-designer | Stitch MCP design: app screens + store screenshots + web page design |
 | appstore-meta-creator | Generate store listing texts for all configured languages |
 | appstore-reviewer | Full App Store/Play compliance review including live app UI testing via mobile-mcp |
@@ -240,21 +273,42 @@ Push to main. Codemagic detects changes and uploads modified assets. Version aut
 **If you are a TEAMMATE, skip to "For Teammates" section below.**
 ---
 
-### Agent Teams (Evaluate per stage)
+### Agent Teams (MANDATORY by default)
 
-**You MUST evaluate team suitability for EACH workflow stage and print your decision in the output format.**
+**Teams are the DEFAULT for most workflow stages.** Single-agent is the exception, not the norm.
 
-Evaluate each stage independently — a task may use single agents for some stages and teams for others.
+#### Mandatory Team Stages
 
-**Use team for a stage when:**
-- Multiple perspectives improve quality
-- Competing approaches find better solutions
-- Stage work splits into independent file groups
+These stages MUST use teams unless the task touches fewer than 3 files:
 
-**Use single agent for a stage when:**
-- Work touches the same files
-- Stage is a single focused operation
-- Adding perspectives adds no value
+| Stage | Default Size | Split Strategy |
+|-------|-------------|----------------|
+| architect | 2 | Split by concern: structure/patterns vs integration/data-flow |
+| developer | 2-4 | Split by file group: screens/widgets vs providers/repos vs Firebase/backend |
+| reviewer | 2-3 | Split by focus: Dart quality vs security+Firebase rules vs performance+store compliance |
+| tester | 2-4 | Split by type: flutter unit/widget vs mobile-ui iOS vs mobile-ui Android vs web |
+| app-designer | 2-3 | Split by deliverable: app screens vs store screenshots vs web page |
+| appstore-meta-creator | 2-5 | Split by language group: each teammate handles 2-5 languages grouped by similarity |
+
+#### Single-Agent Stages (exceptions)
+
+These stages stay single-agent — teams add no value:
+
+| Stage | Reason |
+|-------|--------|
+| simplifier | Works on same files developer just touched — no parallelism possible |
+| product-manager | Single evaluation checkpoint — multiple perspectives don't help |
+| devops | Single deployment target — cannot parallelize |
+| appstore-reviewer | Single compliance evaluation — one holistic review needed |
+
+#### Team Size Triggers
+
+| Files Touched | Team Size |
+|--------------|-----------|
+| 1-2 files | Single agent — TEAM EXCEPTION |
+| 3-4 files | 2 teammates |
+| 5-7 files | 3 teammates |
+| 8+ files | 4 teammates |
 
 **Team Enforcement (MANDATORY):**
 If `TEAMS:` output includes any stage using teams, you MUST call `TeamCreate` before spawning agents for that stage. Spawning agents via `Task` without `team_name` does NOT count as using teams. Violation = workflow non-compliance.
@@ -324,7 +378,7 @@ TASK TYPE: [flutter/backend/design/metadata/database/infra/standard]
 RECOMMENDED FLOW:
 <copy the EXACT flow from Agent Flows section - include ALL agents with [optional] ones>
 
-TEAMS: [per-stage evaluation: which stages use teams and why, or NO if all stages use single agents]
+TEAMS: [MANDATORY — list team stages with sizes. Single-agent exceptions: list which stages and why. "NO" only valid for tasks <3 files]
 
 DEPLOYMENT: [AVAILABLE - deployment configured | NOT CONFIGURED - workflow ends at product-manager(POST)]
 
@@ -342,7 +396,7 @@ LAUNCHING: [first-agent-name]
 - **backend**: `architect → product-manager(PRE) → developer(backend) → simplifier → reviewer → tester(backend) → product-manager(POST) → [devops(firebase)]`
 - **design**: `app-designer → appstore-reviewer`
 - **metadata**: `appstore-meta-creator → appstore-reviewer`
-- **database**: `devops(database,migrate) → simplifier → reviewer → product-manager(POST) → [devops(firebase)]`
+- **database**: `architect → developer(backend) → simplifier → reviewer → product-manager(POST) → [devops(firebase)]`
 - **infra**: `devops (standalone)`
 - **standard**: `architect → product-manager(PRE) → developer → simplifier → reviewer → tester → product-manager(POST) → [devops]`
 

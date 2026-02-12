@@ -19,10 +19,10 @@ fi
 
 # --- Check if IAP plugin is available ---
 cd "$APP_ROOT/android"
-if ! bundle exec gem list fastlane-plugin-iap --installed 2>/dev/null; then
-  echo "WARNING: fastlane-plugin-iap not installed. Skipping IAP sync."
-  echo "To enable: add it to app/android/Pluginfile and run 'bundle install'."
-  exit 0
+if ! bundle exec gem list fastlane-plugin-iap --installed; then
+  echo "ERROR: fastlane-plugin-iap not installed." >&2
+  echo "To enable: add it to app/android/Pluginfile and run 'bundle install'." >&2
+  exit 1
 fi
 
 # --- Hash-based change detection ---

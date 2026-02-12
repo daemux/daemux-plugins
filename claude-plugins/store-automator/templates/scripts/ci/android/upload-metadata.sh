@@ -60,14 +60,12 @@ echo "$FASTLANE_OUTPUT"
 if [ $FASTLANE_EXIT -ne 0 ]; then
   # Google Play API rejects non-draft edits on apps that have never been
   # published.  This resolves after the first manual release via the Play
-  # Console, so we warn instead of failing the workflow.
+  # Console.  Hard-fail so the CI run surfaces the issue immediately.
   if echo "$FASTLANE_OUTPUT" | grep -qi "draft app"; then
-    echo ""
-    echo "WARNING: Metadata upload failed because the app is still in draft"
-    echo "         state on Google Play.  Complete the first release manually"
-    echo "         via the Play Console, then re-run this workflow."
-    echo ""
-    exit 0
+    echo "ERROR: Metadata upload failed because the app is still in draft" >&2
+    echo "       state on Google Play.  Complete the first release manually" >&2
+    echo "       via the Play Console, then re-run this workflow." >&2
+    exit 1
   fi
   exit $FASTLANE_EXIT
 fi

@@ -47,7 +47,8 @@ if [ "${GOOGLE_PLAY_READY:-false}" != "true" ]; then
     fi
   fi
 elif [ ! -f "$PROJECT_ROOT/$GOOGLE_SA_JSON_PATH" ]; then
-  echo "WARNING: Service account JSON not found. Using default version code."
+  echo "ERROR: Service account JSON not found at $PROJECT_ROOT/$GOOGLE_SA_JSON_PATH" >&2
+  exit 1
 else
   SA_FULL_PATH="$PROJECT_ROOT/$GOOGLE_SA_JSON_PATH"
   cd "$APP_ROOT/android"
@@ -65,7 +66,7 @@ else
     package_name:"$PACKAGE_NAME" \
     json_key:"$SA_FULL_PATH" \
     track:"$TRACK" 2>&1 \
-    | grep -oE '[0-9]+' | sort -n | tail -1 || echo "0")
+    | grep -oE '[0-9]+' | sort -n | tail -1)
 
   # Fallback: direct Ruby Supply::Client API
   if [ -z "$LATEST_CODE" ] || [ "$LATEST_CODE" = "0" ]; then
@@ -83,22 +84,22 @@ Supply.config = FastlaneCore::Configuration.create(
 )
 
 client = Supply::Client.make_from_config
-begin
-  all_codes = []
-  ['internal', 'alpha', 'beta', 'production'].each do |track|
-    begin
-      track_codes = client.track_version_codes(track)
-      all_codes.concat(track_codes) if track_codes
-    rescue => e
-      # Track may not exist yet
-    end
+all_codes = []
+['internal', 'alpha', 'beta', 'production'].each do |track|
+  begin
+    track_codes = client.track_version_codes(track)
+    all_codes.concat(track_codes) if track_codes
+  rescue => e
+    # Track may not exist yet
   end
-  puts all_codes.max || 0
-rescue => e
-  STDERR.puts \"Warning: Could not fetch version codes: #{e.message}\"
-  puts 0
 end
-" 2>/dev/null || echo "0")
+puts all_codes.max || 0
+")
+  fi
+
+  if [ -z "$LATEST_CODE" ]; then
+    echo "ERROR: Failed to fetch version codes from Google Play" >&2
+    exit 1
   fi
 
   echo "Latest version code from Google Play: $LATEST_CODE"

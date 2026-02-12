@@ -84,7 +84,40 @@ If a `.claude/.tasks/` file path is provided, read ONLY that file for requiremen
 Scan the codebase for already-implemented items. Pick 3-5 UNIMPLEMENTED
 related requirements. Design only those. Report: "Batch: N of ~M remaining."
 
+## Team Composition Recommendation
+
+**MANDATORY section in your output.** The orchestrator uses this to create teams.
+
+After your architecture design, include this section:
+
+```
+### Team Recommendations for Orchestrator
+
+**Files touched:** {count}
+
+#### Developer Team
+- **Teammates:** {N} (based on file count: 3-4 files → 2, 5-7 → 3, 8+ → 4)
+- **Teammate 1 scope:** {list of files} — {what they implement}
+- **Teammate 2 scope:** {list of files} — {what they implement}
+- **Teammate N scope:** ...
+- **Rationale:** {why this split works — e.g., "independent feature modules" or "separate layers"}
+
+#### Reviewer Team
+- **Teammates:** 2
+- **Reviewer 1 focus:** Code quality, patterns, maintainability — files: {list}
+- **Reviewer 2 focus:** Security, performance, edge cases — files: {list}
+
+#### Tester Team
+- **Teammates:** 2
+- **Tester 1 focus:** Unit tests, integration tests — {scope}
+- **Tester 2 focus:** E2E tests, acceptance criteria — {scope}
+
+**TEAM EXCEPTION:** If task touches <3 files, output: "Files touched: {N} — below team threshold, single agents recommended."
+```
+
+Include concrete file assignments. The orchestrator will use this to create `TeamCreate` with the exact scopes you specify.
+
 ## Output Footer
 ```
-NEXT: product-manager(PRE) to validate approach before implementation
+NEXT: product-manager(PRE) to validate approach and team composition before implementation
 ```

@@ -152,14 +152,19 @@ af, am, ar, hy-AM, az-AZ, eu-ES, be, bn-BD, bg, my-MM, ca, zh-HK, zh-CN, zh-TW, 
 ## Translation Process
 
 1. Create complete English (en-US) metadata for both platforms first
-2. For EACH target language from ci.config.yaml metadata.languages, spawn a sub-agent (Task tool) with:
-   - The complete English source texts for all files
-   - Target locale code (Apple and Google variants)
-   - Platform (ios and android)
-   - Character limits per field (critical -- translations often expand 20-40%)
-   - Translation instructions (see below)
-3. Launch up to 10 sub-agents in parallel for speed
-4. Each sub-agent writes files directly to the correct locale directory
+2. Group target languages from ci.config.yaml metadata.languages by similarity:
+   - Romance: es-ES, es-MX, fr-FR, fr-CA, it, pt-BR, pt-PT, ro, ca, gl-ES
+   - Germanic: de-DE, nl-NL, sv, da, no, fi
+   - Slavic: ru, uk, pl, cs, sk, hr, bg, sr, sl, mk-MK, be
+   - CJK: ja, ko, zh-Hans, zh-Hant, zh-Hant-HK, zh-CN, zh-TW, zh-HK
+   - South/Southeast Asian: hi, th, vi, id, ms, bn-BD, ta-IN, te-IN, ml-IN, mr-IN, kn-IN, gu, my-MM, km-KH, lo-LA, si-LK
+   - Middle Eastern: ar, ar-SA, he, tr, fa, ur
+   - Other: hu, el, et, lv, lt, ka-GE, hy-AM, az-AZ, kk, ky-KG, mn-MN, ne-NP, af, am, sw, zu, fil, is-IS, eu-ES, rm, pa
+3. Create a translation team using TeamCreate with 2-5 teammates:
+   - Each teammate handles 2-5 language groups (based on total languages configured)
+   - Teammate prompt includes: English source texts, target locale codes (Apple + Google variants), character limits per field, translation instructions
+   - Each teammate writes files directly to the correct locale directories
+4. Wait for all teammates to complete, then verify all languages are covered
 
 ### Translation Instructions for Sub-Agents
 

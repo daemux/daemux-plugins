@@ -5,14 +5,14 @@
   },
   "metadata": {
     "description": "App Store & Google Play automation for Flutter apps",
-    "version": "0.7.1"
+    "version": "0.9.0"
   },
   "plugins": [
     {
       "name": "store-automator",
       "source": "./plugins/store-automator",
       "description": "3 agents for app store publishing: reviewer, meta-creator, media-designer",
-      "version": "0.7.1",
+      "version": "0.9.0",
       "keywords": ["flutter", "app-store", "google-play", "fastlane", "codemagic"]
     }
   ]

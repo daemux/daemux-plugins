@@ -17,7 +17,7 @@ create_symlink() {
   local link="$2"
 
   if [ -e "$link" ] && [ ! -L "$link" ]; then
-    echo "WARNING: $link exists and is not a symlink. Skipping." >&2
+    echo "ERROR: $link exists and is not a symlink. Cannot create link." >&2
     return 1
   fi
 

@@ -43,6 +43,10 @@ setup_ssh_agent() {
 
   mkdir -p ~/.ssh
   ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
+  if ! grep -q "github.com" ~/.ssh/known_hosts; then
+    echo "ERROR: ssh-keyscan failed to retrieve github.com host key" >&2
+    exit 1
+  fi
 
   echo "SSH agent configured with deploy key"
 }
@@ -198,6 +202,11 @@ find_team_id() {
     TEAM_ID=$(/usr/libexec/PlistBuddy -c "Print :TeamIdentifier:0" \
       /dev/stdin <<< "$(security cms -D -i "$profile_file" 2>/dev/null)" \
       2>/dev/null || echo "")
+  fi
+
+  if [ -z "$TEAM_ID" ]; then
+    echo "ERROR: Could not extract TEAM_ID from signing identity or provisioning profile" >&2
+    exit 1
   fi
 }
 

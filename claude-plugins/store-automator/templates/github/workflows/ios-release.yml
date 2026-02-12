@@ -8,10 +8,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# Prevent concurrent iOS builds
+# Cancel in-progress runs when a newer build is triggered
 concurrency:
   group: ios-release-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   metadata:
@@ -52,7 +52,7 @@ jobs:
         run: scripts/ci/ios/sync-iap.sh
 
       - name: Save .ci-state
-        if: always()
+        if: success()
         uses: actions/cache/save@v4
         with:
           path: .ci-state

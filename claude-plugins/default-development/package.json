@@ -1,6 +1,6 @@
 {
   "name": "@daemux/claude-plugin",
-  "version": "1.25.0",
+  "version": "1.26.0",
   "description": "Install and manage Daemux Claude Code plugins",
   "type": "module",
   "bin": {

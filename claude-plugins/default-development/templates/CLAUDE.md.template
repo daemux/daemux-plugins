@@ -10,7 +10,7 @@
 - If unsure which agent to use, use the Task tool with a general-purpose, explore or any other built-in agent
 
 ### DevOps Agent Required
-ALL deployment and infrastructure operations SHOULD use the devops agent (deploy, logs, status, migrations, database/server optimization).
+ALL deployment and infrastructure operations SHOULD use the devops agent (deploy, logs, status, database/server optimization).
 Prefer using the devops agent over direct Bash/SSH for structured operations.
 
 ### Code Quality (enforced by agents)
@@ -61,12 +61,40 @@ architect → product-manager(PRE) → [designer] → developer(frontend) → si
 
 #### Database Flow
 ```
-devops(database,migrate) → simplifier → reviewer → product-manager(POST) → [devops(deploy)]
+architect → developer(backend) → simplifier → reviewer → product-manager(POST) → [devops(deploy)]
 ```
 
 #### Infra Flow
 ```
 devops (standalone)
+```
+
+#### Team Size Annotations
+
+Flows above use single agents by default. For tasks touching 3+ files, apply team sizes:
+
+| Files Touched | Team Size |
+|--------------|-----------|
+| 1-2 files | Single agent (no team) |
+| 3-4 files | 2 teammates |
+| 5-7 files | 3 teammates |
+| 8+ files | 4 teammates |
+
+**Team-annotated flows** (apply when task scope exceeds 2 files):
+
+##### Standard Flow (with teams)
+```
+architect{T:2} → product-manager(PRE) → developer{T:2-4} → simplifier → reviewer{T:2} → tester{T:2} → product-manager(POST) → [devops]
+```
+
+##### Backend Flow (with teams)
+```
+architect{T:2} → product-manager(PRE) → developer(backend){T:2-4} → simplifier → reviewer{T:2} → tester(backend){T:2} → product-manager(POST) → [devops]
+```
+
+##### Frontend Flow (with teams)
+```
+architect{T:2} → product-manager(PRE) → [designer{T:2}] → developer(frontend){T:2-4} → simplifier → reviewer{T:2} → tester(frontend){T:2} → product-manager(POST) → [devops]
 ```
 
 ### Agents Reference
@@ -79,7 +107,7 @@ devops (standalone)
 | simplifier | AFTER developer - simplifies code |
 | reviewer | After ANY code changes |
 | tester | After review passes (auto-detects context) |
-| devops | DevOps operations (mode: deploy/database+migrate/database+optimize/server+migrate/server+optimize) |
+| devops | DevOps operations (mode: deploy/database+deploy/database+optimize/server+migrate/server+optimize) |
 | designer | UI/UX design specs before frontend development |
 | designer(review) | After developer: design review + generate assets via MCP tools if needed |
 | Explore (Task tool) | Read/understand code |
@@ -139,21 +167,40 @@ Missing evidence means run that agent first. Do NOT proceed without it.
 **If you are a TEAMMATE, skip to "For Teammates" section below.**
 ---
 
-### Agent Teams (Evaluate per stage)
+### Agent Teams (MANDATORY by default)
 
-**You MUST evaluate team suitability for EACH workflow stage and print your decision in the output format.**
+**Teams are the DEFAULT for most workflow stages.** Single-agent is the exception, not the norm.
 
-Evaluate each stage independently — a task may use single agents for some stages and teams for others.
+#### Mandatory Team Stages
 
-**Use team for a stage when:**
-- Multiple perspectives improve quality
-- Competing approaches find better solutions
-- Stage work splits into independent file groups
+These stages MUST use teams unless the task touches fewer than 3 files:
 
-**Use single agent for a stage when:**
-- Work touches the same files
-- Stage is a single focused operation
-- Adding perspectives adds no value
+| Stage | Default Size | Split Strategy |
+|-------|-------------|----------------|
+| architect | 2 | Split by concern: structure/patterns vs integration/data-flow |
+| developer | 2-4 | Split by file group: each teammate owns distinct files |
+| reviewer | 2 | Split by focus: code quality/patterns vs security/performance |
+| tester | 2 | Split by scope: unit/integration vs e2e/acceptance |
+| designer | 2 | Split by deliverable: layout/structure vs styling/interactions |
+
+#### Single-Agent Stages (exceptions)
+
+These stages stay single-agent — teams add no value:
+
+| Stage | Reason |
+|-------|--------|
+| simplifier | Works on same files developer just touched — no parallelism possible |
+| product-manager | Single evaluation checkpoint — multiple perspectives don't help |
+| devops | Single deployment target — cannot parallelize |
+
+#### Team Size Triggers
+
+| Files Touched | Team Size |
+|--------------|-----------|
+| 1-2 files | Single agent — TEAM EXCEPTION |
+| 3-4 files | 2 teammates |
+| 5-7 files | 3 teammates |
+| 8+ files | 4 teammates |
 
 **Team Enforcement (MANDATORY):**
 If `TEAMS:` output includes any stage using teams, you MUST call `TeamCreate` before spawning agents for that stage. Spawning agents via `Task` without `team_name` does NOT count as using teams. Violation = workflow non-compliance.
@@ -223,7 +270,7 @@ TASK TYPE: [backend/frontend/database/infra/standard]
 RECOMMENDED FLOW:
 <copy the EXACT flow from Agent Flows section - include ALL agents with [optional] ones>
 
-TEAMS: [per-stage evaluation: which stages use teams and why, or NO if all stages use single agents]
+TEAMS: [MANDATORY — list team stages with sizes. Single-agent exceptions: list which stages and why. "NO" only valid for tasks <3 files]
 
 DEPLOYMENT: [AVAILABLE - deployment configured | NOT CONFIGURED - workflow ends at product-manager(POST)]
 
@@ -239,7 +286,7 @@ LAUNCHING: [first-agent-name]
 
 - **backend**: `architect → product-manager(PRE) → developer(backend) → simplifier → reviewer → tester(backend) → product-manager(POST) → [devops]`
 - **frontend**: `architect → product-manager(PRE) → [designer] → developer(frontend) → simplifier → reviewer → tester(frontend) → product-manager(POST) → [devops]`
-- **database**: `devops(database,migrate) → simplifier → reviewer → product-manager(POST) → [devops(deploy)]`
+- **database**: `architect → developer(backend) → simplifier → reviewer → product-manager(POST) → [devops(deploy)]`
 - **infra**: `devops (standalone)`
 - **standard**: `architect → product-manager(PRE) → developer → simplifier → reviewer → tester → product-manager(POST) → [devops]`
 

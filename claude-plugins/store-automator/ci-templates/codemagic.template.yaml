@@ -34,17 +34,19 @@ workflows:
     scripts:
       - name: Link Fastlane directories
         script: |
+          set -euo pipefail
           ln -sfn "$CM_BUILD_DIR/fastlane/ios" "$CM_BUILD_DIR/$APP_ROOT/ios/fastlane"
           ln -sfn "$CM_BUILD_DIR/fastlane" "$CM_BUILD_DIR/$APP_ROOT/fastlane"
 
       - name: Ensure CERTIFICATE_PRIVATE_KEY
         script: |
+          set -euo pipefail
           KEY_FILE="$CM_BUILD_DIR/creds/ios_dist_private_key"
           if [ -f "$KEY_FILE" ]; then
             echo "Using CERTIFICATE_PRIVATE_KEY from repo creds/"
           else
-            echo "ERROR: creds/ios_dist_private_key not found in repo."
-            echo "Generate it with: ssh-keygen -t rsa -b 2048 -m PEM -f creds/ios_dist_private_key -q -N ''"
+            echo "ERROR: creds/ios_dist_private_key not found in repo." >&2
+            echo "Generate it with: ssh-keygen -t rsa -b 2048 -m PEM -f creds/ios_dist_private_key -q -N ''" >&2
             exit 1
           fi
           echo "CERTIFICATE_PRIVATE_KEY<<DELIMITER" >> $CM_ENV
@@ -54,6 +56,7 @@ workflows:
 
       - name: Set up App Store Connect API key
         script: |
+          set -euo pipefail
           echo "APP_STORE_CONNECT_KEY_IDENTIFIER=$APPLE_KEY_ID" >> $CM_ENV
           echo "APP_STORE_CONNECT_ISSUER_ID=$APPLE_ISSUER_ID" >> $CM_ENV
           echo "APP_STORE_CONNECT_PRIVATE_KEY<<KEYDELIMITER" >> $CM_ENV
@@ -67,54 +70,69 @@ workflows:
 
       - name: Install Fastlane
         script: |
+          set -euo pipefail
           cd $CM_BUILD_DIR/$APP_ROOT/ios
           gem install bundler
           bundle install
 
       - name: Ensure app record exists
         script: |
+          set -euo pipefail
           echo "=== Checking if $BUNDLE_ID exists in App Store Connect ==="
 
-          # First try: list apps filtering by bundle ID
           echo "--- Running: app-store-connect apps list --bundle-id-identifier $BUNDLE_ID ---"
-          APP_JSON=$(app-store-connect apps list \
+          if ! APP_JSON=$(app-store-connect apps list \
             --bundle-id-identifier "$BUNDLE_ID" \
             --strict-match-identifier \
-            --json 2>/tmp/asc_apps_err.log || true)
+            --json 2>/tmp/asc_apps_err.log); then
+            echo "ERROR: Failed to query App Store Connect" >&2
+            cat /tmp/asc_apps_err.log >&2 2>/dev/null || true
+            exit 1
+          fi
 
-          echo "Apps list stderr:"
-          cat /tmp/asc_apps_err.log 2>/dev/null || true
           echo "Apps list stdout (first 500 chars):"
           echo "$APP_JSON" | head -c 500
 
-          EXISTING=$(echo "$APP_JSON" | python3 -c "import sys,json; data=json.load(sys.stdin); apps=data if isinstance(data,list) else []; print('yes' if len(apps)>0 else 'no')" 2>/dev/null || echo "no")
+          EXISTING=$(echo "$APP_JSON" | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          apps = data if isinstance(data, list) else []
+          print('yes' if len(apps) > 0 else 'no')
+          ")
 
           echo "App exists result: $EXISTING"
 
           if [ "$EXISTING" = "yes" ]; then
             echo "App record found for $BUNDLE_ID"
           else
-            echo ""
-            echo "=========================================="
-            echo "BUILD STOPPED - APP RECORD NOT DETECTED"
-            echo "=========================================="
-            echo ""
-            echo "The app-store-connect CLI could not find $BUNDLE_ID."
-            echo "If you already created the app in App Store Connect,"
-            echo "this may be an API propagation delay or permission issue."
-            echo ""
-            echo "Retrying with verbose output..."
-            app-store-connect apps list --json 2>&1 | python3 -c "import sys,json;data=json.load(sys.stdin);apps=data if isinstance(data,list) else [];print(f'Total apps: {len(apps)}');[print(f'  App: {a.get(\"attributes\",{}).get(\"name\",\"?\")} | Bundle: {a.get(\"attributes\",{}).get(\"bundleId\",\"?\")} | ID: {a.get(\"id\",\"?\")}') for a in apps[:10]]" 2>&1 || true
+            echo "ERROR: App record not found for $BUNDLE_ID" >&2
+            echo "If you already created the app in App Store Connect," >&2
+            echo "this may be an API propagation delay or permission issue." >&2
+            echo "" >&2
+            echo "Listing all visible apps for debugging:" >&2
+            app-store-connect apps list --json 2>&1 | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          apps = data if isinstance(data, list) else []
+          print(f'Total apps: {len(apps)}')
+          for a in apps[:10]:
+              attrs = a.get('attributes', {})
+              name = attrs.get('name', '?')
+              bid = attrs.get('bundleId', '?')
+              print(f'  {name} | {bid} | {a.get(\"id\", \"?\")}')
+          " 2>&1 || true
             exit 1
           fi
 
       - name: Upload iOS metadata and screenshots
         script: |
+          set -euo pipefail
           cd $CM_BUILD_DIR/$APP_ROOT/ios
           bundle exec fastlane upload_metadata_ios
 
       - name: Sync IAP and subscriptions
         script: |
+          set -euo pipefail
           FORCE_FLAG=""
           if [ ! -f "$CM_BUILD_DIR/.codemagic/ios_iap_synced" ]; then
             FORCE_FLAG="--force"
@@ -139,6 +157,7 @@ workflows:
 
       - name: Set up iOS code signing
         script: |
+          set -euo pipefail
           keychain initialize
 
           # Attempt to fetch or create signing files.
@@ -189,7 +208,7 @@ workflows:
           # Verify signing artifacts exist
           P12_COUNT=$(ls /Users/builder/Library/MobileDevice/Certificates/*.p12 2>/dev/null | wc -l)
           if [ "$P12_COUNT" -eq 0 ]; then
-            echo "ERROR: No .p12 certificates found after signing setup"
+            echo "ERROR: No .p12 certificates found after signing setup" >&2
             exit 1
           fi
 
@@ -198,11 +217,19 @@ workflows:
 
       - name: Manage iOS version
         script: |
+          set -euo pipefail
           pip3 install --break-system-packages PyJWT cryptography requests
-          VERSION_JSON=$(python3 scripts/manage_version_ios.py 2>/dev/null || echo '{"version":"1.0.0","version_id":"","state":"NEW"}')
-          APP_VERSION=$(echo "$VERSION_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin)['version'])")
-          APP_VERSION_ID=$(echo "$VERSION_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin).get('version_id',''))")
-          APP_STATUS=$(echo "$VERSION_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin).get('state','NEW'))")
+          VERSION_JSON=$(python3 scripts/manage_version_ios.py)
+          eval "$(echo "$VERSION_JSON" | python3 -c "
+          import sys, json
+          d = json.load(sys.stdin)
+          v = d['version']
+          vid = d.get('version_id', '')
+          st = d.get('state', 'NEW')
+          print(f\"APP_VERSION='{v}'\")
+          print(f\"APP_VERSION_ID='{vid}'\")
+          print(f\"APP_STATUS='{st}'\")
+          ")"
           echo "APP_VERSION=$APP_VERSION" >> $CM_ENV
           echo "APP_VERSION_ID=$APP_VERSION_ID" >> $CM_ENV
           echo "APP_STATUS=$APP_STATUS" >> $CM_ENV
@@ -210,7 +237,8 @@ workflows:
 
       - name: Set Flutter version
         script: |
-          BUILD_NUMBER=$(($(app-store-connect get-latest-app-store-build-number "$BUNDLE_ID" 2>/dev/null || echo "0") + 1))
+          set -euo pipefail
+          BUILD_NUMBER=$(($(app-store-connect get-latest-app-store-build-number "$BUNDLE_ID") + 1))
           if [ -z "$APP_VERSION" ]; then
             APP_VERSION="1.0.0"
           fi
@@ -222,13 +250,18 @@ workflows:
           echo "Building: $APP_VERSION+$BUILD_NUMBER"
 
       - name: Flutter packages
-        script: cd $CM_BUILD_DIR/$APP_ROOT && flutter pub get
+        script: |
+          set -euo pipefail
+          cd $CM_BUILD_DIR/$APP_ROOT && flutter pub get
 
       - name: Build iOS
-        script: cd $CM_BUILD_DIR/$APP_ROOT && flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
+        script: |
+          set -euo pipefail
+          cd $CM_BUILD_DIR/$APP_ROOT && flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
 
       - name: Upload IPA to App Store
         script: |
+          set -euo pipefail
           cd $CM_BUILD_DIR/$APP_ROOT/ios
           bundle exec fastlane upload_binary_ios
 
@@ -272,11 +305,13 @@ workflows:
     scripts:
       - name: Link Fastlane directories
         script: |
+          set -euo pipefail
           ln -sfn "$CM_BUILD_DIR/fastlane/android" "$CM_BUILD_DIR/$APP_ROOT/android/fastlane"
           ln -sfn "$CM_BUILD_DIR/fastlane" "$CM_BUILD_DIR/$APP_ROOT/fastlane"
 
       - name: Ensure Android upload keystore
         script: |
+          set -euo pipefail
           KEYSTORE_PATH="$CM_BUILD_DIR/$APP_ROOT/android/upload.keystore"
           CREDS_PATH="$CM_BUILD_DIR/creds/android_upload.keystore"
           GENERATED=false
@@ -320,33 +355,37 @@ workflows:
 
       - name: Check Google Play readiness
         script: |
+          set -euo pipefail
           echo "Checking Google Play setup status..."
           pip3 install --break-system-packages PyJWT cryptography requests
           export SA_JSON="$CM_BUILD_DIR/$GOOGLE_SA_JSON_PATH"
           export PACKAGE_NAME="$PACKAGE_NAME"
-          RESULT=$(python3 scripts/check_google_play.py 2>/dev/null || echo '{"ready":false}')
-          READY=$(echo "$RESULT" | python3 -c "import sys,json; print(str(json.load(sys.stdin).get('ready',False)).lower())" 2>/dev/null || echo "false")
+          RESULT=$(python3 scripts/check_google_play.py)
+          READY=$(echo "$RESULT" | python3 -c "
+          import sys, json
+          print(str(json.load(sys.stdin).get('ready', False)).lower())
+          ")
           if [ "$READY" != "true" ]; then
             echo "GOOGLE_PLAY_READY=false" >> $CM_ENV
-            printf '%s\n' \
-              "# Google Play Setup - Manual Steps Required" \
-              "" \
-              "Your Android AAB is available in the build artifacts above." \
-              "" \
-              "## Steps to complete" \
-              "" \
-              "1. **Go to Google Play Console** - https://play.google.com/console" \
-              "2. **Create your app** (if not already created) with the correct package name" \
-              "3. **Upload the AAB** from build artifacts to an internal testing track" \
-              "4. **Complete the Store Listing** - Add title, descriptions, screenshots, and app icon" \
-              "5. **Complete the Content Rating** questionnaire" \
-              "6. **Set up Pricing and Distribution**" \
-              "7. **Complete the Data Safety** form" \
-              "8. **Review and roll out** the internal testing release" \
-              "" \
-              "## After completing all steps" \
-              "Just git push again - Codemagic will publish automatically on subsequent builds." \
-              > "$CM_BUILD_DIR/HOW_TO_GOOGLE_PLAY.md"
+            cat > "$CM_BUILD_DIR/HOW_TO_GOOGLE_PLAY.md" <<'GUIDE'
+# Google Play Setup - Manual Steps Required
+
+Your Android AAB is available in the build artifacts above.
+
+## Steps to complete
+
+1. **Go to Google Play Console** - https://play.google.com/console
+2. **Create your app** (if not already created)
+3. **Upload the AAB** from build artifacts to an internal testing track
+4. **Complete the Store Listing** - title, descriptions, screenshots, icon
+5. **Complete the Content Rating** questionnaire
+6. **Set up Pricing and Distribution**
+7. **Complete the Data Safety** form
+8. **Review and roll out** the internal testing release
+
+## After completing all steps
+Just git push again - Codemagic will publish automatically.
+GUIDE
             echo "Google Play not ready - see HOW_TO_GOOGLE_PLAY.md in artifacts"
           else
             echo "GOOGLE_PLAY_READY=true" >> $CM_ENV
@@ -363,31 +402,28 @@ workflows:
 
       - name: Install Fastlane
         script: |
+          set -euo pipefail
           cd $CM_BUILD_DIR/$APP_ROOT/android
           gem install bundler
           bundle install
 
       - name: Upload Android metadata and screenshots
         script: |
+          set -euo pipefail
           if [ "$GOOGLE_PLAY_READY" != "true" ]; then
-            echo "WARNING: Google Play not ready - skipping metadata upload."
-            echo "First AAB must be uploaded manually before metadata can sync."
+            echo "Google Play not ready - skipping metadata upload."
             exit 0
           fi
           export GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH="$CM_BUILD_DIR/$GOOGLE_SA_JSON_PATH"
           cd $CM_BUILD_DIR/$APP_ROOT/android
-          if bundle exec fastlane upload_metadata_android; then
-            echo "Metadata uploaded successfully"
-          else
-            echo "WARNING: Metadata upload failed (app may still be in draft state)."
-            echo "Metadata will sync on next build after app leaves draft."
-            echo "Continuing build..."
-          fi
+          bundle exec fastlane upload_metadata_android
+          echo "Metadata uploaded successfully"
 
       - name: Sync subscriptions and IAP
         script: |
+          set -euo pipefail
           if [ "$GOOGLE_PLAY_READY" != "true" ]; then
-            echo "WARNING: Google Play not ready - skipping IAP sync."
+            echo "Google Play not ready - skipping IAP sync."
             exit 0
           fi
           FORCE_FLAG=""
@@ -397,21 +433,17 @@ workflows:
           if ./scripts/check_changed.sh $FORCE_FLAG fastlane/iap_config.json; then
             export GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH="$CM_BUILD_DIR/$GOOGLE_SA_JSON_PATH"
             cd $CM_BUILD_DIR/$APP_ROOT/android
-            if bundle exec fastlane sync_google_iap 2>&1; then
-              echo "IAP sync completed successfully"
-            else
-              echo "WARNING: IAP sync failed (fastlane-plugin-iap may not be available yet)."
-              echo "IAP products can be configured manually in Google Play Console."
-              echo "Continuing build..."
-            fi
+            bundle exec fastlane sync_google_iap
+            echo "IAP sync completed successfully"
           else
             echo "IAP config unchanged - skipping"
           fi
 
       - name: Update data safety form
         script: |
+          set -euo pipefail
           if [ "$GOOGLE_PLAY_READY" != "true" ]; then
-            echo "WARNING: Google Play not ready - skipping data safety update."
+            echo "Google Play not ready - skipping data safety update."
             exit 0
           fi
           FORCE_FLAG=""
@@ -421,13 +453,8 @@ workflows:
           if ./scripts/check_changed.sh $FORCE_FLAG fastlane/data_safety.csv; then
             export GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH="$CM_BUILD_DIR/$GOOGLE_SA_JSON_PATH"
             cd $CM_BUILD_DIR/$APP_ROOT/android
-            if bundle exec fastlane update_data_safety 2>&1; then
-              echo "Data safety form updated successfully"
-            else
-              echo "WARNING: Data safety update failed."
-              echo "Data safety can be configured manually in Google Play Console."
-              echo "Continuing build..."
-            fi
+            bundle exec fastlane update_data_safety
+            echo "Data safety form updated successfully"
           else
             echo "Data safety unchanged - skipping"
           fi
@@ -444,6 +471,7 @@ workflows:
 
       - name: Manage Android version
         script: |
+          set -euo pipefail
           # Read iOS version for consistency (if iOS workflow ran)
           pip3 install --break-system-packages PyJWT cryptography requests
           echo "APP_STORE_CONNECT_KEY_IDENTIFIER=$APPLE_KEY_ID" >> $CM_ENV
@@ -452,8 +480,13 @@ workflows:
           cat "$CM_BUILD_DIR/$P8_KEY_PATH" >> $CM_ENV
           echo "" >> $CM_ENV
           echo "KEYDELIMITER" >> $CM_ENV
-          VERSION_JSON=$(python3 scripts/manage_version_ios.py 2>/dev/null || echo '{"version":"1.0.0","version_id":"","state":"NEW"}')
-          APP_VERSION=$(echo "$VERSION_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin)['version'])")
+          VERSION_JSON=$(python3 scripts/manage_version_ios.py)
+          eval "$(echo "$VERSION_JSON" | python3 -c "
+          import sys, json
+          d = json.load(sys.stdin)
+          v = d['version']
+          print(f\"APP_VERSION='{v}'\")
+          ")"
           echo "APP_VERSION=$APP_VERSION" >> $CM_ENV
           if [ "$GOOGLE_PLAY_READY" != "true" ]; then
             LATEST_BUILD=0
@@ -461,14 +494,13 @@ workflows:
             export GOOGLE_PLAY_SERVICE_ACCOUNT_CREDENTIALS="$(cat $CM_BUILD_DIR/$GOOGLE_SA_JSON_PATH)"
             LATEST_BUILD_OUTPUT=$(google-play get-latest-build-number \
               --package-name "$PACKAGE_NAME" \
-              --tracks=production,beta,alpha,internal 2>/dev/null || true)
+              --tracks=production,beta,alpha,internal)
             # Extract just the number from output
             LATEST_BUILD=$(echo "$LATEST_BUILD_OUTPUT" | grep -oE '^[0-9]+$' | tail -1)
             if [ -z "$LATEST_BUILD" ]; then
-              echo "WARNING: Could not get latest build number from Google Play."
-              echo "Raw output: $LATEST_BUILD_OUTPUT"
-              echo "Falling back to build number 1"
-              LATEST_BUILD=1
+              echo "ERROR: Could not get latest build number from Google Play." >&2
+              echo "Raw output: $LATEST_BUILD_OUTPUT" >&2
+              exit 1
             fi
             echo "Latest build number from Google Play: $LATEST_BUILD"
           fi
@@ -485,26 +517,25 @@ workflows:
           echo "Android versionCode: $NEW_BUILD, versionName: $APP_VERSION"
 
       - name: Flutter packages
-        script: cd $CM_BUILD_DIR/$APP_ROOT && flutter pub get
+        script: |
+          set -euo pipefail
+          cd $CM_BUILD_DIR/$APP_ROOT && flutter pub get
 
       - name: Build Android
-        script: cd $CM_BUILD_DIR/$APP_ROOT && flutter build appbundle --release
+        script: |
+          set -euo pipefail
+          cd $CM_BUILD_DIR/$APP_ROOT && flutter build appbundle --release
 
       - name: Upload AAB to Google Play
         script: |
+          set -euo pipefail
           if [ "$GOOGLE_PLAY_READY" != "true" ]; then
-            echo "============================================"
-            echo "FIRST RUN: AAB built but NOT uploaded."
-            echo "============================================"
-            echo ""
-            echo "Download the AAB from build artifacts and"
-            echo "upload it manually to Google Play Console."
-            echo "See HOW_TO_GOOGLE_PLAY.md in artifacts for"
-            echo "step-by-step instructions."
-            echo ""
-            echo "After completing manual setup, push again"
-            echo "for fully automated publishing."
-            echo "============================================"
+            cat >&2 <<'MSG'
+FIRST RUN: AAB built but NOT uploaded.
+Download the AAB from build artifacts and upload it manually
+to Google Play Console. See HOW_TO_GOOGLE_PLAY.md in artifacts.
+After completing manual setup, push again for automated publishing.
+MSG
             exit 1
           fi
           export GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH="$CM_BUILD_DIR/$GOOGLE_SA_JSON_PATH"

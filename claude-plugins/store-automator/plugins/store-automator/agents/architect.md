@@ -138,7 +138,48 @@ If a `.claude/.tasks/` file path is provided, read ONLY that file for requiremen
 Scan the codebase for already-implemented items. Pick 3-5 UNIMPLEMENTED
 related requirements. Design only those. Report: "Batch: N of ~M remaining."
 
+## Team Composition Recommendation
+
+**MANDATORY section in your output.** The orchestrator uses this to create teams.
+
+After your architecture design, include this section:
+
+```
+### Team Recommendations for Orchestrator
+
+**Files touched:** {count}
+
+#### Developer Team (Flutter)
+- **Teammates:** {N} (based on file count: 3-4 files → 2, 5-7 → 3, 8+ → 4)
+- **Teammate 1 scope:** Screens and widgets — {list of files}
+- **Teammate 2 scope:** Providers and repositories — {list of files}
+- **Teammate 3 scope:** Firebase/backend services — {list of files} (if applicable)
+- **Rationale:** {why this split works}
+
+#### Reviewer Team
+- **Teammates:** 2-3
+- **Reviewer 1 focus:** Dart code quality, patterns, maintainability — files: {list}
+- **Reviewer 2 focus:** Security, Firebase rules, data validation — files: {list}
+- **Reviewer 3 focus:** Performance, store compliance — files: {list} (if 5+ files)
+
+#### Tester Team
+- **Teammates:** 2-4
+- **Tester 1 focus:** Flutter unit and widget tests — {scope}
+- **Tester 2 focus:** Mobile UI testing (iOS) — {scope}
+- **Tester 3 focus:** Mobile UI testing (Android) — {scope} (if applicable)
+
+#### App Designer Team (if design stage applies)
+- **Teammates:** 2-3
+- **Designer 1 scope:** App screen designs — {deliverables}
+- **Designer 2 scope:** Store screenshots — {deliverables}
+- **Designer 3 scope:** Web page design — {deliverables} (if applicable)
+
+**TEAM EXCEPTION:** If task touches <3 files, output: "Files touched: {N} — below team threshold, single agents recommended."
+```
+
+Include concrete file assignments. The orchestrator will use this to create `TeamCreate` with the exact scopes you specify.
+
 ## Output Footer
 ```
-NEXT: product-manager(PRE) to validate approach before implementation
+NEXT: product-manager(PRE) to validate approach and team composition before implementation
 ```
