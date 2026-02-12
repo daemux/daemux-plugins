@@ -58,9 +58,14 @@ platform :android do
     )
     latest_code = codes.max
 
+    # Draft apps only accept draft releases.  Use RELEASE_STATUS env var so
+    # this keeps working after the first production release.
+    status = ENV.fetch("RELEASE_STATUS", "draft")
+
     upload_to_play_store(
       base_play_store_options.merge(
         version_code: latest_code,
+        release_status: status,
         skip_upload_aab: true,
         skip_upload_apk: true,
         skip_upload_metadata: false,
