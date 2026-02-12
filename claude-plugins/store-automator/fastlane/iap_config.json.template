@@ -20,6 +20,10 @@
           "prices": {
             "USD": "9.99"
           },
+          "availability": {
+            "available_in_new_territories": true
+          },
+          "review_screenshot": "fastlane/screenshots/review/subscription_review.png",
           "introductory_offer": {
             "type": "FREE",
             "duration": "ONE_WEEK",
@@ -40,6 +44,10 @@
           "prices": {
             "USD": "69.99"
           },
+          "availability": {
+            "available_in_new_territories": true
+          },
+          "review_screenshot": "fastlane/screenshots/review/subscription_review.png",
           "introductory_offer": {
             "type": "FREE",
             "duration": "ONE_MONTH",
