@@ -65,35 +65,25 @@ platform :android do
   end
 
   lane :upload_metadata_android do
-    # supply always calls fetch_track_and_release! even for metadata-only
-    # uploads.  When the track contains multiple releases and no version_code
-    # is given it errors with "more than one release found".  We resolve this
-    # by fetching the latest version code from the track first.
-    track = ENV.fetch("TRACK", "internal")
-    codes = google_play_track_version_codes(
-      package_name: ENV["PACKAGE_NAME"],
-      json_key: ENV["GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH"],
-      track: track
-    )
-    latest_code = codes.max
-
-    # Draft apps only accept draft releases.  Use RELEASE_STATUS env var so
-    # this keeps working after the first production release.
-    status = ENV.fetch("RELEASE_STATUS", "draft")
-
+    # Metadata (title, descriptions) and images/screenshots are app-level
+    # properties, NOT release-level.  Passing track/release_status causes
+    # supply to create or update a release during the edit commit.  For draft
+    # apps (never published) Google rejects any non-draft release, the commit
+    # fails, and ALL metadata changes are discarded.
+    #
+    # By omitting track, version_code, and release_status we upload only
+    # store-listing data.  The edit commits without touching any release.
     link_screenshots_into_metadata
     upload_to_play_store(
-      base_play_store_options.merge(
-        version_code: latest_code,
-        release_status: status,
-        skip_upload_aab: true,
-        skip_upload_apk: true,
-        skip_upload_metadata: false,
-        skip_upload_screenshots: false,
-        skip_upload_images: false,
-        skip_upload_changelogs: true,
-        metadata_path: METADATA_DIR
-      )
+      package_name: ENV["PACKAGE_NAME"],
+      json_key: ENV["GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH"],
+      skip_upload_aab: true,
+      skip_upload_apk: true,
+      skip_upload_metadata: false,
+      skip_upload_screenshots: false,
+      skip_upload_images: false,
+      skip_upload_changelogs: true,
+      metadata_path: METADATA_DIR
     )
   end
 
