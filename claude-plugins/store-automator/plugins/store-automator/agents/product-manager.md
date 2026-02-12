@@ -47,8 +47,8 @@ Track which phases are complete. All phases must pass before declaring COMPLETE:
 | Phase 2: Develop | Flutter app builds (iOS + Android), tests pass, matches designs |
 | Phase 3: Store Metadata | fastlane/metadata/ populated for all configured languages |
 | Phase 4: Web Pages | Marketing, privacy, terms, support pages deployed; URLs working |
-| Phase 5: CI/CD | codemagic.yaml generated, .gitignore correct, repo pushed |
-| Phase 6: First Publish | iOS submitted via Codemagic, Android AAB created |
+| Phase 5: CI/CD | GitHub Actions workflows configured, .gitignore correct, repo pushed |
+| Phase 6: First Publish | iOS submitted via CI, Android AAB created |
 | Phase 7: Updates | Ongoing (not required for initial COMPLETE) |
 
 ---
@@ -88,7 +88,7 @@ Before declaring COMPLETE, confirm:
 - [ ] `flutter test` all passed
 - [ ] mobile-mcp UI tests passed on iOS simulator
 - [ ] mobile-mcp UI tests passed on Android emulator
-- [ ] Codemagic build status is green (coordinate with devops)
+- [ ] CI build status is green (coordinate with devops)
 - [ ] Store metadata generated for ALL languages in ci.config.yaml
 - [ ] Web pages deployed and URLs return 200 OK
 - [ ] appstore-reviewer passed compliance checks (if applicable)
@@ -104,7 +104,7 @@ Before declaring COMPLETE, confirm:
 - Either iOS or Android build fails
 - Store metadata is missing for any configured language
 - Web pages are not deployed or return errors
-- Codemagic pipeline has failures
+- CI pipeline has failures
 - App is not published to BOTH stores (for final completion)
 
 ## UX Regression Checklist
@@ -232,7 +232,7 @@ If NOT COMPLETE -> developer fixes -> product-manager checks again (repeat until
 - Android Build: PASS/FAIL
 - UI Tests (iOS): PASS/FAIL/NOT RUN
 - UI Tests (Android): PASS/FAIL/NOT RUN
-- Codemagic Pipeline: GREEN/RED/NOT CONFIGURED
+- CI Pipeline: GREEN/RED/NOT CONFIGURED
 - Store Metadata: COMPLETE/INCOMPLETE ({missing})
 - Web Pages: DEPLOYED/NOT DEPLOYED
 - Store Compliance: PASS/FAIL/NOT CHECKED

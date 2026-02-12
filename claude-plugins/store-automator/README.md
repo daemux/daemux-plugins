@@ -10,7 +10,7 @@ This package installs three Claude Code agents and a complete CI/CD template sui
 - **appstore-meta-creator** -- Creates all store metadata texts (names, descriptions, keywords) for all available languages
 - **app-designer** -- Designs complete app UI, creates ASO-optimized store screenshots, and designs marketing web pages — all in Stitch MCP
 
-Plus CI/CD templates for Codemagic, Fastlane, web pages, and scripts.
+Plus CI/CD templates for GitHub Actions, Fastlane, web pages, and scripts.
 
 ## Requirements
 
@@ -27,8 +27,8 @@ npm install @daemux/store-automator@latest
 
 The postinstall script will:
 
-1. Prompt for bundle ID and MCP server tokens (Stitch, Cloudflare, Codemagic)
-2. Configure `.mcp.json` with MCP servers (Playwright, mobile-mcp, Stitch, Cloudflare, Codemagic)
+1. Prompt for bundle ID and MCP server tokens (Stitch, Cloudflare)
+2. Configure `.mcp.json` with MCP servers (Playwright, mobile-mcp, Stitch, Cloudflare)
 3. Install the plugin marketplace and register agents
 4. Copy `CLAUDE.md` template to `.claude/CLAUDE.md`
 5. Copy CI/CD templates (Fastlane, scripts, web pages, ci.config.yaml)
@@ -86,8 +86,6 @@ The package installs these templates to your project:
 | File | Purpose |
 |------|---------|
 | `ci.config.yaml` | Per-project configuration (credentials, app identity, settings) |
-| `ci-templates/codemagic.template.yaml` | Full Codemagic CI/CD pipeline template |
-| `scripts/generate.sh` | Generates `codemagic.yaml` from template + config |
 | `scripts/check_changed.sh` | Git-based change detection for conditional uploads |
 | `scripts/manage_version_ios.py` | Automatic iOS version management |
 | `fastlane/` | iOS and Android Fastlane configurations |
@@ -101,8 +99,7 @@ The package installs these templates to your project:
 3. Use `app-designer` to design app UI + create screenshots + design web page
 4. Use `appstore-meta-creator` to generate metadata
 5. Use `appstore-reviewer` to verify compliance
-6. Run `scripts/generate.sh` to create `codemagic.yaml`
-7. Push to GitHub -- Codemagic builds and publishes automatically
+6. Push to GitHub -- GitHub Actions builds and publishes automatically
 
 ## MCP Servers
 
@@ -114,7 +111,6 @@ The package configures these MCP servers in `.mcp.json`:
 | mobile-mcp | Mobile device automation | None |
 | stitch | AI design tool for screenshot generation | `STITCH_API_KEY` |
 | cloudflare | Cloudflare Pages deployment | `CLOUDFLARE_API_TOKEN` + Account ID |
-| codemagic | Codemagic CI/CD build management (27 tools) | `CODEMAGIC_API_TOKEN` |
 
 ## Non-interactive Install
 
@@ -123,13 +119,12 @@ For CI/CD environments or scripted setups, pass tokens as CLI flags to skip inte
 ```bash
 npx @daemux/store-automator \
   --bundle-id=com.company.app \
-  --codemagic-token=YOUR_CM_TOKEN \
   --stitch-key=YOUR_STITCH_KEY \
   --cloudflare-token=YOUR_CF_TOKEN \
   --cloudflare-account-id=YOUR_CF_ACCOUNT_ID
 ```
 
-Any tokens provided via flags will skip the corresponding interactive prompt. If all four tokens are provided, the entire interactive session is skipped. The bundle ID, if provided, is automatically written to `bundle_id` and `package_name` in `ci.config.yaml`.
+Any tokens provided via flags will skip the corresponding interactive prompt. If all three tokens are provided, the entire interactive session is skipped. The bundle ID, if provided, is automatically written to `bundle_id` and `package_name` in `ci.config.yaml`.
 
 ## CLI Options
 
@@ -147,22 +142,9 @@ App Configuration:
   --bundle-id=ID                 Bundle ID / Package Name (e.g., com.company.app)
 
 MCP Token Flags (skip interactive prompts):
-  --codemagic-token=TOKEN        Codemagic API token
   --stitch-key=KEY               Stitch MCP API key
   --cloudflare-token=TOKEN       Cloudflare API token
   --cloudflare-account-id=ID     Cloudflare account ID
-
-Codemagic:
-  --codemagic-setup              Register repo and optionally trigger build
-  --token=TOKEN                  API token (or set CM_API_TOKEN env var)
-  --branch=BRANCH                Branch to build (default: main)
-  --workflow=ID                  Workflow ID (default: default)
-  --trigger                      Trigger build after setup
-  --wait                         Wait for build completion (implies --trigger)
-
-GitHub Actions:
-  --github-setup                 Set CM_API_TOKEN secret for GitHub Actions
-  --token=TOKEN                  API token (or set CM_API_TOKEN env var)
 ```
 
 ## License

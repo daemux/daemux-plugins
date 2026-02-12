@@ -44,7 +44,7 @@ jobs:
 
       - name: Publish all packages
         run: |
-          for pkg in llm-providers/anthropic-provider channels/telegram-adapter features/human-behavior features/transcription mcp-servers/codemagic; do
+          for pkg in llm-providers/anthropic-provider channels/telegram-adapter features/human-behavior features/transcription; do
             npm -w "$pkg" publish --access public 2>&1 || echo "::warning::Failed to publish $pkg (may already exist)"
           done
         env:

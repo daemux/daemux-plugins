@@ -35,7 +35,7 @@ echo "Publishing @daemux/plugin-sdk@${SDK_VERSION}..."
 npm -w packages/plugin-sdk publish --access public
 
 # Publish remaining packages
-for pkg in llm-providers/anthropic-provider channels/telegram-adapter features/human-behavior features/transcription mcp-servers/codemagic; do
+for pkg in llm-providers/anthropic-provider channels/telegram-adapter features/human-behavior features/transcription; do
   PKG_NAME=$(node -p "require('./$pkg/package.json').name")
   PKG_VERSION=$(node -p "require('./$pkg/package.json').version")
   echo "Publishing ${PKG_NAME}@${PKG_VERSION}..."

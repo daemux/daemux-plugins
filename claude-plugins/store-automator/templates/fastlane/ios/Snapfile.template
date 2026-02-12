@@ -1,4 +1,4 @@
-root_dir = ENV.fetch("CM_BUILD_DIR", File.expand_path("../..", __FILE__))
+root_dir = ENV.fetch("PROJECT_ROOT", File.expand_path("../..", __FILE__))
 
 devices([
   "iPhone 16 Pro Max",

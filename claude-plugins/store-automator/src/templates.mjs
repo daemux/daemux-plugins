@@ -4,7 +4,6 @@ import { ensureDir } from './utils.mjs';
 
 const FILE_COPIES = [
   ['ci.config.yaml.template', 'ci.config.yaml'],
-  ['codemagic.template.yaml', 'ci-templates/codemagic.template.yaml'],
   ['Gemfile.template', 'Gemfile'],
 ];
 

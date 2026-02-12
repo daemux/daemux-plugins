@@ -3,8 +3,6 @@ import { join } from 'node:path';
 
 const CI_CONFIG_FILE = 'ci.config.yaml';
 const FIELD_PATTERNS = {
-  app_id: /^(\s*app_id:\s*)"[^"]*"/m,
-  team_id: /^(\s*team_id:\s*)"[^"]*"/m,
   bundle_id: /^(\s*bundle_id:\s*)"[^"]*"/m,
   package_name: /^(\s*package_name:\s*)"[^"]*"/m,
   deploy_key_path: /^(\s*deploy_key_path:\s*)"[^"]*"/m,
@@ -29,14 +27,6 @@ function writeCiField(projectDir, field, value) {
   } catch {
     return false;
   }
-}
-
-export function writeCiAppId(projectDir, appId) {
-  return writeCiField(projectDir, 'app_id', appId);
-}
-
-export function writeCiTeamId(projectDir, teamId) {
-  return writeCiField(projectDir, 'team_id', teamId);
 }
 
 export function writeCiBundleId(projectDir, bundleId) {

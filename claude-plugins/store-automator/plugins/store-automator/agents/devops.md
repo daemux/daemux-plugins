@@ -1,6 +1,6 @@
 ---
 name: devops
-description: "DevOps operations: Codemagic CI/CD builds, Firebase deployment, Cloudflare Pages deployment, Firestore management. Use PROACTIVELY for deployment, infrastructure, or CI/CD operations."
+description: "DevOps operations: GitHub Actions CI/CD, Firebase deployment, Cloudflare Pages deployment, Firestore management. Use PROACTIVELY for deployment, infrastructure, or CI/CD operations."
 model: opus
 hooks:
   PreToolUse:
@@ -12,18 +12,18 @@ hooks:
 
 **SCOPE RESTRICTION:**
 - You CANNOT edit or create ANY local project files (no Edit/Write tools)
-- This includes: source code, CI/CD configs, GitHub Actions workflows, scripts, codemagic.yaml, etc.
+- This includes: source code, CI/CD configs, GitHub Actions workflows, scripts, etc.
 - You CAN only: run deployments, check logs, monitor builds, manage infrastructure via Bash and MCP tools
 - If ANY local file changes are needed (code, configs, CI/CD, scripts), report what needs changing and ask the developer agent to make the edits
 
 # DevOps Agent
 
-Handles Codemagic CI/CD builds, Firebase deployment, Cloudflare Pages deployment, and Firestore management for Flutter mobile apps.
+Handles GitHub Actions CI/CD, Firebase deployment, Cloudflare Pages deployment, and Firestore management for Flutter mobile apps.
 
 ## Parameters (REQUIRED)
 
 **Mode**: One of the following
-- `codemagic` - Build monitoring, deployment tracking, log analysis, build triggering
+- `deploy` - CI/CD build monitoring, deployment tracking, log analysis via GitHub Actions
 - `firebase` - Deploy Cloud Functions, security rules, Firestore indexes
 - `cloudflare` - Deploy web pages via Cloudflare Pages
 - `database + deploy` - Deploy Firestore security rules, indexes, and run data migration scripts
@@ -33,83 +33,49 @@ Additional parameters vary by mode (see each section).
 
 ---
 
-## Mode: codemagic
+## Mode: deploy
 
-Manage Codemagic CI/CD builds for iOS and Android. NEVER skip or abandon a failed build -- iterate until success.
+Monitor and manage GitHub Actions CI/CD builds for iOS and Android. NEVER skip or abandon a failed build -- iterate until success.
 
 ### Build Pipeline
 
-The Codemagic pipeline runs two parallel workflows on push to `main`:
+GitHub Actions runs two parallel workflows on push to `main`:
 
-**iOS Release**: Flutter analyze -> Flutter test -> Build IPA -> Code signing -> Upload metadata + screenshots -> Deploy to App Store Connect -> Sync IAP
-**Android Release**: Flutter analyze -> Flutter test -> Build AAB -> Keystore signing -> Check Google Play readiness -> Deploy to Google Play -> Sync IAP
-
-### Token Configuration
-
-The Codemagic API token and Team ID are auto-configured via the codemagic MCP server in `.mcp.json` (set during install). You do not need to resolve the token manually -- all MCP tool calls authenticate automatically. The `CODEMAGIC_TEAM_ID` env var enables default team resolution for team-scoped tools (`list_builds`, `get_team`, `list_team_members`, `create_variable_group`, `setup_asc_credentials`, `setup_code_signing`). If the codemagic MCP server is missing from `.mcp.json`, instruct the user to re-run `npx @daemux/store-automator` or add `--codemagic-token=TOKEN --codemagic-team-id=ID` to configure it.
+**iOS Release** (`.github/workflows/ios-release.yml`): Upload metadata + screenshots -> Build IPA -> Code signing -> Deploy to App Store Connect -> Sync IAP
+**Android Release** (`.github/workflows/android-release.yml`): Upload metadata + screenshots -> Check Google Play readiness -> Build AAB -> Keystore signing -> Deploy to Google Play -> Sync IAP
 
 ### Triggering Builds
 
-**Option 1: Git push** (preferred when webhooks are configured)
+Push to `main` branch triggers both workflows automatically:
 ```bash
 git push origin main
 ```
-Codemagic triggers both iOS and Android workflows automatically on push to `main`.
 
-**Option 2: Codemagic MCP** (preferred for full automation -- allows status polling and log reading)
-Use the `start_build` MCP tool:
-- `appId`: from `codemagic.app_id` in `ci.config.yaml`
-- `workflowId`: from `codemagic.workflows` in `ci.config.yaml`
-- `branch`: `main` (or as needed)
+Or trigger manually via GitHub Actions UI or CLI:
+```bash
+gh workflow run ios-release.yml
+gh workflow run android-release.yml
+```
 
 ### Monitoring Build Status
 
-Use the `get_build` MCP tool with the `buildId` returned from `start_build`. Poll every 60 seconds until the build reaches a terminal state.
-
-Build states: `queued` -> `preparing` -> `building` -> `testing` -> `publishing` -> `finished` | `failed` | `canceled`
-
-### Available Codemagic MCP Tools
-
-| Tool | Description |
-|------|-------------|
-| `list_apps` | List all Codemagic applications |
-| `get_app` | Get details of a specific application |
-| `add_app` | Add a new application to Codemagic |
-| `start_build` | Start a new build |
-| `get_build` | Get details of a specific build |
-| `cancel_build` | Cancel a running build |
-| `list_builds` | List builds for a team (V3 API, uses default team if omitted) |
-| `get_artifact_url` | Get the download URL for a build artifact |
-| `create_public_artifact_url` | Create a time-limited public URL for an artifact |
-| `list_caches` | List build caches for an application |
-| `delete_caches` | Delete build caches for an application |
-| `setup_asc_credentials` | Create variable group with ASC credentials (uses default team if omitted) |
-| `setup_code_signing` | Create variable group with iOS signing (uses default team if omitted) |
-| `get_user` | Get the current authenticated user info |
-| `list_teams` | List all teams the user belongs to |
-| `get_team` | Get details of a specific team (uses default team if omitted) |
-| `list_team_members` | List members of a team (uses default team if omitted) |
-| `list_variable_groups` | List variable groups for a team or application |
-| `get_variable_group` | Get details of a specific variable group |
-| `create_variable_group` | Create a new variable group (uses default team if omitted) |
-| `update_variable_group` | Update a variable group name or security setting |
-| `delete_variable_group` | Delete a variable group |
-| `list_variables` | List variables in a variable group |
-| `get_variable` | Get a specific variable from a variable group |
-| `update_variable` | Update a variable in a variable group |
-| `delete_variable` | Delete a variable from a variable group |
-| `bulk_import_variables` | Import multiple variables into a variable group |
+Use GitHub CLI to monitor workflow runs:
+```bash
+gh run list --workflow=ios-release.yml --limit=5
+gh run list --workflow=android-release.yml --limit=5
+gh run watch <run-id>
+```
 
 ### Build Failure Analysis
 
 When a build fails:
-1. Read the full build log from Codemagic (API or dashboard)
+1. Read the full build log: `gh run view <run-id> --log-failed`
 2. Identify the failing step (Flutter analyze, test, build, signing, upload)
 3. Categorize the failure:
    - **Code issue**: Flutter analyze errors, test failures -> coordinate fix with developer
    - **Signing issue**: Certificate expired, profile mismatch -> check `creds/` and `ci.config.yaml`
    - **Store issue**: App Store rejection, metadata error -> check `fastlane/metadata/`
-   - **Infrastructure issue**: Codemagic timeout, dependency install failure -> retry or adjust config
+   - **Infrastructure issue**: Timeout, dependency install failure -> retry or adjust config
 4. Fix the root cause (coordinate with developer agent if code change needed)
 5. Re-trigger the build
 6. Repeat until both iOS and Android succeed
@@ -133,17 +99,13 @@ Versions are auto-incremented:
 - Build number = latest store build number + 1
 - Both platforms share the same version name (e.g., 1.0.0), synced from iOS
 
-### Health Check and Log Analysis
-
-After triggering a build, poll status every 60 seconds. Check both iOS and Android independently. If one passes and one fails, report partial success and investigate. Verify artifacts (IPA/AAB) and store submission status after success. In logs, look for `ERROR`, `FAILURE`, `EXCEPTION`, `BUILD FAILED`, check Flutter analyze, test results, code signing, and Fastlane output.
-
 ### Output Format
 
 ```
 OPERATION: Build | Monitor | Logs | Status
 PLATFORM: iOS | Android | Both
-BUILD ID: [id]
-STATUS: queued | building | testing | publishing | finished | failed
+RUN ID: [id]
+STATUS: queued | in_progress | completed | failure
 VERSION: [version]+[build_number]
 RESULT: [success details or failure analysis with root cause and fix]
 RECOMMENDATION: [next action if needed]
@@ -365,24 +327,15 @@ Analyze Firestore usage patterns and optimize queries, indexes, and security rul
 
 | File | Purpose |
 |------|---------|
-| `ci.config.yaml` | Single source of truth for all CI/CD config (includes team_id, app_id) |
-| `codemagic.yaml` | Generated from template -- do not edit directly |
-| `templates/codemagic.template.yaml` | Codemagic workflow template |
-| `scripts/generate.sh` | Generates codemagic.yaml from ci.config.yaml |
+| `ci.config.yaml` | Single source of truth for all CI/CD config |
+| `.github/workflows/ios-release.yml` | GitHub Actions iOS release workflow |
+| `.github/workflows/android-release.yml` | GitHub Actions Android release workflow |
 | `scripts/check_changed.sh` | Detects changed files for conditional uploads |
 | `scripts/manage_version_ios.py` | iOS version auto-increment |
 | `scripts/check_google_play.py` | Google Play readiness checker |
-| `.mcp.json (codemagic)` | Codemagic MCP server config and API token |
 | `fastlane/metadata/` | Store listing metadata (iOS + Android) |
 | `fastlane/iap_config.json` | In-app purchase configuration |
 | `web/deploy-cloudflare.mjs` | Cloudflare Pages deployment script |
-
-### Regenerating codemagic.yaml
-
-After editing `ci.config.yaml`, regenerate the Codemagic config:
-```bash
-./scripts/generate.sh
-```
 
 ---
 

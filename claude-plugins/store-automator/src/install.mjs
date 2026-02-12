@@ -12,7 +12,7 @@ import { promptForTokens } from './prompt.mjs';
 import { getMcpServers, writeMcpJson } from './mcp-setup.mjs';
 import { installClaudeMd, installCiTemplates, installFirebaseTemplates } from './templates.mjs';
 import { writeCiBundleId, writeCiPackageName } from './ci-config.mjs';
-import { installGitHubActionsPath, installCodemagicPath } from './install-paths.mjs';
+import { installGitHubActionsPath } from './install-paths.mjs';
 
 function checkClaudeCli() {
   const result = exec('command -v claude') || exec('which claude');
@@ -94,20 +94,13 @@ function printSummary(scope, oldVersion, newVersion) {
   }
 }
 
-function printNextSteps(isGitHubActions) {
+function printNextSteps() {
   console.log('');
   console.log('Next steps:');
-  if (isGitHubActions) {
-    console.log('  1. Fill ci.config.yaml with credentials');
-    console.log('  2. Add creds/AuthKey.p8 and creds/play-service-account.json');
-    console.log('  3. Set MATCH_PASSWORD secret in GitHub repository settings');
-    console.log('  4. Start Claude Code');
-  } else {
-    console.log('  1. Fill ci.config.yaml (codemagic.app_id is auto-configured if token was provided)');
-    console.log('  2. Add creds/AuthKey.p8 and creds/play-service-account.json');
-    console.log('  3. Start Claude Code');
-    console.log('  Note: For auto-trigger, install gh CLI and run "gh auth login"');
-  }
+  console.log('  1. Fill ci.config.yaml with credentials');
+  console.log('  2. Add creds/AuthKey.p8 and creds/play-service-account.json');
+  console.log('  3. Set MATCH_PASSWORD secret in GitHub repository settings');
+  console.log('  4. Start Claude Code');
 }
 
 export async function runInstall(scope, isPostinstall = false, cliTokens = {}) {
@@ -154,11 +147,7 @@ export async function runInstall(scope, isPostinstall = false, cliTokens = {}) {
     writeCiPackageName(projectDir, tokens.bundleId);
   }
 
-  if (isGitHubActions) {
-    installGitHubActionsPath(projectDir, packageDir, cliTokens);
-  } else {
-    await installCodemagicPath(projectDir, tokens);
-  }
+  installGitHubActionsPath(projectDir, packageDir, cliTokens);
 
   const scopeLabel = scope === 'user' ? 'global' : 'project';
   console.log(`Configuring ${scopeLabel} settings...`);
@@ -167,5 +156,5 @@ export async function runInstall(scope, isPostinstall = false, cliTokens = {}) {
   injectStatusLine(settingsPath);
 
   printSummary(scope, oldVersion, newVersion);
-  printNextSteps(isGitHubActions);
+  printNextSteps();
 }

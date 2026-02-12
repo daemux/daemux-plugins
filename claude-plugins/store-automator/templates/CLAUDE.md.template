@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-This is a Flutter app with Firebase backend, automated for App Store and Google Play publishing via Codemagic CI/CD. This repository MUST be PRIVATE as it contains credential files.
+This is a Flutter app with Firebase backend, automated for App Store and Google Play publishing via GitHub Actions CI/CD. This repository MUST be PRIVATE as it contains credential files.
 
 ## Mandatory Rules
 
@@ -14,7 +14,7 @@ This is a Flutter app with Firebase backend, automated for App Store and Google 
 - If unsure which agent to use, use the Task tool with a general-purpose, explore or any other built-in agent
 
 ### DevOps Agent Required
-ALL deployment and infrastructure operations SHOULD use the devops agent (codemagic, firebase, cloudflare, database/deploy, database/optimize).
+ALL deployment and infrastructure operations SHOULD use the devops agent (deploy, firebase, cloudflare, database/deploy, database/optimize).
 Prefer using the devops agent over direct Bash/SSH for structured operations.
 
 ### Code Quality (enforced by agents)
@@ -38,7 +38,7 @@ Prefer using the devops agent over direct Bash/SSH for structured operations.
 ## Configuration Files
 
 ### ci.config.yaml
-Single source of truth: credentials, app identity, store settings, web domain, Codemagic CI/CD (app_id for GitHub Actions auto-trigger, workflow IDs). The Codemagic API token is managed by the codemagic MCP server in `.mcp.json`.
+Single source of truth: credentials, app identity, store settings, web domain.
 
 ### fastlane/metadata/ Structure
 All store listing texts are stored in fastlane directories and managed by the appstore-meta-creator agent:
@@ -95,7 +95,7 @@ Detect from user request:
 - **design** - App design, store screenshots, web page design (Stitch MCP)
 - **metadata** - Store listing texts, IAP config, app rating
 - **database** - Firestore schema, indexes, data migration
-- **infra** - Codemagic CI/CD, Firebase deploy, Cloudflare web deploy
+- **infra** - GitHub Actions CI/CD, Firebase deploy, Cloudflare web deploy
 - **standard** - Mixed or unclear scope
 
 ### Agent Flows
@@ -107,12 +107,12 @@ architect → product-manager(PRE) → developer → simplifier → reviewer →
 
 #### Flutter Flow
 ```
-architect → product-manager(PRE) → [app-designer] → developer(flutter) → simplifier → reviewer → tester(flutter) → tester(mobile-ui) → product-manager(POST) → [devops(codemagic)]
+architect → product-manager(PRE) → [app-designer] → developer(flutter) → simplifier → reviewer → tester(flutter) → tester(mobile-ui) → product-manager(POST) → [devops(deploy)]
 ```
 
 #### Backend Flow
 ```
-architect → product-manager(PRE) → developer(backend) → simplifier → reviewer → tester(backend) → product-manager(POST) → [devops(firebase)]
+architect → product-manager(PRE) → developer(backend) → simplifier → reviewer → tester(backend) → product-manager(POST) → [devops(deploy)]
 ```
 
 #### Design Flow
@@ -127,7 +127,7 @@ appstore-meta-creator → appstore-reviewer
 
 #### Database Flow
 ```
-architect → developer(backend) → simplifier → reviewer → product-manager(POST) → [devops(firebase)]
+architect → developer(backend) → simplifier → reviewer → product-manager(POST) → [devops(deploy)]
 ```
 
 #### Infra Flow
@@ -137,7 +137,7 @@ devops (standalone)
 
 #### Full Publishing Flow (Design to App Store)
 ```
-architect → product-manager(PRE) → app-designer → developer(flutter) → simplifier → reviewer → tester(flutter) → tester(mobile-ui) → appstore-meta-creator → appstore-reviewer → product-manager(POST) → devops(codemagic)
+architect → product-manager(PRE) → app-designer → developer(flutter) → simplifier → reviewer → tester(flutter) → tester(mobile-ui) → appstore-meta-creator → appstore-reviewer → product-manager(POST) → devops(deploy)
 ```
 
 #### Team Size Annotations
@@ -160,17 +160,17 @@ architect{T:2} → product-manager(PRE) → developer{T:2-4} → simplifier → 
 
 ##### Flutter Flow (with teams)
 ```
-architect{T:2} → product-manager(PRE) → [app-designer{T:2-3}] → developer(flutter){T:2-4} → simplifier → reviewer{T:2-3} → tester(flutter){T:2} → tester(mobile-ui){T:2} → product-manager(POST) → [devops(codemagic)]
+architect{T:2} → product-manager(PRE) → [app-designer{T:2-3}] → developer(flutter){T:2-4} → simplifier → reviewer{T:2-3} → tester(flutter){T:2} → tester(mobile-ui){T:2} → product-manager(POST) → [devops(deploy)]
 ```
 
 ##### Backend Flow (with teams)
 ```
-architect{T:2} → product-manager(PRE) → developer(backend){T:2-4} → simplifier → reviewer{T:2} → tester(backend){T:2} → product-manager(POST) → [devops(firebase)]
+architect{T:2} → product-manager(PRE) → developer(backend){T:2-4} → simplifier → reviewer{T:2} → tester(backend){T:2} → product-manager(POST) → [devops(deploy)]
 ```
 
 ##### Full Publishing Flow (with teams)
 ```
-architect{T:2} → product-manager(PRE) → app-designer{T:2-3} → developer(flutter){T:2-4} → simplifier → reviewer{T:2-3} → tester(flutter){T:2} → tester(mobile-ui){T:2} → appstore-meta-creator{T:2-5} → appstore-reviewer → product-manager(POST) → devops(codemagic)
+architect{T:2} → product-manager(PRE) → app-designer{T:2-3} → developer(flutter){T:2-4} → simplifier → reviewer{T:2-3} → tester(flutter){T:2} → tester(mobile-ui){T:2} → appstore-meta-creator{T:2-5} → appstore-reviewer → product-manager(POST) → devops(deploy)
 ```
 
 ### Agents Reference
@@ -183,7 +183,7 @@ architect{T:2} → product-manager(PRE) → app-designer{T:2-3} → developer(fl
 | simplifier | AFTER developer - simplifies Dart/Flutter code |
 | reviewer | After ANY code changes - Dart/Flutter quality review |
 | tester | After review passes (type: flutter/mobile-ui/web/backend/integration) |
-| devops | Operations (mode: codemagic/firebase/cloudflare/database+deploy/database+optimize) |
+| devops | Operations (mode: deploy/firebase/cloudflare/database+deploy/database+optimize) |
 | app-designer | Stitch MCP design: app screens + store screenshots + web page design |
 | appstore-meta-creator | Generate store listing texts for all configured languages |
 | appstore-reviewer | Full App Store/Play compliance review including live app UI testing via mobile-mcp |
@@ -228,7 +228,7 @@ If the same error persists unchanged after one full fix cycle, try a fundamental
 - `APPROVED` or `COMPLETE` from product-manager
 - Deployment is optional when not configured
 
-**Before devops(codemagic):**
+**Before devops(deploy):**
 - appstore-reviewer APPROVED (if publishing)
 - All metadata files present for configured languages
 - All screenshots present and verified (dimensions match requirements)
@@ -260,13 +260,13 @@ appstore-meta-creator generates texts. Fill fastlane/iap_config.json if needed.
 app-designer designs marketing page in Stitch MCP. Develop web pages. Deploy via Cloudflare Pages (*.pages.dev domain sufficient).
 
 ### Phase 5: Finalize and CI/CD
-Create .gitignore (.claude/.tasks/, Flutter ignores; do NOT ignore *.g.dart). Run scripts/generate.sh. Fill codemagic.app_id. Push to private repo. GitHub Actions auto-triggers on push.
+Create .gitignore (.claude/.tasks/, Flutter ignores; do NOT ignore *.g.dart). Push to private repo. GitHub Actions auto-triggers on push.
 
 ### Phase 6: First Publish
 iOS: fully automated. Android: first build creates AAB + manual steps guide; subsequent builds fully automated.
 
 ### Phase 7: Ongoing Updates
-Push to main. Codemagic detects changes and uploads modified assets. Version auto-incremented.
+Push to main. GitHub Actions detects changes and uploads modified assets. Version auto-incremented.
 
 ---
 ## FOR ORCHESTRATORS ONLY
@@ -392,11 +392,11 @@ LAUNCHING: [first-agent-name]
 
 **Expected RECOMMENDED FLOW outputs (copy exactly):**
 
-- **flutter**: `architect → product-manager(PRE) → [app-designer] → developer(flutter) → simplifier → reviewer → tester(flutter) → tester(mobile-ui) → product-manager(POST) → [devops(codemagic)]`
-- **backend**: `architect → product-manager(PRE) → developer(backend) → simplifier → reviewer → tester(backend) → product-manager(POST) → [devops(firebase)]`
+- **flutter**: `architect → product-manager(PRE) → [app-designer] → developer(flutter) → simplifier → reviewer → tester(flutter) → tester(mobile-ui) → product-manager(POST) → [devops(deploy)]`
+- **backend**: `architect → product-manager(PRE) → developer(backend) → simplifier → reviewer → tester(backend) → product-manager(POST) → [devops(deploy)]`
 - **design**: `app-designer → appstore-reviewer`
 - **metadata**: `appstore-meta-creator → appstore-reviewer`
-- **database**: `architect → developer(backend) → simplifier → reviewer → product-manager(POST) → [devops(firebase)]`
+- **database**: `architect → developer(backend) → simplifier → reviewer → product-manager(POST) → [devops(deploy)]`
 - **infra**: `devops (standalone)`
 - **standard**: `architect → product-manager(PRE) → developer → simplifier → reviewer → tester → product-manager(POST) → [devops]`
 

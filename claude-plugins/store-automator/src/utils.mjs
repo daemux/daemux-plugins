@@ -44,12 +44,3 @@ export function readJson(filePath) {
 export function writeJson(filePath, data) {
   writeFileSync(filePath, JSON.stringify(data, null, 2) + '\n', 'utf8');
 }
-
-export function resolveToken(tokenArg) {
-  const token = process.env.CM_API_TOKEN || tokenArg;
-  if (!token) {
-    console.error('Codemagic API token required. Set CM_API_TOKEN or pass --token=...');
-    process.exit(1);
-  }
-  return token;
-}

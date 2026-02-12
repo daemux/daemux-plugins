@@ -32,17 +32,6 @@ export function getMcpServers(tokens) {
     };
   }
 
-  if (tokens.codemagicToken) {
-    const codemagicEnv = { CODEMAGIC_API_TOKEN: tokens.codemagicToken };
-    if (tokens.codemagicTeamId) codemagicEnv.CODEMAGIC_TEAM_ID = tokens.codemagicTeamId;
-    if (tokens.codemagicAppId) codemagicEnv.CODEMAGIC_APP_ID = tokens.codemagicAppId;
-    servers.codemagic = {
-      command: 'npx',
-      args: ['-y', '@daemux/codemagic-mcp@latest'],
-      env: codemagicEnv,
-    };
-  }
-
   return servers;
 }
 
@@ -78,29 +67,6 @@ export function writeMcpJson(projectDir, servers) {
   }
 }
 
-function updateMcpEnvVar(projectDir, envKey, value) {
-  const mcpPath = join(projectDir, '.mcp.json');
-  if (!existsSync(mcpPath)) return false;
-
-  try {
-    const data = readJson(mcpPath);
-    if (!data.mcpServers?.codemagic?.env) return false;
-    data.mcpServers.codemagic.env[envKey] = value;
-    writeJson(mcpPath, data);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-export function updateMcpAppId(projectDir, appId) {
-  return updateMcpEnvVar(projectDir, 'CODEMAGIC_APP_ID', appId);
-}
-
-export function updateMcpTeamId(projectDir, teamId) {
-  return updateMcpEnvVar(projectDir, 'CODEMAGIC_TEAM_ID', teamId);
-}
-
 export function removeMcpServers(projectDir) {
   const mcpPath = join(projectDir, '.mcp.json');
   if (!existsSync(mcpPath)) return;
@@ -109,7 +75,7 @@ export function removeMcpServers(projectDir) {
     const data = readJson(mcpPath);
     if (!data.mcpServers) return;
 
-    const toRemove = ['playwright', 'mobile-mcp', 'stitch', 'cloudflare', 'codemagic'];
+    const toRemove = ['playwright', 'mobile-mcp', 'stitch', 'cloudflare'];
     for (const name of toRemove) {
       delete data.mcpServers[name];
     }

@@ -16,9 +16,7 @@ function allTokensProvided(cliTokens) {
   return (
     cliTokens.stitchApiKey !== undefined &&
     cliTokens.cloudflareToken !== undefined &&
-    cliTokens.cloudflareAccountId !== undefined &&
-    cliTokens.codemagicToken !== undefined &&
-    cliTokens.codemagicTeamId !== undefined
+    cliTokens.cloudflareAccountId !== undefined
   );
 }
 
@@ -35,8 +33,6 @@ export async function promptForTokens(cliTokens = {}) {
     stitchApiKey: cliTokens.stitchApiKey ?? '',
     cloudflareToken: cliTokens.cloudflareToken ?? '',
     cloudflareAccountId: cliTokens.cloudflareAccountId ?? '',
-    codemagicToken: cliTokens.codemagicToken ?? '',
-    codemagicTeamId: cliTokens.codemagicTeamId ?? '',
   };
 
   if (allPromptsProvided(cliTokens)) {
@@ -95,20 +91,6 @@ export async function promptForTokens(cliTokens = {}) {
       result.cloudflareAccountId = await ask(
         rl,
         'Cloudflare Account ID: '
-      );
-    }
-
-    if (cliTokens.codemagicToken === undefined) {
-      result.codemagicToken = await ask(
-        rl,
-        'Codemagic API Token (CM_API_TOKEN for CI/CD builds): '
-      );
-    }
-
-    if (result.codemagicToken && cliTokens.codemagicTeamId === undefined) {
-      result.codemagicTeamId = await ask(
-        rl,
-        'Codemagic Team ID (optional, from Teams page): '
       );
     }
 

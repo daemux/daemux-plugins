@@ -24,7 +24,7 @@ fi
 export FLUTTER_ROOT=$(yq '.flutter_root // "."' "$CONFIG")
 export APP_ROOT="$PROJECT_ROOT/$FLUTTER_ROOT"
 
-# Fastlane expects CM_BUILD_DIR for absolute path resolution in Fastfiles
+# CI scripts export PROJECT_ROOT for absolute path resolution in Fastfiles
 export CM_BUILD_DIR="$PROJECT_ROOT"
 
 # App identity
@@ -60,10 +60,6 @@ export AUTOMATIC_RELEASE=$(yq '.ios.automatic_release // "false"' "$CONFIG")
 export TRACK=$(yq '.android.track // "internal"' "$CONFIG")
 export ROLLOUT_FRACTION=$(yq '.android.rollout_fraction // ""' "$CONFIG")
 export IN_APP_UPDATE_PRIORITY=$(yq '.android.in_app_update_priority // "0"' "$CONFIG")
-
-# Codemagic CI/CD
-export CODEMAGIC_APP_ID=$(yq '.codemagic.app_id // ""' "$CONFIG")
-export CODEMAGIC_TEAM_ID=$(yq '.codemagic.team_id // ""' "$CONFIG")
 
 # Web
 export WEB_DOMAIN=$(yq '.web.domain // ""' "$CONFIG")

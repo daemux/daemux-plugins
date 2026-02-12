@@ -50,16 +50,29 @@ if [ ! -f "$SA_FULL_PATH" ]; then
   exit 1
 fi
 
-# --- Update data safety via Fastlane ---
+# --- Update data safety via Python script ---
+# Exit codes: 0 = success, 2 = API limitation (manual update needed), other = error
 echo "Updating Android data safety..."
 
+set +e
 PACKAGE_NAME="$PACKAGE_NAME" \
 GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH="$SA_FULL_PATH" \
-DATA_SAFETY_CSV_PATH="$DATA_SAFETY_CSV" \
-bundle exec fastlane update_data_safety
+python3 "$PROJECT_ROOT/scripts/update_data_safety.py" "$DATA_SAFETY_CSV"
+SAFETY_EXIT=$?
+set -e
 
-echo "Android data safety update complete"
-
-# --- Update hash on success ---
-echo "$HASH" > "$STATE_FILE"
-echo "Updated state hash: ${HASH:0:12}..."
+if [ $SAFETY_EXIT -eq 0 ]; then
+  echo "Android data safety update complete"
+  echo "$HASH" > "$STATE_FILE"
+  echo "Updated state hash: ${HASH:0:12}..."
+elif [ $SAFETY_EXIT -eq 2 ]; then
+  # API limitation is non-fatal; hash is NOT saved so the step retries next run
+  echo ""
+  echo "WARNING: Data safety update skipped due to API limitation."
+  echo "         The form must be updated manually via Google Play Console."
+  echo "         This step will retry on the next run."
+  echo ""
+else
+  echo "ERROR: Data safety update failed (exit code: $SAFETY_EXIT)" >&2
+  exit $SAFETY_EXIT
+fi

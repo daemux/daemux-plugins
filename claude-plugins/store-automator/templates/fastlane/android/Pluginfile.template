@@ -1,4 +1,4 @@
 # fastlane-plugin-iap is not yet published.
-# IAP sync is handled gracefully in codemagic.yaml (non-blocking).
+# IAP sync is handled gracefully in CI workflows (non-blocking).
 # Uncomment when the plugin is available:
 # gem "fastlane-plugin-iap", git: "https://github.com/daemux/fastlane-plugin-iap"

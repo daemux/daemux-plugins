@@ -43,7 +43,6 @@ function removeFileIfExists(filePath, label) {
 function removeCiTemplates(projectDir) {
   const files = [
     'ci.config.yaml',
-    'ci-templates/codemagic.template.yaml',
     'Gemfile',
   ];
   for (const file of files) {
@@ -68,9 +67,6 @@ function isDirEmpty(dirPath) {
 }
 
 function removeGitHubWorkflow(projectDir) {
-  const workflowFile = join(projectDir, '.github', 'workflows', 'codemagic-trigger.yml');
-  removeFileIfExists(workflowFile, '.github/workflows/codemagic-trigger.yml');
-
   const workflowsDir = join(projectDir, '.github', 'workflows');
   const githubDir = join(projectDir, '.github');
 

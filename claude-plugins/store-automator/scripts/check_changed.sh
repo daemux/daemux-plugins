@@ -1,7 +1,7 @@
 #!/bin/bash
 # Usage: ./scripts/check_changed.sh <path>
 # Exit 0 if changed, exit 1 if unchanged
-# Used by codemagic.yaml for conditional metadata/screenshot uploads
+# Used by CI workflows for conditional metadata/screenshot uploads
 
 set -euo pipefail
 

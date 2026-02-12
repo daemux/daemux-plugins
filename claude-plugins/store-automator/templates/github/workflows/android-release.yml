@@ -1,8 +1,4 @@
 name: Android Release
-# POST-MIGRATION CLEANUP (after GitHub Actions workflows are verified in production):
-#   - Remove .github/workflows/codemagic-trigger.yml
-#   - Remove any Codemagic-specific configuration files
-#   - Update README/docs to reference GitHub Actions instead of Codemagic
 on:
   push:
     branches: [main]

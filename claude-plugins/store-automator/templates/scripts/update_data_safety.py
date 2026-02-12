@@ -17,6 +17,11 @@ CSV format:
   DATA_SHARED_PERSONAL_INFO,false
   ...
 
+Exit codes:
+  0 - Data safety updated successfully
+  1 - Input validation error (missing env vars, bad CSV, missing files)
+  2 - API limitation (update must be done manually via Play Console)
+
 Environment variables:
   GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH - path to service account JSON
   PACKAGE_NAME - Android package name (e.g., com.firstclass.gigachat)
@@ -193,27 +198,26 @@ def main():
     print(f"Parsed {len(data_safety_responses)} data safety responses from {csv_path}")
 
     if not data_safety_responses:
-        print("WARNING: No data safety responses found in CSV. Nothing to update.")
-        sys.exit(0)
+        print("ERROR: No data safety responses found in CSV. Fix the CSV file.", file=sys.stderr)
+        sys.exit(1)
 
     # --- Connect to Google Play API ---
     service = load_service_account_credentials(sa_json_path)
 
     # --- Attempt update ---
     success = update_data_safety(service, package_name, data_safety_responses)
-
     if success:
         print("Data safety update completed successfully")
         result = {"status": "updated", "responses_count": len(data_safety_responses)}
-    else:
-        print("Data safety update was not applied (API limitation)")
-        print("Please update the data safety form manually at:")
-        print(f"  https://play.google.com/console/developers/app/{package_name}/app-content/data-safety")
-        result = {"status": "manual_required", "responses_count": len(data_safety_responses)}
+        print(json.dumps(result))
+        sys.exit(0)
 
+    print("Data safety update was not applied (API limitation)")
+    print("Please update the data safety form manually at:")
+    print(f"  https://play.google.com/console/developers/app/{package_name}/app-content/data-safety")
+    result = {"status": "manual_required", "responses_count": len(data_safety_responses)}
     print(json.dumps(result))
-    # Exit 0 even on API limitation -- this is graceful degradation
-    sys.exit(0)
+    sys.exit(2)
 
 
 if __name__ == "__main__":

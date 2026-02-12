@@ -56,14 +56,3 @@ web:
   jurisdiction: "State of California, United States"
   app_store_url: ""
   google_play_url: ""
-
-# === CODEMAGIC CI/CD ===
-# Fill after creating app in Codemagic (https://codemagic.io/apps)
-# Find app_id in your Codemagic dashboard URL: codemagic.io/app/{app_id}
-# API token is stored in .mcp.json (codemagic MCP server, set during install)
-codemagic:
-  team_id: ""                   # Team ID from Codemagic Teams page
-  app_id: ""
-  workflows:
-    - ios-release
-    - android-release
