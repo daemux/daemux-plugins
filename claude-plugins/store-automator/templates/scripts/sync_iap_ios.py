@@ -40,6 +40,7 @@ from asc_subscription_setup import (
     get_review_screenshot,
     get_subscription_availability,
     get_subscription_prices,
+    list_all_territory_ids,
     reserve_review_screenshot,
     upload_screenshot_chunks,
 )
@@ -119,21 +120,36 @@ def sync_subscription_group(
 
 
 def _sync_availability(headers: dict, sub_id: str, sub_config: dict) -> None:
-    """Ensure subscription territory availability is configured."""
+    """Ensure subscription territory availability is configured with all territories.
+
+    If no territories are specified in config, fetches all App Store territories
+    so the subscription is available everywhere (empty list = removed from sale).
+    Also re-creates availability if existing territory count is suspiciously low.
+    """
     avail_config = sub_config.get("availability", {})
     available_in_new = avail_config.get("available_in_new_territories", True)
     territory_ids = avail_config.get("territories", [])
 
+    # If no territories specified, fetch all to make available everywhere
+    if not territory_ids:
+        territory_ids = list_all_territory_ids(headers)
+        if not territory_ids:
+            print("      WARNING: Could not fetch territories", file=sys.stderr)
+            return
+
     existing = get_subscription_availability(headers, sub_id)
     if existing:
-        print("      Subscription availability already configured")
-        return
+        included = existing.get("_included_territories", [])
+        if len(included) >= 100:
+            print(f"      Availability OK ({len(included)} territories)")
+            return
+        print(f"      Availability has only {len(included)} territories, recreating with {len(territory_ids)}")
 
     result = create_subscription_availability(
         headers, sub_id, territory_ids, available_in_new=available_in_new,
     )
     if result:
-        print("      Subscription availability configured successfully")
+        print(f"      Availability set ({len(territory_ids)} territories)")
     else:
         print("      WARNING: Failed to configure availability", file=sys.stderr)
 
@@ -178,16 +194,38 @@ def _sync_pricing(headers: dict, sub_id: str, sub_config: dict) -> None:
 def _sync_review_screenshot(
     headers: dict, sub_id: str, sub_config: dict, project_root: str,
 ) -> None:
-    """Upload a review screenshot for the subscription if configured."""
+    """Upload a review screenshot for the subscription if configured.
+
+    Falls back to the first iPhone screenshot from fastlane/screenshots/ios/en-US/
+    when the configured path does not exist.
+    """
     screenshot_path = sub_config.get("review_screenshot")
     if not screenshot_path:
         print("      WARNING: No review_screenshot configured, skipping", file=sys.stderr)
         return
 
     full_path = os.path.join(project_root, screenshot_path)
+
+    # Fallback: if configured path doesn't exist, pick first iPhone screenshot
     if not os.path.isfile(full_path):
-        print(f"      WARNING: Screenshot not found: {full_path}", file=sys.stderr)
-        return
+        fallback = None
+        ios_dir = os.path.join(project_root, "fastlane", "screenshots", "ios", "en-US")
+        if os.path.isdir(ios_dir):
+            for f in sorted(os.listdir(ios_dir)):
+                if f.lower().endswith(".png") and "iphone" in f.lower():
+                    fallback = os.path.join(ios_dir, f)
+                    break
+            if not fallback:
+                for f in sorted(os.listdir(ios_dir)):
+                    if f.lower().endswith(".png"):
+                        fallback = os.path.join(ios_dir, f)
+                        break
+        if fallback:
+            full_path = fallback
+            print(f"      Using fallback screenshot: {os.path.basename(full_path)}")
+        else:
+            print(f"      WARNING: Screenshot not found: {full_path}", file=sys.stderr)
+            return
 
     existing = get_review_screenshot(headers, sub_id)
     if existing:
