@@ -113,11 +113,9 @@ platform :android do
   end
 
   lane :sync_google_iap do
-    manage_google_iap(
-      json_key: ENV["GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH"],
-      package_name: ENV["PACKAGE_NAME"],
-      config_path: "#{ROOT_DIR}/fastlane/iap_config.json"
-    )
+    config_path = "#{ROOT_DIR}/fastlane/iap_config.json"
+    script = "#{ROOT_DIR}/scripts/sync_iap_android.py"
+    sh("python3", script, config_path) if File.exist?(config_path) && File.exist?(script)
   end
 
   lane :update_data_safety do

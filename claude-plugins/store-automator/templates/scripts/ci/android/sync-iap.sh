@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
-# Requires link-fastlane.sh and install-fastlane.sh to have run first (workflow steps).
+# Syncs Android IAPs to Google Play via direct API calls (Python script).
+# Requires read-config.sh to have been sourced (provides PROJECT_ROOT, credentials, etc.).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../common/read-config.sh"
 source "$SCRIPT_DIR/../common/ci-notify.sh"
+
+echo "=== Android IAP Sync ==="
 
 # --- Check Google Play readiness ---
 if [ "${GOOGLE_PLAY_READY:-false}" != "true" ]; then
@@ -16,12 +19,6 @@ fi
 IAP_CONFIG="$PROJECT_ROOT/fastlane/iap_config.json"
 if [ ! -f "$IAP_CONFIG" ]; then
   ci_skip "No Android IAP config file found"
-fi
-
-# --- Check if IAP plugin is available ---
-cd "$APP_ROOT/android"
-if ! bundle exec gem list fastlane-plugin-iap --installed >/dev/null 2>&1; then
-  ci_skip "fastlane-plugin-iap not installed"
 fi
 
 # --- Hash-based change detection ---
@@ -47,12 +44,19 @@ if [ ! -f "$SA_FULL_PATH" ]; then
   exit 1
 fi
 
-# --- Sync IAP via Fastlane ---
+# --- Run IAP sync via Python ---
+SYNC_SCRIPT="$PROJECT_ROOT/scripts/sync_iap_android.py"
+
+if [ ! -f "$SYNC_SCRIPT" ]; then
+  echo "ERROR: sync_iap_android.py not found at $SYNC_SCRIPT" >&2
+  exit 1
+fi
+
 echo "Syncing Android IAP configuration..."
 
+SA_JSON="$SA_FULL_PATH" \
 PACKAGE_NAME="$PACKAGE_NAME" \
-GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH="$SA_FULL_PATH" \
-bundle exec fastlane sync_google_iap
+python3 "$SYNC_SCRIPT" "$IAP_CONFIG"
 
 # --- Update hash on success ---
 echo "$HASH" > "$STATE_FILE"

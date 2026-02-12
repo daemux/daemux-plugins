@@ -2,6 +2,7 @@
 .daemux/
 .DS_Store
 node_modules/
+__pycache__/
 dist/
 *.log
 npm-debug.log*

@@ -51,7 +51,7 @@ def get_access_token(sa_path: str) -> str:
     resp = requests.post(
         "https://oauth2.googleapis.com/token",
         data={
-            "grant_type": "urn:ietf:params:oauth:grant_type:jwt-bearer",
+            "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
             "assertion": signed,
         },
         timeout=TIMEOUT,

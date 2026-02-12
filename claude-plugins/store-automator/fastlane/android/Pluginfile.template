@@ -1,1 +1,2 @@
-gem "fastlane-plugin-iap", git: "https://github.com/daemux/fastlane-plugin-iap"
+# IAP sync is handled by scripts/sync_iap_android.py (direct Google Play API).
+# No fastlane plugins required for IAP management.
