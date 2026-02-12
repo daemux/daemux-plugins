@@ -158,7 +158,15 @@ def _sync_pricing(headers: dict, sub_id: str, sub_config: dict) -> None:
         price_points = get_price_points_for_territory(headers, sub_id, territory)
         point = find_price_point_by_amount(price_points, amount)
         if not point:
-            print(f"      WARNING: No price point matching {amount} for {territory}", file=sys.stderr)
+            sample = [
+                pp.get("attributes", {}).get("customerPrice", "?")
+                for pp in price_points[:5]
+            ]
+            print(
+                f"      WARNING: No price point matching {amount} for {territory}"
+                f" (API returned {len(price_points)} points, first prices: {sample})",
+                file=sys.stderr,
+            )
             continue
         result = create_subscription_price(headers, sub_id, point["id"])
         if result:

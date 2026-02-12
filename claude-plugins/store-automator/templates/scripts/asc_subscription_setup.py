@@ -116,11 +116,21 @@ def get_price_points_for_territory(
 def find_price_point_by_amount(
     price_points: list, amount_str: str,
 ) -> dict | None:
-    """Find a price point matching the given customer price string."""
+    """Find a price point matching the given customer price (numeric comparison).
+
+    Apple's API may return prices with trailing zeros (e.g. "9.990" instead
+    of "9.99"), so we compare as floats with a small tolerance rather than
+    doing an exact string match.
+    """
     for pp in price_points:
         customer_price = pp.get("attributes", {}).get("customerPrice", "")
-        if customer_price == amount_str:
-            return pp
+        try:
+            api_price = float(customer_price)
+            target_price = float(amount_str)
+            if abs(api_price - target_price) < 0.01:
+                return pp
+        except (ValueError, TypeError):
+            continue
     return None
 
 
