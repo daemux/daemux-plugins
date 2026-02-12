@@ -48,9 +48,29 @@ fi
 # --- Upload metadata via Fastlane ---
 echo "Uploading Android metadata..."
 
-PACKAGE_NAME="$PACKAGE_NAME" \
+set +e
+FASTLANE_OUTPUT=$(PACKAGE_NAME="$PACKAGE_NAME" \
 GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH="$SA_FULL_PATH" \
-bundle exec fastlane upload_metadata_android
+bundle exec fastlane upload_metadata_android 2>&1)
+FASTLANE_EXIT=$?
+set -e
+
+echo "$FASTLANE_OUTPUT"
+
+if [ $FASTLANE_EXIT -ne 0 ]; then
+  # Google Play API rejects non-draft edits on apps that have never been
+  # published.  This resolves after the first manual release via the Play
+  # Console, so we warn instead of failing the workflow.
+  if echo "$FASTLANE_OUTPUT" | grep -qi "draft app"; then
+    echo ""
+    echo "WARNING: Metadata upload failed because the app is still in draft"
+    echo "         state on Google Play.  Complete the first release manually"
+    echo "         via the Play Console, then re-run this workflow."
+    echo ""
+    exit 0
+  fi
+  exit $FASTLANE_EXIT
+fi
 
 echo "Android metadata uploaded successfully"
 
