@@ -134,12 +134,23 @@ PROFILE_UUID=""
 TEAM_ID=""
 
 find_profile_uuid() {
-  local profiles_dir="$HOME/Library/MobileDevice/Provisioning Profiles"
+  # Check both old and new Xcode provisioning profile locations
+  local profiles_dir=""
+  local xcode_dir="$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"
+  local legacy_dir="$HOME/Library/MobileDevice/Provisioning Profiles"
 
-  if [ ! -d "$profiles_dir" ]; then
+  if [ -d "$xcode_dir" ]; then
+    profiles_dir="$xcode_dir"
+  elif [ -d "$legacy_dir" ]; then
+    profiles_dir="$legacy_dir"
+  else
     echo "ERROR: Provisioning Profiles directory not found" >&2
+    echo "Checked: $xcode_dir" >&2
+    echo "Checked: $legacy_dir" >&2
     exit 1
   fi
+
+  echo "Searching for profiles in: $profiles_dir"
 
   for profile in "$profiles_dir"/*.mobileprovision; do
     [ -f "$profile" ] || continue
@@ -178,10 +189,16 @@ find_team_id() {
   fi
 
   # Fallback: extract from provisioning profile
-  local profiles_dir="$HOME/Library/MobileDevice/Provisioning Profiles"
-  TEAM_ID=$(/usr/libexec/PlistBuddy -c "Print :TeamIdentifier:0" \
-    /dev/stdin <<< "$(security cms -D -i "$profiles_dir/$PROFILE_UUID.mobileprovision" 2>/dev/null)" \
-    2>/dev/null || echo "")
+  local profile_file=""
+  local xcode_path="$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
+  local legacy_path="$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
+  [ -f "$xcode_path" ] && profile_file="$xcode_path"
+  [ -f "$legacy_path" ] && profile_file="$legacy_path"
+  if [ -n "$profile_file" ]; then
+    TEAM_ID=$(/usr/libexec/PlistBuddy -c "Print :TeamIdentifier:0" \
+      /dev/stdin <<< "$(security cms -D -i "$profile_file" 2>/dev/null)" \
+      2>/dev/null || echo "")
+  fi
 }
 
 # --- Step 8: Generate ExportOptions.plist ---
