@@ -56,11 +56,11 @@ set -e
 echo "$FASTLANE_OUTPUT"
 
 if [ $FASTLANE_EXIT -ne 0 ]; then
-  # Google Play API rejects non-draft edits on apps that have never been
-  # published.  This resolves after the first manual release via the Play
-  # Console, so we warn instead of failing the workflow.
+  # Google Play API rejects all edits on draft apps (apps that have never
+  # passed Google review).  Submitting to closed testing and getting approved
+  # removes draft status.  We warn instead of failing the workflow.
   if echo "$FASTLANE_OUTPUT" | grep -qi "draft app"; then
-    echo "::warning title=Google Play Draft App::First manual release required. See job summary for instructions."
+    echo "::warning title=Google Play Draft App::Closed testing submission required to exit draft status. See job summary for instructions."
     if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
       cat >> "$GITHUB_STEP_SUMMARY" << 'SUMMARY'
 ## :warning: Google Play Draft App — Closed Testing Required (Internal Testing Is NOT Enough)
@@ -148,7 +148,7 @@ SUMMARY
         } >> "$GITHUB_STEP_SUMMARY"
       fi
     fi
-    ci_skip "App is in draft status — manual first release required on Google Play Console"
+    ci_skip "App is in draft status — submit to closed testing on Google Play Console to exit draft"
   fi
   exit $FASTLANE_EXIT
 fi
