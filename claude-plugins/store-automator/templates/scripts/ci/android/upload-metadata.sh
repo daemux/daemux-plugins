@@ -44,6 +44,8 @@ fi
 # --- Upload metadata via Fastlane ---
 echo "Uploading Android metadata..."
 
+cd "$APP_ROOT/android"
+
 set +e
 FASTLANE_OUTPUT=$(PACKAGE_NAME="$PACKAGE_NAME" \
 GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH="$SA_FULL_PATH" \
