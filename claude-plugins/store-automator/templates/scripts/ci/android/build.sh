@@ -5,12 +5,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../common/read-config.sh"
 
 # --- Validate prerequisites ---
-if [ -z "${CM_KEYSTORE_PATH:-}" ]; then
-  echo "ERROR: CM_KEYSTORE_PATH not set. Run setup-keystore.sh first." >&2
+if [ -z "${KEYSTORE_PATH:-}" ]; then
+  echo "ERROR: KEYSTORE_PATH not set. Run setup-keystore.sh first." >&2
   exit 1
 fi
-if [ ! -f "$CM_KEYSTORE_PATH" ]; then
-  echo "ERROR: Keystore not found at $CM_KEYSTORE_PATH" >&2
+if [ ! -f "$KEYSTORE_PATH" ]; then
+  echo "ERROR: Keystore not found at $KEYSTORE_PATH" >&2
   exit 1
 fi
 if ! command -v flutter &>/dev/null; then
@@ -20,8 +20,8 @@ fi
 
 echo "Building Android AAB..."
 echo "  APP_ROOT: $APP_ROOT"
-echo "  CM_KEYSTORE_PATH: $CM_KEYSTORE_PATH"
-echo "  CM_KEY_ALIAS: ${CM_KEY_ALIAS:-not set}"
+echo "  KEYSTORE_PATH: $KEYSTORE_PATH"
+echo "  KEY_ALIAS: ${KEY_ALIAS:-not set}"
 
 # --- Build AAB ---
 cd "$APP_ROOT"

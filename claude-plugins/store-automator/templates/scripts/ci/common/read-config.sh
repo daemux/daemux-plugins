@@ -24,9 +24,6 @@ fi
 export FLUTTER_ROOT=$(yq '.flutter_root // "."' "$CONFIG")
 export APP_ROOT="$PROJECT_ROOT/$FLUTTER_ROOT"
 
-# CI scripts export PROJECT_ROOT for absolute path resolution in Fastfiles
-export CM_BUILD_DIR="$PROJECT_ROOT"
-
 # App identity
 export BUNDLE_ID=$(yq '.app.bundle_id // ""' "$CONFIG")
 export PACKAGE_NAME=$(yq '.app.package_name // ""' "$CONFIG")
