@@ -48,7 +48,6 @@ else
 fi
 
 # ── Step 5: Setup Fastlane symlink and build dir ──
-export CM_BUILD_DIR="$PROJECT_ROOT"
 "$COMMON_DIR/link-fastlane.sh" ios
 
 # ── Step 6: Set up App Store Connect API key ──

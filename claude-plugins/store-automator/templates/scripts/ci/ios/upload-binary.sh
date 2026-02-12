@@ -22,7 +22,6 @@ if [ ! -f "$P8_FULL_PATH" ]; then
 fi
 
 # --- Setup Fastlane ---
-export CM_BUILD_DIR="$PROJECT_ROOT"
 "$SCRIPT_DIR/../common/link-fastlane.sh" ios
 "$SCRIPT_DIR/../common/install-fastlane.sh" ios
 
