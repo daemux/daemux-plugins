@@ -58,6 +58,29 @@ if [ $FASTLANE_EXIT -ne 0 ]; then
   # published.  This resolves after the first manual release via the Play
   # Console, so we warn instead of failing the workflow.
   if echo "$FASTLANE_OUTPUT" | grep -qi "draft app"; then
+    echo "::warning title=Google Play Draft App::First manual release required. See job summary for instructions."
+    if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+      cat >> "$GITHUB_STEP_SUMMARY" << 'SUMMARY'
+## :warning: Google Play Draft App - Manual Action Required
+
+Metadata upload could not be committed because the app is still in **draft state** on Google Play.
+
+### How to fix:
+
+1. Go to [Google Play Console](https://play.google.com/console)
+2. Select your app
+3. Navigate to **Release > Production** (or **Internal testing**)
+4. Click **Create new release**
+5. The AAB was already uploaded by CI -- select it
+6. Fill in release notes
+7. Complete **Store listing** (description, screenshots -- already uploaded by CI)
+8. Complete **Content rating** questionnaire
+9. Complete **Pricing & distribution** settings
+10. Click **Review release** then **Start rollout**
+
+> After the first manual release, all subsequent CI metadata uploads will commit successfully without this error.
+SUMMARY
+    fi
     ci_skip "App is in draft status — manual first release required on Google Play Console"
   fi
   exit $FASTLANE_EXIT

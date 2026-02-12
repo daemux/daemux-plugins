@@ -15,12 +15,15 @@ if [ "${GOOGLE_PLAY_READY:-false}" != "true" ]; then
 
   AAB_DIR="$APP_ROOT/build/app/outputs/bundle/release"
   AAB_FILE=$(find "$AAB_DIR" -name "*.aab" -type f 2>/dev/null | head -1)
+  AAB_INFO=""
   if [ -n "$AAB_FILE" ]; then
+    AAB_INFO="Built AAB: $AAB_FILE ($(du -h "$AAB_FILE" | cut -f1))"
     echo ""
-    echo "Built AAB: $AAB_FILE ($(du -h "$AAB_FILE" | cut -f1))"
+    echo "$AAB_INFO"
   else
+    AAB_INFO="No AAB found. Run build.sh first."
     echo ""
-    echo "No AAB found. Run build.sh first."
+    echo "$AAB_INFO"
   fi
 
   echo ""
@@ -32,6 +35,28 @@ if [ "${GOOGLE_PLAY_READY:-false}" != "true" ]; then
   echo "  5. Complete the release form and roll out"
   echo ""
   echo "After the first manual upload, subsequent releases will be automated."
+  echo "::warning title=Manual AAB Upload Required::First release must be uploaded manually. See job summary for instructions."
+  if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+    cat >> "$GITHUB_STEP_SUMMARY" << SUMMARY
+## :warning: Manual AAB Upload Required - First Release
+
+Google Play is not ready for automated binary uploads. This is expected for the first release.
+
+**$AAB_INFO**
+
+### How to upload manually:
+
+1. Go to [Google Play Console](https://play.google.com/console)
+2. Select your app (\`$PACKAGE_NAME\`)
+3. Navigate to **Release > Testing > Internal testing** (or your target track)
+4. Click **Create new release**
+5. Upload the AAB file built by CI
+6. Fill in release notes
+7. Complete the release form and click **Start rollout**
+
+> After the first manual upload, all subsequent binary uploads will be fully automated by CI.
+SUMMARY
+  fi
   exit 1
 fi
 

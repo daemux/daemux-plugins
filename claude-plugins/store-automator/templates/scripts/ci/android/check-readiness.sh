@@ -86,6 +86,29 @@ if [ "$READY" != "true" ]; then
   echo "  4. Upload at least one AAB manually for the first release"
   echo "  5. Grant the service account access to the app"
   echo ""
+  echo "::warning title=Google Play Not Ready::App setup incomplete. See job summary for missing steps."
+  if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+    cat >> "$GITHUB_STEP_SUMMARY" << SUMMARY
+## :warning: Google Play Not Ready for Automation
+
+The app **$PACKAGE_NAME** is not yet configured for automated publishing.
+
+### Missing steps:
+$MISSING_STEPS
+
+### How to fix:
+
+1. Go to [Google Play Console](https://play.google.com/console)
+2. Ensure the app (\`$PACKAGE_NAME\`) has been manually created
+3. Complete the **Store listing** (description, graphics, screenshots)
+4. Complete the **Content rating** questionnaire
+5. Complete **Pricing & distribution** settings
+6. Upload at least one AAB manually for the first release
+7. Grant the service account access to the app under **Users & permissions**
+
+> Once all steps are completed, re-run this workflow and Google Play readiness will pass.
+SUMMARY
+  fi
   echo "Google Play is NOT ready. CI cannot proceed."
   exit 1
 else
