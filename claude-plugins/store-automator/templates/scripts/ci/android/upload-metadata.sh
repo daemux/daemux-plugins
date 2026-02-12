@@ -63,25 +63,39 @@ if [ $FASTLANE_EXIT -ne 0 ]; then
     echo "::warning title=Google Play Draft App::First manual release required. See job summary for instructions."
     if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
       cat >> "$GITHUB_STEP_SUMMARY" << 'SUMMARY'
-## :warning: Google Play Draft App — First-Time Setup Required
+## :warning: Google Play Draft App — Closed Testing Required (Internal Testing Is NOT Enough)
 
-Metadata and screenshots were uploaded by CI but **could not be saved** because the app hasn't completed its initial setup on Google Play Console. This is a [Google Play API limitation](https://developers.google.com/android-publisher/edits) — all API edits are rejected until the first manual release.
+Metadata and screenshots were uploaded by CI but **could not be saved** because the app is still in **draft status**. This is a [Google Play API limitation](https://developers.google.com/android-publisher/edits) — all API edits are rejected until the app exits draft status.
+
+**"Draft" is an app-level status**, not a release-level one. Internal testing bypasses Google review entirely, so it **cannot** transition your app out of draft. You must submit to **closed testing** (or higher) to trigger Google's review and remove draft status.
 
 ### One-time setup steps:
 
 1. Go to [Google Play Console](https://play.google.com/console) → Select your app
-2. **Dashboard** → Complete all required setup tasks shown in the checklist
-3. **Store listing** → Create your default store listing (title, description, screenshots)
-   - *Copy-paste the values from the **Store Listing** table below, then re-run CI after setup to auto-upload future changes.*
-4. **Content rating** → Complete the content rating questionnaire
-5. **App pricing** → Set pricing and distribution countries
-6. **First release** → Go to **Testing → Internal testing** → Click **Create new release**
-   - The AAB was already uploaded by CI — select it
-   - Add release notes
-   - Click **Review release** → **Start rollout to internal testing**
+2. **Dashboard** → Complete **all** required setup tasks in the checklist:
+   - **Store listing** — app name, descriptions, screenshots, app icon, feature graphic
+     - *Copy-paste the values from the **Store Listing** table below, then re-run CI after setup to auto-upload future changes.*
+   - **App Content** declarations — **all** of the following:
+     - Privacy policy
+     - Data safety
+     - Content rating questionnaire
+     - Target audience and content
+     - Ads declaration
+     - App access (instructions if login required)
+     - Government apps declaration
+     - Financial features declaration (if applicable)
+     - Health apps (if applicable)
+   - **Pricing and distribution** — countries and free/paid
+3. **Submit to Closed Testing** (not internal testing):
+   - Go to **Testing → Closed testing** → Create a track if needed → **Create new release**
+   - The AAB was already uploaded by CI — select it, add release notes
+   - Click **Review release** → **Start rollout to closed testing**
+   - This submits the app to **Google review**
+4. **Wait for Google review approval** — typically 1-7 days for new apps
+   - :information_source: *New personal developer accounts (created after Nov 2023): Google requires **20+ testers** for **14+ continuous days** of closed testing before you can request production access.*
 
-### After first release:
-All subsequent CI runs will automatically upload metadata, screenshots, and new builds without manual intervention. Re-trigger the CI workflow after completing the steps above.
+### After Google approves the review:
+The app permanently exits draft status and all API operations (metadata, builds, screenshots) work automatically. Re-trigger the CI workflow after approval.
 SUMMARY
 
       # --- Append store listing table (read from metadata files) ---
