@@ -3,9 +3,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-COMMON_DIR="$SCRIPT_DIR/../common"
-source "$COMMON_DIR/read-config.sh"
-source "$COMMON_DIR/ci-notify.sh"
+source "$SCRIPT_DIR/../common/read-config.sh"
+source "$SCRIPT_DIR/../common/ci-notify.sh"
 
 echo "=== iOS Metadata & Screenshots Upload ==="
 

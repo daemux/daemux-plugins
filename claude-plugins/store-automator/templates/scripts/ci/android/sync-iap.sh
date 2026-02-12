@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Requires link-fastlane.sh and install-fastlane.sh to have run first (workflow steps).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -19,7 +20,7 @@ fi
 
 # --- Check if IAP plugin is available ---
 cd "$APP_ROOT/android"
-if ! bundle exec gem list fastlane-plugin-iap --installed > /dev/null 2>&1; then
+if ! bundle exec gem list fastlane-plugin-iap --installed >/dev/null 2>&1; then
   ci_skip "fastlane-plugin-iap not installed"
 fi
 

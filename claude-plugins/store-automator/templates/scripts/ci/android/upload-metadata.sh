@@ -18,7 +18,11 @@ STATE_DIR="$PROJECT_ROOT/.ci-state"
 mkdir -p "$STATE_DIR"
 
 HASH=$(find "$PROJECT_ROOT/fastlane/metadata" "$PROJECT_ROOT/fastlane/screenshots/android" \
-  -type f 2>/dev/null | sort | xargs shasum -a 256 2>/dev/null | shasum -a 256 | cut -d' ' -f1)
+  -type f ! -name '.DS_Store' -print0 2>/dev/null \
+  | LC_ALL=C sort -z \
+  | xargs -0 shasum -a 256 2>/dev/null \
+  | shasum -a 256 \
+  | cut -d' ' -f1)
 STATE_FILE="$STATE_DIR/android-metadata-hash"
 
 if [ -f "$STATE_FILE" ]; then

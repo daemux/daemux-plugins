@@ -35,6 +35,9 @@ jobs:
       - name: Install yq
         run: brew install yq
 
+      - name: Init Summary
+        run: echo "| Step | Status | Details |" >> $GITHUB_STEP_SUMMARY && echo "|------|--------|---------|" >> $GITHUB_STEP_SUMMARY
+
       - name: Link Fastlane
         run: scripts/ci/common/link-fastlane.sh android
 
@@ -45,15 +48,18 @@ jobs:
         run: scripts/ci/android/check-readiness.sh
 
       - name: Upload Metadata & Screenshots
+        id: upload-metadata
         run: scripts/ci/android/upload-metadata.sh
 
       - name: Sync IAP
+        id: sync-iap
         run: scripts/ci/android/sync-iap.sh
 
       - name: Install Python dependencies
         run: pip3 install --break-system-packages google-api-python-client google-auth
 
       - name: Update Data Safety
+        id: update-data-safety
         run: scripts/ci/android/update-data-safety.sh
 
       - name: Save .ci-state

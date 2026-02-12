@@ -22,7 +22,7 @@ _ci_output() {
 
 ci_skip() {
   local reason="${1:-skipped}"
-  echo "::warning::${STEP_NAME}: ${reason}" 2>/dev/null || true
+  echo "::warning::${STEP_NAME}: ${reason}"
   _ci_summary_row "Skipped" "$reason"
   _ci_output "status" "skipped"
   echo "[SKIP] ${STEP_NAME}: ${reason}"
@@ -31,7 +31,7 @@ ci_skip() {
 
 ci_done() {
   local message="${1:-done}"
-  echo "::notice::${STEP_NAME}: ${message}" 2>/dev/null || true
+  echo "::notice::${STEP_NAME}: ${message}"
   _ci_summary_row "Done" "$message"
   _ci_output "status" "done"
   echo "[DONE] ${STEP_NAME}: ${message}"
