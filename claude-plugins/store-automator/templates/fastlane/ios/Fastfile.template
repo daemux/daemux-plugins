@@ -80,8 +80,7 @@ platform :ios do
         skip_metadata: !metadata_changed?("fastlane/metadata/ios/"),
         skip_screenshots: !metadata_changed?("fastlane/screenshots/ios/"),
         run_precheck_before_submit: true,
-        precheck_include_in_app_purchases: false,
-        wait_processing_timeout_duration: 1800
+        precheck_include_in_app_purchases: false
       )
     )
   end
@@ -105,8 +104,7 @@ platform :ios do
         skip_metadata: true,
         skip_screenshots: true,
         run_precheck_before_submit: false,
-        submit_for_review: false,
-        wait_processing_timeout_duration: 1800
+        submit_for_review: false
       )
     )
   end
