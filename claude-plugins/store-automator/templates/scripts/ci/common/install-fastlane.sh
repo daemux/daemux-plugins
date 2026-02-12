@@ -30,7 +30,7 @@ if ! command -v bundle &>/dev/null; then
   gem install bundler --no-document --user-install
 fi
 
-export BUNDLE_PATH="${BUNDLE_PATH:-vendor/bundle}"
+bundle config set --local path vendor/bundle
 bundle install --jobs 4 --retry 3
 
 echo "Verifying Fastlane installation..."
