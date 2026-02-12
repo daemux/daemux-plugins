@@ -98,6 +98,12 @@ Read fastlane/app_rating_config.json and verify:
 - Minimum OS version reasonable (iOS 16+, Android API 24+)
 - All declared permissions documented and justified
 - Bundle ID / package name follows reverse-domain convention
+- **Info.plist purpose strings (ITMS-90683 prevention)**: Read `ios/Runner/Info.plist` and verify it contains
+  NS*UsageDescription keys for all privacy-sensitive frameworks used by the app and its dependencies.
+  Check `ios/Podfile.lock` for pods that commonly require purpose strings
+  (e.g. image_picker, camera, geolocator, contacts_service, health, speech_to_text).
+  Each key must have a meaningful, user-facing description -- not placeholder text.
+  Missing keys cause automatic rejection at submission.
 
 ### 7. Live App UI Review (MANDATORY)
 
@@ -210,6 +216,7 @@ Before running the full review, verify these mandatory items. Include checkbox r
 - [ ] All primary user flows complete successfully on iOS
 - [ ] App UI matches store screenshots on iOS
 - [ ] No placeholder text in live app on iOS
+- [ ] Info.plist contains NS*UsageDescription keys for all linked privacy-sensitive frameworks (prevents ITMS-90683)
 
 ### Google Play Mandatory Items
 - [ ] Title (title.txt) present and <= 30 characters

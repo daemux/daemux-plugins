@@ -34,7 +34,44 @@ Run these in order. Stop and report on first failure:
 1. **Static analysis**: `flutter analyze` - must pass with zero issues
 2. **Unit and widget tests**: `flutter test -v` - all tests must pass
 3. **iOS build**: `flutter build ios --no-codesign` - must succeed
-4. **Android build**: `flutter build appbundle` - must succeed
+4. **Info.plist purpose strings**: After iOS build succeeds, verify all required purpose strings are present.
+
+   **Detect linked frameworks:**
+   ```bash
+   APP_BUNDLE=$(find build/ios/Release-iphoneos -name "*.app" -type d | head -1)
+   BINARY="$APP_BUNDLE/$(defaults read "$APP_BUNDLE/Info.plist" CFBundleExecutable)"
+   otool -L "$BINARY" | grep -oE '/[^ ]+\.framework/' | sed 's|.*/||; s|\.framework/||' | sort -u
+   ```
+
+   **Cross-reference linked frameworks against required keys:**
+
+   | Framework | Required Info.plist Key | Condition |
+   |-----------|----------------------|-----------|
+   | Photos / PhotosUI | NSPhotoLibraryUsageDescription | Always |
+   | AVFoundation | NSCameraUsageDescription | Binary contains `AVCapture*` symbols |
+   | AVFoundation | NSMicrophoneUsageDescription | Binary contains `AVAudioRecorder` |
+   | CoreLocation | NSLocationWhenInUseUsageDescription | Always |
+   | Contacts / ContactsUI | NSContactsUsageDescription | Always |
+   | CoreBluetooth | NSBluetoothAlwaysUsageDescription | Always |
+   | Speech | NSSpeechRecognitionUsageDescription | Always |
+   | CoreMotion | NSMotionUsageDescription | Always |
+   | LocalAuthentication | NSFaceIDUsageDescription | Always |
+   | CoreNFC | NFCReaderUsageDescription | Always |
+   | EventKit | NSCalendarsUsageDescription | Calendar access |
+   | EventKit | NSRemindersUsageDescription | Reminders access |
+   | MediaPlayer | NSAppleMusicUsageDescription | Apple Music / media library |
+   | HealthKit | NSHealthShareUsageDescription | Health data read |
+   | HealthKit | NSHealthUpdateUsageDescription | Health data write |
+   | UserNotifications | (no key needed) | -- |
+
+   **Verify AVFoundation conditions** (only if AVFoundation is linked):
+   ```bash
+   strings "$BINARY" | grep -E "AVCapture|AVAudioRecorder"
+   ```
+
+   Read `ios/Runner/Info.plist` and confirm every required key is present with a non-empty, user-facing string.
+   **Missing keys = FAILURE** (Apple rejects with ITMS-90683).
+5. **Android build**: `flutter build appbundle` - must succeed
 
 ### Before Testing
 ```bash
