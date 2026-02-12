@@ -8,10 +8,10 @@ import {
   getPackageDir, exec, ensureDir, ensureFile, readJson, writeJson,
 } from './utils.mjs';
 import { injectEnvVars, injectStatusLine } from './settings.mjs';
-import { promptForTokens } from './prompt.mjs';
+import { promptAll } from './prompt.mjs';
 import { getMcpServers, writeMcpJson } from './mcp-setup.mjs';
 import { installClaudeMd, installCiTemplates, installFirebaseTemplates } from './templates.mjs';
-import { writeCiBundleId, writeCiPackageName } from './ci-config.mjs';
+import { readCiConfig, writeCiFields, writeCiLanguages, isPlaceholder } from './ci-config.mjs';
 import { installGitHubActionsPath } from './install-paths.mjs';
 
 function checkClaudeCli() {
@@ -94,13 +94,66 @@ function printSummary(scope, oldVersion, newVersion) {
   }
 }
 
-function printNextSteps() {
+function mapPromptsToCiFields(prompted) {
+  return {
+    'app.name': prompted.appName,
+    'app.bundle_id': prompted.bundleId,
+    'app.package_name': prompted.packageName,
+    'app.sku': prompted.sku,
+    'app.apple_id': prompted.appleId,
+    'credentials.apple.key_id': prompted.keyId,
+    'credentials.apple.issuer_id': prompted.issuerId,
+    'credentials.android.keystore_password': prompted.keystorePassword,
+    'ios.primary_category': prompted.primaryCategory,
+    'ios.secondary_category': prompted.secondaryCategory,
+    'ios.price_tier': prompted.priceTier,
+    'ios.submit_for_review': prompted.submitForReview,
+    'ios.automatic_release': prompted.automaticRelease,
+    'android.track': prompted.track,
+    'android.rollout_fraction': prompted.rolloutFraction,
+    'android.in_app_update_priority': prompted.inAppUpdatePriority,
+    'web.domain': prompted.domain,
+    'web.cloudflare_project_name': prompted.cfProjectName,
+    'web.tagline': prompted.tagline,
+    'web.primary_color': prompted.primaryColor,
+    'web.secondary_color': prompted.secondaryColor,
+    'web.company_name': prompted.companyName,
+    'web.contact_email': prompted.contactEmail,
+    'web.support_email': prompted.supportEmail,
+    'web.jurisdiction': prompted.jurisdiction,
+  };
+}
+
+function printNextSteps(prompted) {
+  const missing = [];
+
+  if (isPlaceholder(prompted.bundleId)) {
+    missing.push('Set bundle ID in ci.config.yaml');
+  }
+  if (isPlaceholder(prompted.keyId)) {
+    missing.push('Add App Store Connect credentials (key_id, issuer_id, AuthKey.p8)');
+  }
+  if (!existsSync(join(process.cwd(), 'creds', 'play-service-account.json'))) {
+    missing.push('Add creds/play-service-account.json for Google Play');
+  }
+  if (isPlaceholder(prompted.matchGitUrl)) {
+    missing.push('Configure Match code signing (match_git_url, deploy key)');
+  }
+
   console.log('');
-  console.log('Next steps:');
-  console.log('  1. Fill ci.config.yaml with credentials');
-  console.log('  2. Add creds/AuthKey.p8 and creds/play-service-account.json');
-  console.log('  3. Set MATCH_PASSWORD secret in GitHub repository settings');
-  console.log('  4. Start Claude Code');
+  if (missing.length === 0) {
+    console.log('All configuration complete! Start Claude Code.');
+  } else {
+    console.log('Next steps:');
+    for (let i = 0; i < missing.length; i++) {
+      console.log(`  ${i + 1}. ${missing[i]}`);
+    }
+    console.log(`  ${missing.length + 1}. Start Claude Code`);
+  }
+}
+
+function isNonInteractive() {
+  return Boolean(process.env.npm_config_yes) || process.argv.includes('--postinstall');
 }
 
 export async function runInstall(scope, isPostinstall = false, cliTokens = {}) {
@@ -109,21 +162,11 @@ export async function runInstall(scope, isPostinstall = false, cliTokens = {}) {
   console.log('Installing/updating Daemux Store Automator...');
 
   const isGitHubActions = Boolean(cliTokens.githubActions);
-
-  const tokens = isGitHubActions
-    ? { bundleId: cliTokens.bundleId ?? '' }
-    : await promptForTokens(cliTokens);
-
   const projectDir = process.cwd();
-
-  if (!isGitHubActions) {
-    const servers = getMcpServers(tokens);
-    writeMcpJson(projectDir, servers);
-  }
-
   const oldVersion = readMarketplaceVersion();
   const packageDir = getPackageDir();
 
+  // 1. Copy plugin files + register marketplace
   copyPluginFiles(packageDir);
   clearCache();
   registerMarketplace();
@@ -131,21 +174,51 @@ export async function runInstall(scope, isPostinstall = false, cliTokens = {}) {
 
   const newVersion = readMarketplaceVersion('unknown');
 
+  // 2. Install CI templates (creates ci.config.yaml if missing)
+  installCiTemplates(projectDir, packageDir);
+  installFirebaseTemplates(projectDir, packageDir);
+
+  // 3. Read current ci.config.yaml values
+  const currentConfig = readCiConfig(projectDir);
+
+  // 4. Run interactive prompts (or use CLI flags / skip in non-interactive)
+  let prompted;
+  if (isGitHubActions) {
+    prompted = { bundleId: cliTokens.bundleId ?? '' };
+  } else if (isNonInteractive()) {
+    prompted = { ...cliTokens };
+  } else {
+    prompted = await promptAll(cliTokens, currentConfig, projectDir);
+  }
+
+  // 5. Write all prompted values to ci.config.yaml
+  const ciFields = mapPromptsToCiFields(prompted);
+  const wrote = writeCiFields(projectDir, ciFields);
+  if (wrote) console.log('Configuration written to ci.config.yaml');
+
+  // 6. Handle languages separately
+  if (prompted.languages) {
+    const langStr = Array.isArray(prompted.languages)
+      ? prompted.languages.join(',')
+      : prompted.languages;
+    if (writeCiLanguages(projectDir, langStr)) {
+      console.log('Languages updated in ci.config.yaml');
+    }
+  }
+
+  // 7. Configure MCP, CLAUDE.md, settings
+  if (!isGitHubActions) {
+    const servers = getMcpServers(prompted);
+    writeMcpJson(projectDir, servers);
+  }
+
   const baseDir = scope === 'user'
     ? join(homedir(), '.claude')
     : join(process.cwd(), '.claude');
 
   ensureDir(baseDir);
 
-  installClaudeMd(join(baseDir, 'CLAUDE.md'), packageDir);
-  installCiTemplates(projectDir, packageDir);
-  installFirebaseTemplates(projectDir, packageDir);
-
-  if (tokens.bundleId) {
-    const written = writeCiBundleId(projectDir, tokens.bundleId);
-    if (written) console.log(`Bundle ID set in ci.config.yaml: ${tokens.bundleId}`);
-    writeCiPackageName(projectDir, tokens.bundleId);
-  }
+  installClaudeMd(join(baseDir, 'CLAUDE.md'), packageDir, prompted.appName);
 
   installGitHubActionsPath(projectDir, packageDir, cliTokens);
 
@@ -155,6 +228,19 @@ export async function runInstall(scope, isPostinstall = false, cliTokens = {}) {
   injectEnvVars(settingsPath);
   injectStatusLine(settingsPath);
 
+  // 8. Run post-install guides (interactive only)
+  if (!isGitHubActions && !isNonInteractive()) {
+    const { createInterface } = await import('node:readline');
+    const { runPostInstallGuides } = await import('./prompts/store-settings.mjs');
+    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    try {
+      await runPostInstallGuides(rl);
+    } finally {
+      rl.close();
+    }
+  }
+
+  // 9. Summary + dynamic next steps
   printSummary(scope, oldVersion, newVersion);
-  printNextSteps();
+  printNextSteps(prompted);
 }

@@ -23,7 +23,32 @@ const valueFlags = {
   '--cloudflare-token=': 'cloudflareToken',
   '--cloudflare-account-id=': 'cloudflareAccountId',
   '--bundle-id=': 'bundleId',
+  '--app-name=': 'appName',
+  '--key-id=': 'keyId',
+  '--issuer-id=': 'issuerId',
+  '--keystore-password=': 'keystorePassword',
+  '--sku=': 'sku',
+  '--apple-id=': 'appleId',
+  '--primary-category=': 'primaryCategory',
+  '--secondary-category=': 'secondaryCategory',
+  '--price-tier=': 'priceTier',
+  '--submit-for-review=': 'submitForReview',
+  '--automatic-release=': 'automaticRelease',
+  '--track=': 'track',
+  '--rollout-fraction=': 'rolloutFraction',
+  '--in-app-update-priority=': 'inAppUpdatePriority',
+  '--domain=': 'domain',
+  '--cf-project-name=': 'cfProjectName',
+  '--tagline=': 'tagline',
+  '--primary-color=': 'primaryColor',
+  '--secondary-color=': 'secondaryColor',
+  '--company-name=': 'companyName',
+  '--contact-email=': 'contactEmail',
+  '--support-email=': 'supportEmail',
+  '--jurisdiction=': 'jurisdiction',
+  '--languages=': 'languages',
   '--match-deploy-key=': 'matchDeployKey',
+  '--match-deploy-key-path=': 'matchDeployKeyPath',
   '--match-git-url=': 'matchGitUrl',
 };
 
@@ -60,8 +85,44 @@ Options:
   -v, --version                  Show version number
   -h, --help                     Show help
 
-App Configuration:
+App Identity:
+  --app-name=NAME                App display name
   --bundle-id=ID                 Bundle ID / Package Name (e.g., com.company.app)
+  --sku=SKU                      App Store Connect SKU
+  --apple-id=EMAIL               Apple Developer Account Email
+
+Credentials:
+  --key-id=ID                    App Store Connect Key ID
+  --issuer-id=ID                 App Store Connect Issuer ID
+  --keystore-password=PASS       Android keystore password
+  --match-deploy-key-path=PATH   Path to Match deploy key
+  --match-git-url=URL            Match certificates Git URL (SSH)
+
+iOS Store Settings:
+  --primary-category=CAT         iOS primary category (e.g., UTILITIES)
+  --secondary-category=CAT       iOS secondary category
+  --price-tier=N                 iOS price tier (0 = free)
+  --submit-for-review=BOOL       Auto-submit for review (true/false)
+  --automatic-release=BOOL       Auto-release after approval (true/false)
+
+Android Store Settings:
+  --track=TRACK                  Android release track (internal/alpha/beta/production)
+  --rollout-fraction=N           Rollout fraction (0.0-1.0)
+  --in-app-update-priority=N     In-app update priority (0-5)
+
+Web Settings:
+  --domain=DOMAIN                Web domain (e.g., myapp-pages.pages.dev)
+  --cf-project-name=NAME         Cloudflare Pages project name
+  --tagline=TEXT                  App tagline
+  --primary-color=HEX            Primary color (e.g., #2563EB)
+  --secondary-color=HEX          Secondary color
+  --company-name=NAME            Company name
+  --contact-email=EMAIL          Contact email
+  --support-email=EMAIL          Support email
+  --jurisdiction=TEXT             Legal jurisdiction
+
+Languages:
+  --languages=LANGS              Comma-separated language codes (e.g., en-US,de-DE)
 
 MCP Token Flags (skip interactive prompts):
   --stitch-key=KEY               Stitch MCP API key
@@ -74,17 +135,9 @@ GitHub Actions CI mode:
   --match-git-url=URL            Git URL for Match certificates repo
 
 Examples:
-  npx @daemux/store-automator                          Install for project
-  npx @daemux/store-automator -g                       Install globally
-  npx @daemux/store-automator -u                       Uninstall from project
-  npx @daemux/store-automator -g -u                    Uninstall globally
-
-GitHub Actions install:
-  npx @daemux/store-automator --github-actions --bundle-id=ID --match-deploy-key=PATH --match-git-url=URL
-
-Non-interactive install:
-  npx @daemux/store-automator --bundle-id=ID --stitch-key=KEY
-  npx @daemux/store-automator --cloudflare-token=TOKEN --cloudflare-account-id=ID`);
+  npx @daemux/store-automator
+  npx @daemux/store-automator --app-name="My App" --bundle-id=com.company.app
+  npx @daemux/store-automator --github-actions --bundle-id=ID --match-deploy-key=PATH --match-git-url=URL`);
       process.exit(0);
     case '-v':
     case '--version':

@@ -91,6 +91,7 @@ platform :ios do
         skip_binary_upload: true,
         skip_metadata: false,
         skip_screenshots: false,
+        overwrite_screenshots: true,
         run_precheck_before_submit: false,
         submit_for_review: false
       )

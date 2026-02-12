@@ -92,6 +92,22 @@ jobs:
         with:
           channel: stable
 
+      - name: Cache Flutter
+        uses: actions/cache@v4
+        with:
+          path: /Users/runner/.pub-cache
+          key: pub-cache-${{ hashFiles('app/pubspec.lock') }}
+          restore-keys: |
+            pub-cache-
+
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: app/ios/Pods
+          key: pods-${{ hashFiles('app/ios/Podfile.lock') }}
+          restore-keys: |
+            pods-
+
       - name: Install yq
         run: brew install yq
 

@@ -46,13 +46,18 @@ function copyIfMissing(srcPath, destPath, label, isDirectory) {
   }
 }
 
-export function installClaudeMd(targetPath, packageDir) {
+export function installClaudeMd(targetPath, packageDir, appName) {
   const template = join(packageDir, 'templates', 'CLAUDE.md.template');
   if (!existsSync(template)) return;
   const action = existsSync(targetPath) ? 'Updating' : 'Installing';
   console.log(`${action} CLAUDE.md...`);
   ensureDir(join(targetPath, '..'));
-  copyFileSync(template, targetPath);
+
+  let content = readFileSync(template, 'utf8');
+  if (appName) {
+    content = content.replace(/\{APP_NAME\}/g, appName);
+  }
+  writeFileSync(targetPath, content, 'utf8');
 }
 
 export function installCiTemplates(projectDir, packageDir) {

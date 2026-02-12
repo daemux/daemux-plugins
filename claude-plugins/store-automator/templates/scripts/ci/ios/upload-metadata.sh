@@ -16,33 +16,9 @@ if [ ! -d "$METADATA_DIR" ] && [ ! -d "$SCREENSHOTS_DIR" ]; then
   ci_skip "No iOS metadata directories found"
 fi
 
-HASH_DIRS=()
 for dir in "$METADATA_DIR" "$SCREENSHOTS_DIR"; do
-  [ -d "$dir" ] && HASH_DIRS+=("$dir") && echo "  Found: $dir"
+  [ -d "$dir" ] && echo "  Found: $dir"
 done
-
-# --- Hash-based change detection ---
-HASH=$(
-  find "${HASH_DIRS[@]}" -type f ! -name '.DS_Store' -print0 \
-    | LC_ALL=C sort -z \
-    | xargs -0 shasum -a 256 2>/dev/null \
-    | shasum -a 256 \
-    | cut -d' ' -f1
-)
-
-STATE_DIR="$PROJECT_ROOT/.ci-state"
-mkdir -p "$STATE_DIR"
-STATE_FILE="$STATE_DIR/ios-metadata-hash"
-
-if [ -f "$STATE_FILE" ]; then
-  STORED_HASH=$(cat "$STATE_FILE")
-  if [ "$HASH" = "$STORED_HASH" ]; then
-    ci_skip "iOS metadata unchanged since last upload"
-  fi
-  echo "Changes detected (old: ${STORED_HASH:0:12}..., new: ${HASH:0:12}...)"
-else
-  echo "No cached hash found. First run — will upload metadata."
-fi
 
 # --- Validate Apple credentials ---
 if [ -z "$P8_KEY_PATH" ] || [ -z "$APPLE_KEY_ID" ] || [ -z "$APPLE_ISSUER_ID" ]; then
@@ -70,6 +46,4 @@ cd "$APP_ROOT/ios"
 
 bundle exec fastlane upload_metadata_ios
 
-# --- Update hash on success ---
-echo "$HASH" > "$STATE_FILE"
 ci_done "iOS metadata uploaded to App Store Connect"
