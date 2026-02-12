@@ -57,7 +57,6 @@ def metadata_deliver_options
     sync_screenshots: true,
     primary_category: ENV.fetch("PRIMARY_CATEGORY", "UTILITIES"),
     secondary_category: ENV.fetch("SECONDARY_CATEGORY", "PRODUCTIVITY"),
-    price_tier: ENV.fetch("PRICE_TIER", "0").to_i,
     app_rating_config_path: "#{ROOT_DIR}/fastlane/app_rating_config.json"
   )
 end
