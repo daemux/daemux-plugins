@@ -63,24 +63,26 @@ if [ $FASTLANE_EXIT -ne 0 ]; then
     echo "::warning title=Google Play Draft App::First manual release required. See job summary for instructions."
     if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
       cat >> "$GITHUB_STEP_SUMMARY" << 'SUMMARY'
-## :warning: Google Play Draft App - Manual Action Required
+## :warning: Google Play Draft App — First-Time Setup Required
 
-Metadata upload could not be committed because the app is still in **draft state** on Google Play.
+Metadata and screenshots were uploaded by CI but **could not be saved** because the app hasn't completed its initial setup on Google Play Console. This is a [Google Play API limitation](https://developers.google.com/android-publisher/edits) — all API edits are rejected until the first manual release.
 
-### How to fix:
+### One-time setup steps:
 
-1. Go to [Google Play Console](https://play.google.com/console)
-2. Select your app
-3. Navigate to **Release > Production** (or **Internal testing**)
-4. Click **Create new release**
-5. The AAB was already uploaded by CI -- select it
-6. Fill in release notes
-7. Complete **Store listing** (description, screenshots -- already uploaded by CI)
-8. Complete **Content rating** questionnaire
-9. Complete **Pricing & distribution** settings
-10. Click **Review release** then **Start rollout**
+1. Go to [Google Play Console](https://play.google.com/console) → Select your app
+2. **Dashboard** → Complete all required setup tasks shown in the checklist
+3. **Store listing** → Create your default store listing (title, description, screenshots)
+   - *Note: CI uploaded this data but it was discarded. After completing setup, re-run CI to auto-upload.*
+4. **Content rating** → Complete the content rating questionnaire
+5. **App pricing** → Set pricing and distribution countries
+6. **Release** → Go to **Testing → Internal testing** (or **Production**)
+   - Click **Create new release**
+   - The AAB was already uploaded by CI — select it
+   - Add release notes
+   - Click **Review release** → **Start rollout**
 
-> After the first manual release, all subsequent CI metadata uploads will commit successfully without this error.
+### After first release:
+All subsequent CI runs will automatically upload metadata, screenshots, and new builds without manual intervention. Re-trigger the CI workflow after completing the steps above.
 SUMMARY
     fi
     ci_skip "App is in draft status — manual first release required on Google Play Console"
