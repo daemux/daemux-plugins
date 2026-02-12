@@ -97,20 +97,28 @@ def get_subscription_prices(headers: dict, sub_id: str) -> list:
 def get_price_points_for_territory(
     headers: dict, sub_id: str, territory: str,
 ) -> list:
-    """Get available price points for a subscription in a given territory."""
-    resp = requests.get(
-        f"{BASE_URL}/subscriptions/{sub_id}/pricePoints",
-        params={
-            "filter[territory]": territory,
-            "include": "territory",
-        },
-        headers=headers,
-        timeout=TIMEOUT,
-    )
-    if not resp.ok:
-        print_api_errors(resp, f"get price points for {territory}")
-        return []
-    return resp.json().get("data", [])
+    """Get all available price points for a subscription in a given territory.
+
+    Uses limit=200 (ASC API max) and follows pagination links to ensure
+    higher price tiers (e.g. $9.99, $69.99) beyond the first page are included.
+    """
+    url: str | None = f"{BASE_URL}/subscriptions/{sub_id}/pricePoints"
+    params: dict | None = {
+        "filter[territory]": territory,
+        "include": "territory",
+        "limit": 200,
+    }
+    all_points: list = []
+    while url:
+        resp = requests.get(url, headers=headers, params=params, timeout=TIMEOUT)
+        if not resp.ok:
+            print_api_errors(resp, f"get price points for {territory}")
+            return all_points
+        data = resp.json()
+        all_points.extend(data.get("data", []))
+        url = data.get("links", {}).get("next")
+        params = None  # next URL already contains query parameters
+    return all_points
 
 
 def find_price_point_by_amount(
