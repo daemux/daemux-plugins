@@ -1,0 +1,8 @@
+git_url(ENV["MATCH_GIT_URL"] || "{{MATCH_GIT_URL}}")
+storage_mode("git")
+type("appstore")
+app_identifier(ENV["BUNDLE_ID"] || "{{BUNDLE_ID}}")
+git_branch("main")
+
+# Set to true after initial cert creation for faster CI runs
+# readonly(true)

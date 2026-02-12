@@ -1,0 +1,72 @@
+name: Android Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      skip_build:
+        description: 'Skip build (metadata only)'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  FLUTTER_VERSION: '3.x'
+
+jobs:
+  android-release:
+    runs-on: macos-latest-xlarge
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore CI state cache
+        uses: actions/cache@v4
+        with:
+          path: .ci-state
+          key: ci-state-android-${{ github.ref_name }}
+          restore-keys: ci-state-android-
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Upload metadata
+        run: scripts/ci/android/upload-metadata.sh
+
+      - name: Setup keystore
+        if: inputs.skip_build != 'true'
+        run: source scripts/ci/android/setup-keystore.sh
+
+      - name: Check Google Play readiness
+        if: inputs.skip_build != 'true'
+        run: scripts/ci/android/check-readiness.sh
+
+      - name: Manage Android version
+        if: inputs.skip_build != 'true'
+        run: source scripts/ci/android/manage-version.sh
+
+      - name: Flutter pub get
+        if: inputs.skip_build != 'true'
+        run: scripts/ci/common/flutter-setup.sh
+
+      - name: Build Android
+        if: inputs.skip_build != 'true'
+        run: scripts/ci/android/build.sh
+
+      - name: Upload binary
+        if: inputs.skip_build != 'true'
+        run: scripts/ci/android/upload-binary.sh
+
+      - name: Save CI state cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .ci-state
+          key: ci-state-android-${{ github.ref_name }}-${{ github.run_id }}

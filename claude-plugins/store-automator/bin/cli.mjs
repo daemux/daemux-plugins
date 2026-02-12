@@ -34,6 +34,8 @@ const valueFlags = {
   '--cloudflare-token=': 'cloudflareToken',
   '--cloudflare-account-id=': 'cloudflareAccountId',
   '--bundle-id=': 'bundleId',
+  '--match-deploy-key=': 'matchDeployKey',
+  '--match-git-url=': 'matchGitUrl',
 };
 
 for (const arg of args) {
@@ -42,15 +44,11 @@ for (const arg of args) {
   if ((v = flagValue(arg, '--branch=')) !== undefined) { cmBranch = v; continue; }
   if ((v = flagValue(arg, '--workflow=')) !== undefined) { cmWorkflowId = v; continue; }
 
-  let matched = false;
-  for (const [prefix, key] of Object.entries(valueFlags)) {
-    if ((v = flagValue(arg, prefix)) !== undefined) {
-      cliTokens[key] = v;
-      matched = true;
-      break;
-    }
+  const valueFlagEntry = Object.entries(valueFlags).find(([prefix]) => arg.startsWith(prefix));
+  if (valueFlagEntry) {
+    cliTokens[valueFlagEntry[1]] = arg.slice(valueFlagEntry[0].length);
+    continue;
   }
-  if (matched) continue;
 
   switch (arg) {
     case '-g':
@@ -69,6 +67,9 @@ for (const arg of args) {
       break;
     case '--github-setup':
       action = 'github-setup';
+      break;
+    case '--github-actions':
+      cliTokens.githubActions = true;
       break;
     case '--trigger':
       cmTrigger = true;
@@ -105,33 +106,56 @@ Codemagic:
   --trigger                      Trigger build after setup
   --wait                         Wait for build completion (implies --trigger)
 
+GitHub Actions CI mode:
+  --github-actions               Use GitHub Actions instead of Codemagic (skip MCP setup)
+  --match-deploy-key=PATH        Path to Match deploy key file (required with --github-actions)
+  --match-git-url=URL            Git URL for Match certificates repo (required with --github-actions)
+
 GitHub Actions (auto-configured during install if gh CLI available):
   --github-setup                 Set CM_API_TOKEN secret for GitHub Actions
   --token=TOKEN                  API token (or set CM_API_TOKEN env var)
 
 Examples:
-  npx @daemux/store-automator                          Install for project
+  npx @daemux/store-automator                          Install for project (Codemagic)
   npx @daemux/store-automator -g                       Install globally
   npx @daemux/store-automator -u                       Uninstall from project
   npx @daemux/store-automator -g -u                    Uninstall globally
   npx @daemux/store-automator --codemagic-setup        Register with Codemagic
   npx @daemux/store-automator --codemagic-setup --trigger --wait  Trigger and wait
-  npx @daemux/store-automator --github-setup           Configure GitHub Actions
+  npx @daemux/store-automator --github-setup           Configure GitHub Actions secret
 
-Non-interactive install (CI/CD):
-  npx @daemux/store-automator --bundle-id=com.company.app --codemagic-token=TOKEN --codemagic-team-id=ID --stitch-key=KEY
+GitHub Actions install:
+  npx @daemux/store-automator --github-actions --bundle-id=ID --match-deploy-key=PATH --match-git-url=URL
+
+Non-interactive install (Codemagic):
+  npx @daemux/store-automator --bundle-id=ID --codemagic-token=TOKEN --stitch-key=KEY
   npx @daemux/store-automator --cloudflare-token=TOKEN --cloudflare-account-id=ID`);
       process.exit(0);
-      break; // eslint: no-fallthrough
     case '-v':
     case '--version':
       console.log(pkg.version);
       process.exit(0);
-      break; // eslint: no-fallthrough
   }
 }
 
 if (cmWait) cmTrigger = true;
+
+if (cliTokens.githubActions) {
+  const missing = [];
+  if (!cliTokens.matchDeployKey) missing.push('--match-deploy-key');
+  if (!cliTokens.matchGitUrl) missing.push('--match-git-url');
+  if (!cliTokens.bundleId) missing.push('--bundle-id');
+  if (missing.length > 0) {
+    console.error(`Error: --github-actions requires: ${missing.join(', ')}`);
+    console.error('');
+    console.error('Example:');
+    console.error('  npx @daemux/store-automator --github-actions \\');
+    console.error('    --bundle-id=com.company.app \\');
+    console.error('    --match-deploy-key=creds/match_deploy_key \\');
+    console.error('    --match-git-url=git@github.com:org/certs.git');
+    process.exit(1);
+  }
+}
 
 notifier.notify();
 

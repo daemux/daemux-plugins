@@ -7,6 +7,8 @@ const FIELD_PATTERNS = {
   team_id: /^(\s*team_id:\s*)"[^"]*"/m,
   bundle_id: /^(\s*bundle_id:\s*)"[^"]*"/m,
   package_name: /^(\s*package_name:\s*)"[^"]*"/m,
+  deploy_key_path: /^(\s*deploy_key_path:\s*)"[^"]*"/m,
+  git_url: /^(\s*git_url:\s*)"[^"]*"/m,
 };
 
 function writeCiField(projectDir, field, value) {
@@ -43,4 +45,23 @@ export function writeCiBundleId(projectDir, bundleId) {
 
 export function writeCiPackageName(projectDir, packageName) {
   return writeCiField(projectDir, 'package_name', packageName);
+}
+
+export function writeMatchConfig(projectDir, { deployKeyPath, gitUrl }) {
+  const wrote1 = writeCiField(projectDir, 'deploy_key_path', deployKeyPath);
+  const wrote2 = writeCiField(projectDir, 'git_url', gitUrl);
+  return wrote1 || wrote2;
+}
+
+export function readFlutterRoot(projectDir) {
+  const configPath = join(projectDir, CI_CONFIG_FILE);
+  if (!existsSync(configPath)) return '.';
+
+  try {
+    const content = readFileSync(configPath, 'utf8');
+    const match = content.match(/^flutter_root:\s*"([^"]*)"/m);
+    return match ? match[1] : '.';
+  } catch {
+    return '.';
+  }
 }

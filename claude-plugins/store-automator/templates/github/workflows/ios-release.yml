@@ -1,0 +1,62 @@
+name: iOS Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      skip_build:
+        description: 'Skip build (metadata/screenshots only)'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  FLUTTER_VERSION: '3.x'
+
+jobs:
+  ios-release:
+    runs-on: macos-latest-xlarge
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore CI state cache
+        uses: actions/cache@v4
+        with:
+          path: .ci-state
+          key: ci-state-ios-${{ github.ref_name }}
+          restore-keys: ci-state-ios-
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+
+      # Note: No separate "Load CI config" step needed here.
+      # Each script sources read-config.sh internally.
+
+      - name: Setup iOS signing (Fastlane Match)
+        env:
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+        run: scripts/ci/ios/setup-signing.sh
+
+      - name: Upload metadata & screenshots
+        run: scripts/ci/ios/upload-metadata.sh
+
+      - name: Sync IAP
+        run: scripts/ci/ios/sync-iap.sh
+
+      # Build & upload binary steps (added when build scripts are created)
+      # - name: Build iOS
+      #   if: inputs.skip_build != 'true'
+      #   run: scripts/ci/ios/build.sh
+
+      # - name: Upload binary
+      #   if: inputs.skip_build != 'true'
+      #   run: scripts/ci/ios/upload-binary.sh
+
+      - name: Save CI state cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .ci-state
+          key: ci-state-ios-${{ github.ref_name }}-${{ github.run_id }}

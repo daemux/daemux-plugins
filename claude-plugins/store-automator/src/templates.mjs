@@ -1,4 +1,4 @@
-import { existsSync, cpSync, copyFileSync } from 'node:fs';
+import { existsSync, cpSync, copyFileSync, chmodSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ensureDir } from './utils.mjs';
 
@@ -20,6 +20,17 @@ const FIREBASE_COPIES = [
   ['firebase/firebase.json.template', 'backend/firebase.json'],
   ['firebase/firestore.indexes.json.template', 'backend/firestore.indexes.json'],
   ['firebase/.firebaserc.template', 'backend/.firebaserc'],
+];
+
+const GH_ACTIONS_WORKFLOWS = [
+  ['github/workflows/ios-release.yml', '.github/workflows/ios-release.yml'],
+  ['github/workflows/android-release.yml', '.github/workflows/android-release.yml'],
+];
+
+const GH_ACTIONS_SCRIPT_DIRS = [
+  'scripts/ci/common',
+  'scripts/ci/android',
+  'scripts/ci/ios',
 ];
 
 function copyIfMissing(srcPath, destPath, label, isDirectory) {
@@ -80,4 +91,63 @@ export function installFirebaseTemplates(projectDir, packageDir) {
   for (const [src, dest] of FIREBASE_COPIES) {
     copyIfMissing(join(templateDir, src), join(projectDir, dest), dest, false);
   }
+}
+
+function copyOrUpdate(srcPath, destPath, label) {
+  if (!existsSync(srcPath)) return;
+  ensureDir(join(destPath, '..'));
+  if (existsSync(destPath)) {
+    console.log(`  ${label} exists, overwriting.`);
+  }
+  copyFileSync(srcPath, destPath);
+}
+
+function chmodShFiles(dirPath) {
+  if (!existsSync(dirPath)) return;
+  for (const entry of readdirSync(dirPath, { withFileTypes: true })) {
+    const fullPath = join(dirPath, entry.name);
+    if (entry.isDirectory()) {
+      chmodShFiles(fullPath);
+    } else if (entry.name.endsWith('.sh')) {
+      chmodSync(fullPath, 0o755);
+    }
+  }
+}
+
+export function installGitHubActionsTemplates(projectDir, packageDir) {
+  console.log('Installing GitHub Actions templates...');
+  const templateDir = join(packageDir, 'templates');
+
+  for (const [src, dest] of GH_ACTIONS_WORKFLOWS) {
+    copyOrUpdate(join(templateDir, src), join(projectDir, dest), dest);
+  }
+
+  for (const scriptDir of GH_ACTIONS_SCRIPT_DIRS) {
+    const scriptsSrc = join(templateDir, scriptDir);
+    const scriptsDest = join(projectDir, scriptDir);
+    if (existsSync(scriptsSrc)) {
+      ensureDir(scriptsDest);
+      cpSync(scriptsSrc, scriptsDest, { recursive: true });
+      chmodShFiles(scriptsDest);
+      console.log(`  ${scriptDir}/ copied.`);
+    }
+  }
+}
+
+export function installMatchfile(projectDir, packageDir, flutterRoot, { matchGitUrl, bundleId }) {
+  console.log('Installing Matchfile...');
+  const src = join(packageDir, 'templates', 'Matchfile.template');
+  if (!existsSync(src)) return;
+
+  const destDir = join(projectDir, flutterRoot, 'ios', 'fastlane');
+  ensureDir(destDir);
+  const dest = join(destDir, 'Matchfile');
+
+  copyOrUpdate(src, dest, 'Matchfile');
+
+  const content = readFileSync(dest, 'utf8');
+  const updated = content
+    .replace('{{MATCH_GIT_URL}}', matchGitUrl)
+    .replace('{{BUNDLE_ID}}', bundleId);
+  writeFileSync(dest, updated, 'utf8');
 }

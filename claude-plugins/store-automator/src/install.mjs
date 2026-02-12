@@ -1,7 +1,7 @@
 import { existsSync, rmSync, cpSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
-import { execSync, execFileSync } from 'node:child_process';
+import { execSync } from 'node:child_process';
 import {
   MARKETPLACE_DIR, KNOWN_MP_PATH, CACHE_DIR,
   MARKETPLACE_NAME, PLUGIN_REF,
@@ -9,10 +9,10 @@ import {
 } from './utils.mjs';
 import { injectEnvVars, injectStatusLine } from './settings.mjs';
 import { promptForTokens } from './prompt.mjs';
-import { getMcpServers, writeMcpJson, updateMcpAppId, updateMcpTeamId } from './mcp-setup.mjs';
+import { getMcpServers, writeMcpJson } from './mcp-setup.mjs';
 import { installClaudeMd, installCiTemplates, installFirebaseTemplates } from './templates.mjs';
-import { findAppByRepo, addApp, normalizeRepoUrl } from './codemagic-api.mjs';
-import { writeCiAppId, writeCiTeamId, writeCiBundleId, writeCiPackageName } from './ci-config.mjs';
+import { writeCiBundleId, writeCiPackageName } from './ci-config.mjs';
+import { installGitHubActionsPath, installCodemagicPath } from './install-paths.mjs';
 
 function checkClaudeCli() {
   const result = exec('command -v claude') || exec('which claude');
@@ -94,61 +94,19 @@ function printSummary(scope, oldVersion, newVersion) {
   }
 }
 
-function setupGitHubActions(codemagicToken) {
-  if (!codemagicToken) return false;
-
-  try {
-    execFileSync('which', ['gh'], { encoding: 'utf8', stdio: 'pipe' });
-    const authStatus = execFileSync('gh', ['auth', 'status'], { encoding: 'utf8', stdio: 'pipe' });
-    if (authStatus.includes('not logged')) return false;
-
-    execFileSync('gh', ['secret', 'set', 'CM_API_TOKEN', '--body', codemagicToken], {
-      encoding: 'utf8',
-      stdio: 'pipe',
-    });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function setupCodemagicApp(projectDir, codemagicToken, codemagicTeamId) {
-  if (!codemagicToken) return;
-
-  let repoUrl;
-  try {
-    const raw = execSync('git remote get-url origin', {
-      encoding: 'utf8',
-      stdio: ['pipe', 'pipe', 'pipe'],
-    }).trim();
-    if (!raw) return;
-    repoUrl = normalizeRepoUrl(raw);
-  } catch {
-    return;
-  }
-
-  try {
-    let app = await findAppByRepo(codemagicToken, repoUrl);
-    if (!app) {
-      app = await addApp(codemagicToken, repoUrl, codemagicTeamId);
-      console.log(`Codemagic app created: ${app.appName || app._id}`);
-    } else {
-      console.log(`Codemagic app found: ${app.appName || app._id}`);
-    }
-
-    const written = writeCiAppId(projectDir, app._id);
-    if (written) {
-      console.log(`Codemagic app_id written to ci.config.yaml`);
-    }
-
-    updateMcpAppId(projectDir, app._id);
-
-    if (codemagicTeamId) {
-      writeCiTeamId(projectDir, codemagicTeamId);
-      updateMcpTeamId(projectDir, codemagicTeamId);
-    }
-  } catch (err) {
-    console.log(`Codemagic auto-setup skipped: ${err.message || err}`);
+function printNextSteps(isGitHubActions) {
+  console.log('');
+  console.log('Next steps:');
+  if (isGitHubActions) {
+    console.log('  1. Fill ci.config.yaml with credentials');
+    console.log('  2. Add creds/AuthKey.p8 and creds/play-service-account.json');
+    console.log('  3. Set MATCH_PASSWORD secret in GitHub repository settings');
+    console.log('  4. Start Claude Code');
+  } else {
+    console.log('  1. Fill ci.config.yaml (codemagic.app_id is auto-configured if token was provided)');
+    console.log('  2. Add creds/AuthKey.p8 and creds/play-service-account.json');
+    console.log('  3. Start Claude Code');
+    console.log('  Note: For auto-trigger, install gh CLI and run "gh auth login"');
   }
 }
 
@@ -157,11 +115,18 @@ export async function runInstall(scope, isPostinstall = false, cliTokens = {}) {
 
   console.log('Installing/updating Daemux Store Automator...');
 
-  const tokens = await promptForTokens(cliTokens);
+  const isGitHubActions = Boolean(cliTokens.githubActions);
+
+  const tokens = isGitHubActions
+    ? { bundleId: cliTokens.bundleId ?? '' }
+    : await promptForTokens(cliTokens);
 
   const projectDir = process.cwd();
-  const servers = getMcpServers(tokens);
-  writeMcpJson(projectDir, servers);
+
+  if (!isGitHubActions) {
+    const servers = getMcpServers(tokens);
+    writeMcpJson(projectDir, servers);
+  }
 
   const oldVersion = readMarketplaceVersion();
   const packageDir = getPackageDir();
@@ -189,7 +154,11 @@ export async function runInstall(scope, isPostinstall = false, cliTokens = {}) {
     writeCiPackageName(projectDir, tokens.bundleId);
   }
 
-  await setupCodemagicApp(projectDir, tokens.codemagicToken, tokens.codemagicTeamId);
+  if (isGitHubActions) {
+    installGitHubActionsPath(projectDir, packageDir, cliTokens);
+  } else {
+    await installCodemagicPath(projectDir, tokens);
+  }
 
   const scopeLabel = scope === 'user' ? 'global' : 'project';
   console.log(`Configuring ${scopeLabel} settings...`);
@@ -197,20 +166,6 @@ export async function runInstall(scope, isPostinstall = false, cliTokens = {}) {
   injectEnvVars(settingsPath);
   injectStatusLine(settingsPath);
 
-  const ghConfigured = setupGitHubActions(tokens.codemagicToken);
-  if (ghConfigured) {
-    console.log('GitHub Actions: CM_API_TOKEN secret configured.');
-  } else if (tokens.codemagicToken) {
-    console.log('GitHub Actions: secret not set (gh CLI unavailable or not authenticated).');
-  }
-
   printSummary(scope, oldVersion, newVersion);
-  console.log('');
-  console.log('Next steps:');
-  console.log('  1. Fill ci.config.yaml (codemagic.app_id is auto-configured if token was provided)');
-  console.log('  2. Add creds/AuthKey.p8 and creds/play-service-account.json');
-  console.log('  3. Start Claude Code');
-  if (!ghConfigured) {
-    console.log('  Note: For auto-trigger, install gh CLI and run "gh auth login"');
-  }
+  printNextSteps(isGitHubActions);
 }

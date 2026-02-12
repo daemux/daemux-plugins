@@ -39,6 +39,6 @@ platform :android do
   lane :update_data_safety do
     script = "#{ROOT_DIR}/scripts/update_data_safety.py"
     csv = "#{ROOT_DIR}/fastlane/data_safety.csv"
-    sh("python3", script) if File.exist?(csv)
+    sh("python3", script, csv) if File.exist?(csv)
   end
 end
