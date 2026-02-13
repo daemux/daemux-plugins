@@ -25,10 +25,9 @@ def create_review_submission(
     Idempotent: silently handles 409 Conflict (already submitted).
     """
     resp = requests.post(
-        f"{BASE_URL}/subscriptionAppStoreReviewSubmissions",
+        f"{BASE_URL}/subscriptionSubmissions",
         json={"data": {
-            "type": "subscriptionAppStoreReviewSubmissions",
-            "attributes": {"reviewerNotes": reviewer_notes} if reviewer_notes else {},
+            "type": "subscriptionSubmissions",
             "relationships": {
                 "subscription": {"data": {"type": "subscriptions", "id": sub_id}},
             },
