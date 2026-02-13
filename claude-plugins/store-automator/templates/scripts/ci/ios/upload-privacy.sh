@@ -18,6 +18,12 @@ fi
 
 echo "  Found: $PRIVACY_JSON"
 
+# --- Validate JSON format ---
+if ! python3 -m json.tool "$PRIVACY_JSON" > /dev/null 2>&1; then
+  echo "ERROR: Invalid JSON format in $PRIVACY_JSON"
+  exit 1
+fi
+
 # --- Privacy upload requires Apple ID auth (not API key) ---
 if [ -z "${APPLE_ID:-}" ]; then
   echo "Skipping privacy upload: APPLE_ID not set (requires Apple ID auth, not API key)"

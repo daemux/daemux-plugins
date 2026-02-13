@@ -118,6 +118,8 @@ platform :ios do
   end
 
   lane :upload_privacy_ios do
+    # Note: upload_app_privacy_details_to_app_store requires Apple ID authentication
+    # (username + team_name), not API key. Use APPLE_ID and APPLE_TEAM_NAME env vars.
     upload_app_privacy_details_to_app_store(
       username: ENV.fetch("APPLE_ID", ""),
       team_name: ENV.fetch("APPLE_TEAM_NAME", ""),
