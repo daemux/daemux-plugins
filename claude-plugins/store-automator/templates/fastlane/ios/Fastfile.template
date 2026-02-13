@@ -127,4 +127,17 @@ platform :ios do
       json_path: "#{ROOT_DIR}/fastlane/app_privacy_details.json"
     )
   end
+
+  # NOTE: produce requires Apple ID auth (not API key). Run locally for new apps.
+  lane :create_app_ios do
+    produce(
+      username: ENV.fetch("APPLE_ID", ""),
+      team_name: ENV.fetch("APPLE_TEAM_NAME", ""),
+      app_identifier: ENV["BUNDLE_ID"],
+      app_name: ENV.fetch("APP_NAME", ""),
+      sku: ENV.fetch("SKU", ENV["BUNDLE_ID"]),
+      language: ENV.fetch("PRIMARY_LOCALE", "en-US"),
+      enable_services: {}
+    )
+  end
 end

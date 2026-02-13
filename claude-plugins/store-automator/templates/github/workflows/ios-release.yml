@@ -157,6 +157,7 @@ jobs:
   submit:
     name: Submit iOS for Review
     needs: [build]
+    if: false
     runs-on: macos-latest
     timeout-minutes: 45
     steps:

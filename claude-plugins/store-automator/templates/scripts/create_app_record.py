@@ -177,6 +177,14 @@ def create_app_record(
             return existing
         print("ERROR: App creation returned 409 but app not found.", file=sys.stderr)
         sys.exit(1)
+    if resp.status_code == 403:
+        print("App creation is not available via the ASC REST API.")
+        print("Create the app using fastlane (requires Apple ID + 2FA):")
+        print(f'  APPLE_ID="your@email.com" BUNDLE_ID="{bundle_id}" APP_NAME="{app_name}" SKU="{sku}" \\')
+        print('    bundle exec fastlane create_app_ios')
+        print("")
+        print("Or create the app manually at https://appstoreconnect.apple.com")
+        sys.exit(1)
     if not resp.ok:
         print_api_errors(resp, "create app record")
         sys.exit(1)
