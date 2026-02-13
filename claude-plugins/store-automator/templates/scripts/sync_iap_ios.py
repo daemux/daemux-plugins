@@ -52,6 +52,10 @@ from asc_subscription_setup import (
     list_all_territory_ids,
     upload_review_screenshot,
 )
+from asc_subscription_submit import (
+    create_group_submission,
+    create_review_submission,
+)
 
 CURRENCY_TO_TERRITORY = {
     "USD": "USA", "EUR": "FRA", "GBP": "GBR", "JPY": "JPN",
@@ -155,8 +159,10 @@ def sync_subscription_group(
         )
         if not resp.ok:
             print_api_errors(resp, f"touch subscription {sub_id}")
+        create_review_submission(headers, sub_id)
         sub_results.append({"product_id": sub_config["product_id"], "id": sub_id})
 
+    create_group_submission(headers, group_id)
     return {"group": ref_name, "group_id": group_id, "subscriptions": sub_results}
 
 

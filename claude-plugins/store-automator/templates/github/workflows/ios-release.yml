@@ -47,6 +47,9 @@ jobs:
       - name: Install Python dependencies
         run: pip3 install --break-system-packages requests PyJWT
 
+      - name: Ensure App Exists
+        run: scripts/ci/ios/ensure-app-exists.sh
+
       - name: Upload Metadata & Screenshots
         id: upload-metadata
         run: scripts/ci/ios/upload-metadata.sh

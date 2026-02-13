@@ -20,6 +20,7 @@ fi
 CURRENT_HASH=$(cat "$IAP_CONFIG" \
   "$PROJECT_ROOT/scripts/sync_iap_ios.py" \
   "$PROJECT_ROOT/scripts/asc_subscription_setup.py" \
+  "$PROJECT_ROOT/scripts/asc_subscription_submit.py" \
   "$PROJECT_ROOT/scripts/asc_iap_api.py" \
   | shasum -a 256 | cut -d' ' -f1)
 
