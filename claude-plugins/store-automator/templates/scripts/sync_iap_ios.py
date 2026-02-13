@@ -21,7 +21,11 @@ import os
 import sys
 import time
 
+import requests
+
 from asc_iap_api import (
+    BASE_URL,
+    TIMEOUT,
     create_group_localization,
     create_localization,
     create_subscription,
@@ -32,6 +36,7 @@ from asc_iap_api import (
     get_subscription_localizations,
     list_subscription_groups,
     list_subscriptions_in_group,
+    print_api_errors,
     update_group_localization,
     update_localization,
 )
@@ -138,6 +143,18 @@ def sync_subscription_group(
         _sync_availability(headers, sub_id, sub_config)
         _sync_pricing(headers, sub_id, sub_config)
         _sync_review_screenshot(headers, sub_id, sub_config, project_root)
+        # Patch subscription to trigger Apple's state re-evaluation
+        resp = requests.patch(
+            f"{BASE_URL}/subscriptions/{sub_id}",
+            json={"data": {
+                "type": "subscriptions", "id": sub_id,
+                "attributes": {"reviewNote": "", "familySharable": False},
+            }},
+            headers=headers,
+            timeout=TIMEOUT,
+        )
+        if not resp.ok:
+            print_api_errors(resp, f"touch subscription {sub_id}")
         sub_results.append({"product_id": sub_config["product_id"], "id": sub_id})
 
     return {"group": ref_name, "group_id": group_id, "subscriptions": sub_results}
@@ -230,18 +247,17 @@ def _apply_equalized_prices(
     skipped = 0
     failed = 0
 
-    # Set base territory price if not already set
-    if base_territory not in priced_territories:
-        result = create_subscription_price(headers, sub_id, base_point["id"], base_territory)
-        if result:
-            created += 1
-            print(f"      Set base price {base_amount} {base_currency} for {base_territory}")
-        else:
-            failed += 1
-            print(f"      WARNING: Failed to set base price for {base_territory}", file=sys.stderr)
-            return created, skipped, failed
+    # Always set base territory price to ensure it matches config.
+    # Apple's preserveCurrentPrice=False handles updates; if the price
+    # is already correct this is effectively a no-op re-confirmation.
+    result = create_subscription_price(headers, sub_id, base_point["id"], base_territory)
+    if result:
+        created += 1
+        print(f"      Set base price {base_amount} {base_currency} for {base_territory}")
     else:
-        skipped += 1
+        failed += 1
+        print(f"      WARNING: Failed to set base price for {base_territory}", file=sys.stderr)
+        return created, skipped, failed
 
     # Get equalized prices for all other territories
     equalized = get_price_point_equalizations(headers, base_point["id"])

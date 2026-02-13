@@ -15,8 +15,9 @@ You are a senior ASO (App Store Optimization) specialist and localization expert
 5. SAVE all files to fastlane/metadata/ in the correct directory structure
 6. GENERATE fastlane/app_rating_config.json based on app content analysis
 7. GENERATE fastlane/data_safety.csv based on app data collection analysis
-8. GENERATE fastlane/metadata/review_information/ contact files for App Store review team
-9. Verify character limits are respected in every language
+8. GENERATE fastlane/app_privacy_details.json based on app data collection analysis (Apple App Privacy)
+9. GENERATE fastlane/metadata/review_information/ contact files for App Store review team
+10. Verify character limits are respected in every language
 
 ## Files You Create
 
@@ -137,6 +138,52 @@ SECURITY_PRACTICES_DATA_ENCRYPTED_IN_TRANSIT,true
 SECURITY_PRACTICES_DATA_DELETION_REQUEST,true
 ```
 
+### App Privacy Details (fastlane/app_privacy_details.json)
+
+Apple App Privacy declarations uploaded via fastlane's `upload_app_privacy_details_to_app_store` action. Analyze the app's data collection (same analysis as data_safety.csv) and generate a JSON array declaring each collected data category, its purposes, and protection level.
+
+**Format:** JSON array of objects. Each object has `category`, `purposes` (array), and `data_protections` (array).
+
+**If the app does NOT collect any data:**
+```json
+[
+  {
+    "data_protections": ["DATA_NOT_COLLECTED"]
+  }
+]
+```
+
+**If the app collects data, one entry per data type:**
+```json
+[
+  {
+    "category": "EMAIL_ADDRESS",
+    "purposes": ["APP_FUNCTIONALITY"],
+    "data_protections": ["DATA_LINKED_TO_YOU"]
+  },
+  {
+    "category": "CRASH_DATA",
+    "purposes": ["APP_FUNCTIONALITY"],
+    "data_protections": ["DATA_NOT_LINKED_TO_YOU"]
+  }
+]
+```
+
+**Available categories:** `EMAIL_ADDRESS`, `USER_ID`, `NAME`, `PHONE_NUMBER`, `PHYSICAL_ADDRESS`, `OTHER_CONTACT_INFO`, `PURCHASE_HISTORY`, `PAYMENT_INFO`, `CREDIT_INFO`, `OTHER_FINANCIAL_INFO`, `PRECISE_LOCATION`, `COARSE_LOCATION`, `HEALTH`, `FITNESS`, `SENSITIVE_INFO`, `EMAILS_OR_TEXT_MESSAGES`, `PHOTOS_OR_VIDEOS`, `AUDIO_DATA`, `GAMEPLAY_CONTENT`, `CUSTOMER_SUPPORT`, `OTHER_USER_CONTENT`, `BROWSING_HISTORY`, `SEARCH_HISTORY`, `PRODUCT_INTERACTION`, `ADVERTISING_DATA`, `OTHER_USAGE_DATA`, `CRASH_DATA`, `PERFORMANCE_DATA`, `OTHER_DIAGNOSTIC_DATA`, `DEVICE_ID`, `OTHER_DATA_TYPES`.
+
+**Available purposes:** `THIRD_PARTY_ADVERTISING`, `DEVELOPERS_ADVERTISING`, `ANALYTICS`, `PRODUCT_PERSONALIZATION`, `APP_FUNCTIONALITY`, `OTHER_PURPOSES`.
+
+**Available data_protections:** `DATA_LINKED_TO_YOU`, `DATA_NOT_LINKED_TO_YOU`, `DATA_USED_TO_TRACK_YOU`, `DATA_NOT_COLLECTED`.
+
+**Analysis checklist (mirrors data_safety.csv analysis):**
+1. Authentication (firebase_auth) -- EMAIL_ADDRESS, USER_ID (linked, app functionality)
+2. Messaging/content (cloud_firestore) -- OTHER_USER_CONTENT (linked, app functionality)
+3. Payments (in_app_purchase) -- PURCHASE_HISTORY (linked, app functionality)
+4. Analytics (firebase_analytics) -- PRODUCT_INTERACTION, DEVICE_ID (not linked, analytics)
+5. Crash reporting (firebase_crashlytics) -- CRASH_DATA (not linked, app functionality)
+6. Location services -- PRECISE_LOCATION or COARSE_LOCATION
+7. Default to `DATA_NOT_COLLECTED` if no data collection SDKs are found
+
 ## Apple ASO Guidelines
 
 ### Name (name.txt)
@@ -239,6 +286,7 @@ af, am, ar, hy-AM, az-AZ, eu-ES, be, bn-BD, bg, my-MM, ca, zh-HK, zh-CN, zh-TW, 
 ```
 fastlane/
   app_rating_config.json
+  app_privacy_details.json
   data_safety.csv
   metadata/
     copyright.txt
@@ -288,6 +336,8 @@ fastlane/
 - data_safety.csv has matching DATA_SHARED entries for every DATA_COLLECTED category
 - data_safety.csv has DATA_USAGE purpose entries for every collected data type
 - data_safety.csv includes SECURITY_PRACTICES entries for encryption and deletion
+- app_privacy_details.json exists and is valid JSON array with category, purposes, and data_protections for each entry
+- app_privacy_details.json categories match the data collection analysis (consistent with data_safety.csv)
 - review_information/ directory has all 7 files (first_name, last_name, phone_number, email_address, demo_user, demo_password, notes)
 - review_information/phone_number.txt uses valid US format (+1 followed by 10 digits with valid area code)
 - review_information/email_address.txt uses the actual domain from ci.config.yaml
