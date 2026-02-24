@@ -1,10 +1,10 @@
-import { existsSync, rmSync, cpSync, copyFileSync } from 'node:fs';
+import { existsSync, rmSync, cpSync, copyFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { execSync } from 'node:child_process';
 import {
   MARKETPLACE_DIR, KNOWN_MP_PATH, CACHE_DIR, TYPO_DIR,
-  MARKETPLACE_NAME, PLUGIN_REF,
+  MARKETPLACE_NAME, PLUGIN_NAME, PLUGIN_REF,
   getPackageDir, exec, ensureDir, ensureFile, readJson, writeJson,
 } from './utils.mjs';
 import { injectEnvVars, injectStatusLine } from './settings.mjs';
@@ -28,7 +28,7 @@ function readMarketplaceVersion(fallback = '') {
   }
 }
 
-function copyPluginFiles(packageDir) {
+function copyPluginFiles(packageDir, options = {}) {
   console.log('Installing marketplace...');
   rmSync(MARKETPLACE_DIR, { recursive: true, force: true });
   ensureDir(MARKETPLACE_DIR);
@@ -39,6 +39,25 @@ function copyPluginFiles(packageDir) {
     const dest = join(MARKETPLACE_DIR, dir);
     if (existsSync(src)) {
       cpSync(src, dest, { recursive: true });
+    }
+  }
+
+  if (options.onlyAgents || options.excludeAgents) {
+    filterAgents(MARKETPLACE_DIR, options);
+  }
+}
+
+function filterAgents(marketplaceDir, { onlyAgents, excludeAgents }) {
+  const agentsDir = join(marketplaceDir, 'plugins', PLUGIN_NAME, 'agents');
+  if (!existsSync(agentsDir)) return;
+  for (const file of readdirSync(agentsDir).filter(f => f.endsWith('.md'))) {
+    const name = file.replace('.md', '');
+    const shouldRemove = onlyAgents
+      ? !onlyAgents.includes(name)
+      : excludeAgents && excludeAgents.includes(name);
+    if (shouldRemove) {
+      rmSync(join(agentsDir, file));
+      console.log(`  Excluded agent: ${name}`);
     }
   }
 }
@@ -98,7 +117,7 @@ function printSummary(scope, oldVersion, newVersion) {
   }
 }
 
-export async function runInstall(scope) {
+export async function runInstall(scope, options = {}) {
   checkClaudeCli();
 
   console.log('Installing/updating Daemux Claude Plugins...');
@@ -106,7 +125,7 @@ export async function runInstall(scope) {
   const oldVersion = readMarketplaceVersion();
   const packageDir = getPackageDir();
 
-  copyPluginFiles(packageDir);
+  copyPluginFiles(packageDir, options);
   clearCacheAndTypo();
   registerMarketplace();
   runClaudeInstall(scope);

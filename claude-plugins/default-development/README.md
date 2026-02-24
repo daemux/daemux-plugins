@@ -49,9 +49,29 @@ npx @daemux/claude-plugin [options]
 Options:
   -g, --global     Install/uninstall globally (~/.claude) instead of project scope
   -u, --uninstall  Uninstall the plugin
+  --only <agents>    Install only specified agents (comma-separated)
+  --exclude <agents> Exclude specified agents (comma-separated)
+  --list             List available agents and their tiers
   -v, --version    Show version number
   -h, --help       Show help message
 ```
+
+## Selective Installation
+
+```bash
+npx @daemux/claude-plugin --list
+npx @daemux/claude-plugin --only=developer,reviewer
+npx @daemux/claude-plugin --exclude=designer,devops
+npx @daemux/claude-plugin -g --only=developer,reviewer,tester
+```
+
+### Agent Tiers
+
+| Tier | Agents | Description |
+|------|--------|-------------|
+| Core | developer, reviewer | Minimum viable pipeline |
+| Enhanced | + architect, simplifier, tester | Full quality pipeline |
+| Full | + product-manager, designer, devops | Complete workflow |
 
 ## Included Plugins
 

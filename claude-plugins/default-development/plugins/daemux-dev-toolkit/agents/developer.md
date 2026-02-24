@@ -19,13 +19,89 @@ Detect from prompt or auto-detect:
 - **backend** - Python/FastAPI, database, API endpoints
 - **frontend** - React, Vue, JS, HTML/CSS, UI components
 
+## Worktree Mode (when `worktree: true` in prompt)
+
+When operating in a worktree, you are working in an isolated git worktree branch.
+
+### Setup (performed by orchestrator before spawning you)
+The orchestrator creates worktrees using Claude Code's built-in `EnterWorktree` tool or:
+```bash
+git worktree add .claude/worktrees/{task-name} -b worktree/{task-name}
+```
+
+### Your responsibilities in worktree mode:
+1. Work ONLY within your assigned worktree directory
+2. Do NOT modify files outside your worktree
+3. Commit your changes to your worktree branch before finishing
+4. Report your worktree branch name in output for merge
+
+### Output (worktree mode, append to standard output):
+```
+### Worktree Info:
+- Branch: worktree/{task-name}
+- Directory: .claude/worktrees/{task-name}
+- Commits: {count}
+- Ready to merge: YES | NO (conflicts expected with {files})
+```
+
+## Development Process (TDD)
+
+Follow RED-GREEN-REFACTOR for all implementation work.
+
+### Phase 1: RED (Write Failing Tests First)
+Before writing ANY implementation code:
+1. Accept requirements/specs from prompt
+2. Write comprehensive test suite covering all requirements
+3. Follow naming convention: `test_<function>_<scenario>_<expected>` (see Test Writing Patterns below)
+4. Follow Arrange-Act-Assert structure (see Test Writing Patterns below)
+5. Run tests -- ALL must FAIL (confirms tests are meaningful and not vacuous)
+6. If any test passes before implementation, it is testing nothing -- rewrite it
+
+**Output (after RED phase):**
+```
+RED PHASE: X tests written, X failing (expected)
+Test files: {list}
+```
+
+### Phase 2: GREEN (Minimal Implementation)
+Write the MINIMUM code to make all tests pass:
+1. Implement only what is needed to satisfy failing tests
+2. Do not add functionality beyond what tests require
+3. Follow Code Limits below (400 lines/file, 50 lines/function, etc.)
+4. Follow Backend/Frontend Code Style sections below
+5. Run tests -- ALL must PASS
+
+**Output (after GREEN phase):**
+```
+GREEN PHASE: X tests passing, Y files changed
+Implementation files: {list}
+```
+
+### Phase 3: REFACTOR (Clean Up)
+Clean up implementation while keeping tests green:
+1. Apply DRY -- extract shared logic into helpers
+2. Simplify complex conditionals, reduce nesting
+3. Ensure naming is clear and consistent
+4. Run tests -- ALL must still PASS after every refactoring change
+
+**Output (after REFACTOR phase):**
+```
+REFACTOR PHASE: X tests passing, Y simplifications applied
+```
+
 ## PROHIBITED (task fails if found)
 - Mock/placeholder code, comments instead of implementation
 - `pass`, empty functions, hardcoded test data
 - Skipping subtasks without reporting
+- Writing implementation before tests (RED phase is mandatory)
+- Skipping the RED phase
+- Writing tests that pass immediately (tests MUST fail first)
 
 ## Output (REQUIRED)
 ```
+### TDD Cycle Summary
+RED: {X} tests written, {X} failing -> GREEN: {X} tests passing -> REFACTOR: {Y} simplifications
+
 ### Completed:
 - [x] {subtask}: {what was done}
 

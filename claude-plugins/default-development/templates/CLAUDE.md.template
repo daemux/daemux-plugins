@@ -69,6 +69,14 @@ architect → developer(backend) → simplifier → reviewer → product-manager
 devops (standalone)
 ```
 
+### Architect Brainstorming Phase
+
+The architect includes a mandatory brainstorming phase (Phase 0) for new features:
+- 5+ alternative approaches with pros/cons/effort
+- Challenge assumptions, evaluate build vs buy vs integrate, identify hidden complexity
+
+**Mandatory for:** backend, frontend, standard | **Skipped for:** database, infra, bug fixes
+
 #### Team Size Annotations
 
 Flows above use single agents by default. For tasks touching 3+ files, apply team sizes:
@@ -101,12 +109,12 @@ architect{T:2} → product-manager(PRE) → [designer{T:2}] → developer(fronte
 
 | Agent | When to use |
 |-------|-------------|
-| architect | BEFORE developer - designs architecture |
+| architect | BEFORE developer - brainstorms approaches then designs architecture |
 | product-manager | PRE-DEV: validates approach. POST-DEV: after tests |
 | developer | Code implementation (auto-detects context) |
 | simplifier | AFTER developer - simplifies code |
 | reviewer | After ANY code changes |
-| tester | After review passes (auto-detects context) |
+| tester | After review passes. mode=test (default): runs tests + auto root-cause analysis on failure. mode=debug: standalone bug investigation |
 | devops | DevOps operations (mode: deploy/database+deploy/database+optimize/server+migrate/server+optimize) |
 | designer | UI/UX design specs before frontend development |
 | designer(review) | After developer: design review + generate assets via MCP tools if needed |
@@ -136,7 +144,9 @@ architect{T:2} → product-manager(PRE) → [designer{T:2}] → developer(fronte
 
 **manager-loop:** product-manager → COMPLETE? → EXIT | ISSUES? → developer → product-manager (repeat)
 
-**test-loop:** tester → PASS? → EXIT | FAIL? → developer → simplifier → reviewer → tester (repeat)
+**test-loop:** tester → PASS? → EXIT | FAIL? → tester provides ROOT CAUSE + PROPOSED FIX → developer → simplifier → reviewer → tester (repeat)
+
+**debug-flow:** tester(mode=debug) → developer (implements proposed fix) → simplifier → reviewer → tester → product-manager(POST)
 
 If the same error persists unchanged after one full fix cycle, try a fundamentally different approach. If an agent crashes or returns empty output, re-run it once. If a test passes on re-run without code changes, note it as flaky and proceed.
 
@@ -161,6 +171,36 @@ Missing evidence means run that agent first. Do NOT proceed without it.
 **Parallel OK:** Independent features, backend + frontend, tester(backend) + tester(frontend)
 
 **Sequential ONLY:** Same-file changes, simplifier → reviewer, review-fix cycles, deployer after tests
+
+**Read-only agents** (architect, reviewer, tester, product-manager) can safely run in parallel — they don't modify files.
+**Write agents** (developer, simplifier) require sequential access to the same files, or worktree isolation for parallel execution.
+
+### Worktree Parallel Development
+
+For parallel developer teams with overlapping file scopes, use git worktrees for isolation:
+
+#### Worktree Workflow
+```
+architect (recommends worktree strategy)
+  -> create worktrees (one per developer teammate)
+  -> developer(worktree-1) + developer(worktree-2) [parallel]
+  -> merge worktrees back to main branch
+  -> simplifier -> reviewer -> tester -> product-manager(POST)
+```
+
+#### Orchestrator Worktree Protocol
+1. Architect recommends worktree strategy in team composition
+2. Create worktrees: `EnterWorktree` tool or `git worktree add .claude/worktrees/{name} -b worktree/{name}`
+3. Spawn each developer with `worktree: true` and their worktree path
+4. Merge in recommended order: `git checkout main && git merge worktree/{name-1}`, then `git merge worktree/{name-2}`
+5. Clean up: `git worktree remove .claude/worktrees/{name}`
+6. Unresolvable merge conflicts -> flag for human review
+7. **Optional pre-merge simplifier**: Orchestrator MAY run simplifier inside each worktree before merge to catch issues early. Reviewer and tester MUST still run on the merged result.
+8. **Fix before merge**: If pre-merge simplifier identifies issues in a worktree, fix in that worktree before merging. After merge, the standard test-loop applies to the merged result.
+
+#### When to Use / Skip Worktrees
+- **Use:** Parallel developers touching overlapping directories, high conflict risk
+- **Skip:** Separate directories, single developer, <3 files total
 
 ---
 ## FOR ORCHESTRATORS ONLY
@@ -271,6 +311,8 @@ RECOMMENDED FLOW:
 <copy the EXACT flow from Agent Flows section - include ALL agents with [optional] ones>
 
 TEAMS: [MANDATORY — list team stages with sizes. Single-agent exceptions: list which stages and why. "NO" only valid for tasks <3 files]
+
+WORKTREES: [YES - per architect recommendation | NO - {reason} | N/A - single developer]
 
 DEPLOYMENT: [AVAILABLE - deployment configured | NOT CONFIGURED - workflow ends at product-manager(POST)]
 

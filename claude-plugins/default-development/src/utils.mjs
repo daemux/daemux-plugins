@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { homedir } from 'node:os';
@@ -44,4 +44,28 @@ export function readJson(filePath) {
 
 export function writeJson(filePath, data) {
   writeFileSync(filePath, JSON.stringify(data, null, 2) + '\n', 'utf8');
+}
+
+export function listAvailableAgents() {
+  const agentsDir = join(getPackageDir(), 'plugins', PLUGIN_NAME, 'agents');
+  if (!existsSync(agentsDir)) { console.log('No agents found.'); return; }
+
+  const tiers = {
+    core: ['developer', 'reviewer'],
+    enhanced: ['architect', 'simplifier', 'tester'],
+    full: ['product-manager', 'designer', 'devops'],
+  };
+  const agents = readdirSync(agentsDir).filter(f => f.endsWith('.md')).map(f => f.replace('.md', ''));
+
+  for (const [tier, tierAgents] of Object.entries(tiers)) {
+    const available = tierAgents.filter(a => agents.includes(a));
+    if (available.length) {
+      console.log(`  ${tier.toUpperCase()}:`);
+      available.forEach(a => console.log(`    - ${a}`));
+      console.log('');
+    }
+  }
+  const untiered = agents.filter(a => !Object.values(tiers).flat().includes(a));
+  if (untiered.length) { console.log('  OTHER:'); untiered.forEach(a => console.log(`    - ${a}`)); }
+  console.log(`\nTotal: ${agents.length} agents`);
 }
