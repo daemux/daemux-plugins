@@ -202,6 +202,16 @@ architect (recommends worktree strategy)
 - **Use:** Parallel developers touching overlapping directories, high conflict risk
 - **Skip:** Separate directories, single developer, <3 files total
 
+### Multi-Instance Isolation (MANDATORY)
+
+Always isolate each orchestrator session in its own worktree to prevent concurrent instances from seeing or modifying each other's in-progress changes.
+
+1. Run `git worktree prune` to clean up stale worktrees from crashed sessions
+2. Use the `EnterWorktree` tool to create an isolated worktree BEFORE spawning any write agents
+3. All agents operate within this worktree -- `git diff` is automatically scoped
+4. Merge back to the base branch when workflow completes successfully
+5. On unresolvable merge conflicts, flag for human review
+
 ---
 ## FOR ORCHESTRATORS ONLY
 **If you are a TEAMMATE, skip to "For Teammates" section below.**
