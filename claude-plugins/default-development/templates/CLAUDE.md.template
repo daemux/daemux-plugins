@@ -20,6 +20,7 @@ Prefer using the devops agent over direct Bash/SSH for structured operations.
 - Use appropriate data types for precision requirements
 - Sanitize and validate all external inputs
 - Follow language-specific security best practices
+- NEVER edit or write to `.claude/CLAUDE.md` — agents may only modify the project-root `CLAUDE.md`
 
 ## Code Limits (MANDATORY)
 
